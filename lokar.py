@@ -68,4 +68,4 @@ for n, record in enumerate(records):
     for emne in frie:
         print u' -  FRITT NØKKELORD : ', emne.find('subfield[@code="a"]').text
         
-  print ET.tostring(record)
+# print ET.tostring(record)
