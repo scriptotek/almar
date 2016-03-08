@@ -59,7 +59,9 @@ for n, record in enumerate(records):
                 
             elif emne.find('subfield[@code="2"]') is None and record.findall('./datafield[@ind2="2"]'):
                 print ' - ', emne.find('subfield[@code="a"]').text, ' : MeSH '
-                
+# det vi mangler her er evt om det skal skrives noe for de andre verdiene i indikator 2, jeg klarte ikke hente ut verdien, 
+# bare sjekke om det var noe spesielt. Men dette er kanskje bare artigtesting på veien, evt også for å holde øye med om vi
+# klarer å la de andre emneordene være i fred...
                 
             elif emne.find('subfield[@code="2"]') is None:
                 print ' -  UKJENT : ', emne.find('subfield[@code="a"]').text
