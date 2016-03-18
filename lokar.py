@@ -1,4 +1,4 @@
-import xmlwitch
+# coding=utf-8
 import requests
 import xml.etree.ElementTree as ET
 
@@ -38,13 +38,13 @@ len(records)
 
 for n, record in enumerate(records):
     
-    title = record.find('./datafield[@tag="245"]/subfield[@code="a"]').text
+    title = record.find('./datafield[@tag="245"]/subfield[@code="a"]').text.encode('utf-8')
     print n, title
     
     emner = record.findall('./datafield[@tag="650"]')
     for emne in emner:
             if emne.find('subfield[@code="2"]') is not None and emne.find('subfield[@code="2"]').text == 'noubomn':
-                print ' - ', emne.find('subfield[@code="a"]').text
+                print ' - ', emne.find('subfield[@code="a"]').text.encode('utf-8')
                 if emne.find('subfield[@code="a"]').text == u'Monstre':
                     # print ' ---> Ja, monstre!'
                     emne.find('subfield[@code="a"]').text = u'Monsterbibliotekarer'
@@ -52,7 +52,7 @@ for n, record in enumerate(records):
                     print ' --> Nei, mønstre!'
                     
             elif emne.find('subfield[@code="2"]') is not None and emne.find('subfield[@code="2"]').text != 'noubomn':
-                print ' - ', emne.find('subfield[@code="a"]').text, ' : ', emne.find('subfield[@code="2"]').text
+                print ' - ', emne.find('subfield[@code="a"]').text.encode('utf-8'), ' : ', emne.find('subfield[@code="2"]').text.encode('utf-8')
                 
             elif emne.find('subfield[@code="2"]') is None and record.findall('./datafield[@ind2="0"]'):
                 print ' - ', emne.find('subfield[@code="a"]').text, ' : LCSH '
@@ -68,6 +68,6 @@ for n, record in enumerate(records):
                 
     frie = record.findall('./datafield[@tag="653"]')
     for emne in frie:
-        print u' -  FRITT NØKKELORD : ', emne.find('subfield[@code="a"]').text
+        print u' -  FRITT NØKKELORD : '.encode('utf-8'), emne.find('subfield[@code="a"]').text.encode('utf-8')
         
 # print ET.tostring(record)
