@@ -3,6 +3,7 @@ from __future__ import print_function
 from six.moves import input
 from six.moves import configparser
 import requests
+import sys
 from requests import Session
 import xml.etree.ElementTree as ET
 
@@ -22,11 +23,8 @@ def finn_realfagstermer(record, emneord):
     for emne in record.findall('./datafield[@tag="650"]'):
         if emne.find('subfield[@code="2"]') is not None and emne.find('subfield[@code="2"]').text == 'noubomn':
             if emne.find('subfield[@code="a"]').text == emneord:
-                if emne.find('subfield[@code="x"]') is not None:
-                    print('Vi har funnet en emnestreng! Hjelp!')
-                else:
-                    emner.append(emne)
-
+                emner.append(emne)
+            # Husk: Vi må også sjekke om emneord finnes i $x
     return emner
 
     
@@ -94,11 +92,28 @@ for mms_id in mms_ids:
     record = root.find('.//record')
     emner = finn_realfagstermer(record, gammelord)
 
-    if len(emner) != 1:
-        print('Oi, vi har dubletter')
-        break
+    if len(emner) == 0:
+        print('Snodig, ingen emneord allikevel')
+        continue
 
-    emner[0].find('subfield[@code="a"]').text = nyord
+    strenger = []
+
+    for emne in emner:
+        streng = []
+        for subfield in emne.findall('subfield'):
+            if subfield.get('code') not in ['a', 'x', '2', '0']:
+                print('Snodig, vi fant: ' + ET.tostring(subfield))
+                sys.exit(1)
+            if subfield.get('code') in ['a', 'x']:
+                streng.append(subfield.text)
+        print(streng)
+        if streng in strenger:
+            print('Vi sletter en duplikat: ', streng)
+            record.remove(emne)
+            continue
+
+        strenger.append(streng)
+        emne.find('subfield[@code="a"]').text = nyord
 
     response = requests.put(bib_url.format(mms_id=mms_id_nz),
                             params={'apikey': apikey_nz_sandbox},
