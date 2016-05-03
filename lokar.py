@@ -7,7 +7,7 @@ from requests import Session
 import xml.etree.ElementTree as ET
 
 config = configparser.ConfigParser()
-config.read_file(open('lokar.cfg')) 
+config.read(['lokar.cfg'])
 
 gammelord = input('Det gamle emneordet: ')
 nyord = input('Det nye emneordet: ')
