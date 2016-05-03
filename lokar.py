@@ -1,8 +1,13 @@
 # coding=utf-8
 from __future__ import print_function
 from six.moves import input
+from six.moves import configparser
 import requests
-import xml.etree.ElementTree as ET 
+from requests import Session
+import xml.etree.ElementTree as ET
+
+config = configparser.ConfigParser()
+config.read_file(open('lokar.cfg')) 
 
 gammelord = input('Det gamle emneordet: ')
 nyord = input('Det nye emneordet: ')
@@ -47,5 +52,21 @@ while True:
         break  # Enden er nær, den er faktisk her!
 
     print('Poster som vil bli endret: {:d} av {:d}'.format(len(mms_ids), antall_sjekket))                                
+
+
+# Del 2: Hente ut én og én post fra Bib-apiet og endre dem
+
+apikey_iz = config.get('alma', 'apikey_iz')
+apikey_nz_sandbox = config.get('alma', 'apikey_nz_sandbox')
+
+bib_url = 'https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/{mms_id}'
+# session = Session()
+# session.headers.update({'Authorization': 'apikey l7xx6ec2066dade54a03893c9a9847f42eb9'})
+
+for mms_id in mms_ids:
+    response = requests.get(bib_url.format(mms_id=mms_id), params={'apikey': apikey_iz})
+    root = ET.fromstring(response.text.encode('utf-8'))
+    linked_record = root.find('.//linked_record_id[@type="NZ"]')
+    print('IZ: ', mms_id, ' NZ: ',linked_record.text)
 
 # print(ET.tostring(record))
