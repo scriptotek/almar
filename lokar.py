@@ -154,23 +154,37 @@ class Alma(object):
         return response
 
 
+def read_config(f, section):
+    # raises NoSectionError, NoOptionError
+    parser = configparser.ConfigParser()
+    parser.readfp(f)
+
+    config = {}
+    for key in ['sru_url', 'api_key', 'api_region']:
+        config[key] = parser.get(section, key)
+
+    for key in ['user', 'vocabulary']:
+        config[key] = parser.get('general', key)
+
+    return config
+
+
 def main(args=None):
 
-    config = configparser.ConfigParser()
-    config.read(['lokar.cfg'])
-    vocabulary = 'noubomn'
+    env = 'nz_sandbox'
 
-    sru_url = 'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK'
-    # sru_url='https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK'
-    api_region = 'eu'
-    api_key_index = 'apikey_nz_sandbox'
-    api_key = config.get('alma', api_key_index)
+    try:
+        with open('lokar.cfg') as f:
+            config = read_config(f, env)
+    except IOError:
+        logger.error('Fant ikke lokar.cfg. Se README.md for mer info.')
+        return
 
     print('{:_<80}'.format(''))
     print('{:^80}'.format('LOKAR'))
     print('{:^80}'.format('OBS: Kun oppdatering av 650-feltet støttes foreløpig'))
-    print('{:^80}'.format('Vokabular: %s' % vocabulary))
-    print('{:^80}'.format('API-nøkkel: %s' % api_key_index))
+    print('{:^80}'.format('Miljø: %s' % env))
+    print('{:^80}'.format('Vokabular: %s' % config['vocabulary']))
     print('{:_<80}'.format(''))
     print()
 
@@ -189,12 +203,12 @@ def main(args=None):
 
     valid_records = []
     pbar = None
-    for n, m, marc_record in sru_search('alma.subjects="%s"' % gammelord, sru_url):
+    for n, m, marc_record in sru_search('alma.subjects="%s"' % gammelord, config['sru_url']):
         # @TODO: Vis diag: feilmelding fra respons
         if pbar is None and m != 0:
             pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
 
-        if subject_fields(marc_record, vocabulary=vocabulary, term=gammelord):
+        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=gammelord):
             valid_records.append(marc_record.findtext('./controlfield[@tag="001"]'))
 
         if pbar is not None:

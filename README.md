@@ -9,9 +9,19 @@ Skal bli: Funksjonalitet som henter ut gitte emneord fra Alma, og legger oppdate
 Opprett en fil `lokar.cfg` med følgende innhold:
 
 ```
-[alma]
-apikey_iz=FYLL INN API-NØKKEL
-apikey_nz_sandbox=FYLL INN API-NØKKEL
+[general]
+vocabulary=noubomn
+user=MITT BRUKERNAVN
+
+[nz_sandbox]
+api_key=FYLL INN API-NØKKEL
+api_region=eu
+sru_url=https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK
+
+[nz_prod]
+api_key=FYLL INN API-NØKKEL
+api_region=eu
+sru_url=https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK
 ```
 
 ### Utforske SRU-endepunktet

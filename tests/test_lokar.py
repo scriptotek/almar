@@ -5,7 +5,10 @@ import pytest
 import xml.etree.ElementTree as etree
 import responses
 from mock import Mock
-from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib
+from six import BytesIO
+
+from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config
+from textwrap import dedent
 
 
 def get_sample(filename):
@@ -175,6 +178,30 @@ class TestAlmaEdit(unittest.TestCase):
         responses.add(responses.PUT, url, body=body, content_type='application/xml')
 
         alma.bibs(mms_id).edit_subject('humord', 'abc', 'def')
+
+
+class TestLokar(unittest.TestCase):
+
+    def testConfig(self):
+        config = read_config(BytesIO(dedent('''
+        [general]
+        vocabulary=testvoc
+        user=someuser
+
+        [nz_sandbox]
+        api_key=secret1
+        api_region=eu
+        sru_url=https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK
+
+        [nz_prod]
+        api_key=secret2
+        api_region=us
+        sru_url=https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_UBO
+
+        ''')), 'nz_sandbox')
+
+        assert config['api_key'] == 'secret1'
+        assert config['vocabulary'] == 'testvoc'
 
 
 if __name__ == '__main__':
