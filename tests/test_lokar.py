@@ -1,19 +1,30 @@
 # encoding=utf-8
+from __future__ import unicode_literals
 import os
 import unittest
 import pytest
-import xml.etree.ElementTree as etree
 import responses
 from mock import Mock
-from six import BytesIO
+from mock import ANY
+from six import StringIO
+from io import open
 
 from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config
 from textwrap import dedent
 
+try:
+    # Use lxml if installed, since it's faster ...
+    from lxml import etree
+except ImportError:
+    # ... but also support standard ElementTree, since installation of lxml can be cumbersome
+    import xml.etree.ElementTree as etree
 
-def get_sample(filename):
-    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data/%s' % filename)) as fp:
+
+def get_sample(filename, as_xml=False):
+    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data/%s' % filename), encoding='utf-8') as fp:
         body = fp.read()
+    if as_xml:
+        return etree.fromstring(body.encode('utf-8'))
     return body
 
 
@@ -39,7 +50,7 @@ class TestFindSubjectFields(unittest.TestCase):
                   <subfield code="a">Algoritmer</subfield>
                 </datafield>
               </record>
-        ''')
+        '''.encode('utf-8'))
 
         fields = subject_fields(marc_record, vocabulary='noubomn', term='Monstre')
 
@@ -72,7 +83,7 @@ class TestFindSubjectFields(unittest.TestCase):
                   <subfield code="a">Algoritmer</subfield>
                 </datafield>
               </record>
-        ''')
+        '''.encode('utf-8'))
 
         fields = subject_fields(marc_record, vocabulary='noubomn', term='Atferd')
 
@@ -126,7 +137,21 @@ class TestSruSearch(unittest.TestCase):
         assert len(responses.calls) == 1
 
 
-class TestUpdateMarcRecord(unittest.TestCase):
+class TestAlmaEdit(unittest.TestCase):
+
+    @responses.activate
+    def testBibs(self):
+        mms_id = '123'
+        alma = Alma('test', 'key')
+        url = '{}/bibs/{}'.format(alma.base_url, mms_id)
+        body = get_sample('bib_response.xml')
+        responses.add(responses.GET, url, body=body, content_type='application/xml')
+        alma.bibs(mms_id).edit_subject('humord', 'abc', 'def')
+
+        assert len(responses.calls) == 1
+
+
+class TestBib(unittest.TestCase):
 
     def testModify650a(self):
         rec = etree.fromstring("""
@@ -140,7 +165,7 @@ class TestUpdateMarcRecord(unittest.TestCase):
                 </record>
             </bib>
         """)
-        bib = Bib(Mock(), '123', rec)
+        bib = Bib(Mock(), rec)
         bib.edit_subject('noubomn', 'Monstre', 'Mønstre')
 
         assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
@@ -159,31 +184,26 @@ class TestUpdateMarcRecord(unittest.TestCase):
             </bib>
 
         """)
-        bib = Bib(Mock(), '123', rec)
+        bib = Bib(Mock(), rec)
         bib.edit_subject('noubomn', 'Atferd', 'Dagbøker')
 
         assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')  # $a should not change!
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
 
+    def testSave(self):
+        alma = Mock()
+        doc = get_sample('bib_response.xml', True)
+        bib = Bib(alma, doc)
+        bib.edit_subject('noubomn', 'Kryptozoologi', 'KryptoÆØÅ')
+        bib.save()
 
-class TestAlmaEdit(unittest.TestCase):
-
-    @responses.activate
-    def test1(self):
-        mms_id = '123'
-        alma = Alma('test', 'key')
-        url = '{}/bibs/{}'.format(alma.base_url, mms_id)
-        body = get_sample('bib_response.xml')
-        responses.add(responses.GET, url, body=body, content_type='application/xml')
-        responses.add(responses.PUT, url, body=body, content_type='application/xml')
-
-        alma.bibs(mms_id).edit_subject('humord', 'abc', 'def')
+        alma.put.assert_called_once_with('/bibs/991416299674702204', data=ANY, headers={'Content-Type': 'application/xml'})
 
 
 class TestLokar(unittest.TestCase):
 
     def testConfig(self):
-        config = read_config(BytesIO(dedent('''
+        config = read_config(StringIO(dedent('''
         [general]
         vocabulary=testvoc
         user=someuser

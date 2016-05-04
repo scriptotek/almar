@@ -12,6 +12,7 @@ from requests import Session
 from tqdm import tqdm
 import logging
 import logging.handlers
+from requests.exceptions import HTTPError
 
 try:
     # Use lxml if installed, since it's faster ...
@@ -88,10 +89,10 @@ def sru_search(query, url):
 
 class Bib(object):
 
-    def __init__(self, alma, mms_id, doc):
+    def __init__(self, alma, doc):
         self.alma = alma
-        self.mms_id = mms_id
         self.doc = doc
+        self.mms_id = self.doc.findtext('mms_id')
         self.marc_record = self.doc.find('record')
 
     def remove_duplicate_fields(self, vocabulary, term):
@@ -121,11 +122,13 @@ class Bib(object):
         return self  # for chaining
 
     def save(self):
-        response = self.alma.put('/bibs/{}'.format(self.mms_id), data=etree.tostring(self.doc),
-                                 headers={'Content-Type': 'application/xml'})
-        if response.status_code != response.codes.ok:
+        try:
+            self.alma.put('/bibs/{}'.format(self.mms_id),
+                          data=etree.tostring(self.doc),
+                          headers={'Content-Type': 'application/xml'})
+        except HTTPError as error:
             raise RuntimeError('Failed to save record. Status: {}. ' +
-                               'Response: {}'.format(response.status_code, response.text))
+                               'Response: {}'.format(error.response.status_code, error.response.text))
 
 
 class Alma(object):
@@ -141,7 +144,7 @@ class Alma(object):
         response = self.get('/bibs/{}'.format(mms_id))
         doc = etree.fromstring(response.text.encode('utf-8'))
 
-        return Bib(self, mms_id, doc)
+        return Bib(self, doc)
 
     def get(self, url, *args, **kwargs):
         response = self.session.get(self.base_url + url, *args, **kwargs)
