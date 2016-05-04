@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
+  <version>1.2</version>
+  <numberOfRecords>2</numberOfRecords>
+  <records>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>00999cam a22002417c 4500</leader>
+          <controlfield tag="001">991343643254702201</controlfield>
+          <controlfield tag="005">20160114224802.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">131215s2010    xx#|||||||||||000|u|eng|d</controlfield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9781592536207</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">134364325-47bibsys_network</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(NO-TrBIB)134364325</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="040">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="100">
+            <subfield code="a">Friedenberg, Jay</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="245">
+            <subfield code="a">1001 symmetrical patterns :</subfield>
+            <subfield code="b">a complete resource of pattern designs created by evolving symmetrical shapes</subfield>
+            <subfield code="c">Jay Friedenberg and Jacob Roesch</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="260">
+            <subfield code="a">Beverly, Mass.</subfield>
+            <subfield code="b">Rockport</subfield>
+            <subfield code="c">c2010</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="300">
+            <subfield code="a">208 s.</subfield>
+            <subfield code="b">kol. ill.</subfield>
+            <subfield code="c">24 cm</subfield>
+            <subfield code="e">1 CD-ROM</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="500">
+            <subfield code="a">&quot;CD-ROM includes scalable EPS files of all featured patterns.&quot;</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="653">
+            <subfield code="a">mønstre</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="700">
+            <subfield code="a">Roesch, Jacob</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="776">
+            <subfield code="t">1,001 symmetrical patterns : a complete resource of pattern designs created by evolving symmetrical shapes</subfield>
+            <subfield code="w">991218185004702201</subfield>
+          </datafield>
+          <datafield ind1="4" ind2="2" tag="856">
+            <subfield code="3">Omslagsbilde</subfield>
+            <subfield code="u">http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=9781592536207.jpg</subfield>
+            <subfield code="q">image/jpeg</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="1" tag="852">
+            <subfield code="a">47BIBSYS_KHIO</subfield>
+            <subfield code="6">991343643254702243</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="901">
+            <subfield code="a">60</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>2</recordPosition>
+    </record>
+  </records>
+  <diagnostics/>
+  <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
+    <xb:exact>true</xb:exact>
+    <xb:responseDate>2016-05-03T19:57:53+0200</xb:responseDate>
+  </extraResponseData>
+</searchRetrieveResponse>

@@ -38,3 +38,7 @@ for index in indexes:
     name = index.find('.//e20:name' , ns).text
     print(' %40s %s' % (name,title))
 ```
+
+### Testing
+
+* Emneord som består av flere ord, f.eks. "Åpen kildekode"

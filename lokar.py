@@ -3,133 +3,219 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from six.moves import input
 from six.moves import configparser
+from six.moves import urllib
+from six import BytesIO
 import requests
 import sys
+import time
 from requests import Session
-import xml.etree.ElementTree as ET
+from tqdm import tqdm
 
-config = configparser.ConfigParser()
-config.read(['lokar.cfg'])
+try:
+    # Use lxml if installed, since it's faster ...
+    from lxml import etree
+except ImportError:
+    # ... but also support standard ElementTree, since installation of lxml can be cumbersome
+    import xml.etree.ElementTree as etree
 
-gammelord = input('Det gamle emneordet: ')
-nyord = input('Det nye emneordet: ')
-
-ns = {
-    'e20' : 'http://explain.z3950.org/dtd/2.0/',
-    'e21' : 'http://explain.z3950.org/dtd/2.1/',
-    'srw': 'http://www.loc.gov/zing/srw/'
+nsmap = {
+    'e20': 'http://explain.z3950.org/dtd/2.0/',
+    'e21': 'http://explain.z3950.org/dtd/2.1/',
+    'srw': 'http://www.loc.gov/zing/srw/',
+    'diag': 'http://www.loc.gov/zing/srw/diagnostic/',
 }
 
-def finn_realfagstermer(marc_record, emneord):
+
+class SruErrorResponse(RuntimeError):
+    pass
+
+
+def subject_fields(marc_record, term, vocabulary):
+    # For a given MARC record, return subject fields matching the vocabulary and term
     fields = []
-    for field in marc_record.findall('./datafield[@tag="650"]'):
-        if field.find('subfield[@code="2"]') is not None and field.find('subfield[@code="2"]').text == 'noubomn':
-            if field.find('subfield[@code="a"]').text == emneord:
-                fields.append(field)
-            # Husk: Vi må også sjekke om emneord finnes i $x
+    for field in marc_record.findall('./datafield[@tag="650"]'):  # @TODO: 648, 651, 655
+        if field.findtext('subfield[@code="2"]') != vocabulary:
+            continue
+        if field.findtext('subfield[@code="a"]') == term:
+            fields.append(field)
+        elif field.findtext('subfield[@code="x"]') == term:
+            fields.append(field)
     return fields
 
-# ------------------------------------------------------------------------------------
-# Del 1: Søk mot SRU for å finne over alle bibliografiske poster med emneordet.
-# Vi må filtrere resultatlista i etterkant fordi
-#  - vi mangler en egen indeks for Realfagstermer, så vi må søke mot `alma.subjects`
-#  - søket er ikke presist, så f.eks. "Monstre" vil gi treff i "Mønstre"
-#
-# I fremtiden, når vi får $0 på alle poster, kan vi bruke indeksen `alma.authority_id`
-# i stedet.
 
-# sru_url='https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK'
-sru_url = 'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK'
+def sru_search(query, url):
+    # A SRU search generator that returns MARC records
+    start_record = 1
+    while True:
+        response = requests.get(url, params={
+            'version': '1.2',
+            'operation': 'searchRetrieve',
+            'startRecord': start_record,
+            'maximumRecords': '50',
+            'query': query,
+        })
+        root = etree.fromstring(response.text.encode('utf-8'))  # Takes ~ 4 seconds for 50 records!
 
-start_record = 1
-valid_records = []
-records_checked = 0
-sys.stdout.write('Søker..')
-sys.stdout.flush()
-while True:
-    sru_params = {
-        'version': '1.2',
-        'operation': 'searchRetrieve',
-        'query': 'alma.subjects=' + gammelord,
-        'maximumRecords': '50',
-        'startRecord': start_record
-    }
+        for diagnostic in root.findall('srw:diagnostics/diag:diagnostic', namespaces=nsmap):
+            raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=nsmap))
 
-    response = requests.get(sru_url, params=sru_params)
-    root = ET.fromstring(response.text.encode('utf-8'))
+        num_records = root.findtext('srw:numberOfRecords', namespaces=nsmap)
+        for record in root.iterfind('srw:records/srw:record', namespaces=nsmap):
+            record_no = record.findtext('srw:recordPosition', namespaces=nsmap)
+            yield int(record_no), int(num_records), record.find('srw:recordData/record', namespaces=nsmap)
 
-    for marc_record in root.findall('.//record'):
-        records_checked += 1
-        mms_id = marc_record.find('./controlfield[@tag="001"]').text
-        emner = finn_realfagstermer(marc_record, gammelord)
-        if len(emner) != 0:
-            valid_records.append(mms_id)
+        nrp = root.find('srw:nextRecordPosition', namespaces=nsmap)
+        if nrp is not None:
+            start_record = nrp.text
+        else:
+            break  # Enden er nær, den er faktisk her!
 
-    nextRecordPosition = root.find('.//srw:nextRecordPosition', ns)
-    if nextRecordPosition is not None:
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        start_record = nextRecordPosition.text
-    else:
-        break  # Enden er nær, den er faktisk her!
 
-print('.')
-print('Antall poster som vil bli endret: {:d}'.format(len(valid_records)))
-if not input('Vil du fortsette? [Y/n] ').lower().startswith('y'):
-    sys.exit(0)
+class Bib(object):
 
-# ------------------------------------------------------------------------------------
-# Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
-# Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
+    def __init__(self, alma, mms_id, doc):
+        self.alma = alma
+        self.mms_id = mms_id
+        self.doc = doc
+        self.marc_record = self.doc.find('record')
+        if self.marc_record is None:
+            raise RuntimeError('marc record not found')
 
-apikey_iz = config.get('alma', 'apikey_iz')
-apikey_nz_sandbox = config.get('alma', 'apikey_nz_sandbox')
+    def remove_duplicate_fields(self, vocabulary, term):
+        strenger = []
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term):
+            streng = []
+            for subfield in field.findall('subfield'):
+                if subfield.get('code') in ['a', 'x']:
+                    streng.append(subfield.text)
+                elif subfield.get('code') not in ['2', '0']:
+                    print('ERROR: Emnefeltet inneholdt uventede delfelt: ' + etree.tostring(subfield))
+                    return False
+            if streng in strenger:
+                print('INFO: Fjerner duplikat emnefelt: ', streng.join(' : '))
+                self.marc_record.remove(field)
+                continue
+            strenger.append(streng)
 
-bib_url = 'https://api-{region}.hosted.exlibrisgroup.com/almaws/v1/bibs/{mms_id}'
-region = 'eu'
+    def edit_subject(self, vocabulary, old_term, new_term):
+        self.remove_duplicate_fields(vocabulary, old_term)
 
-for n, mms_id in enumerate(valid_records):
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=old_term):
+            for code in ['a', 'x']:
+                subfield = field.find('subfield[@code="{}"]'.format(code))
+                if subfield is not None and subfield.text == old_term:
+                    subfield.text = new_term
+                    break
+        return self  # for chaining
 
-    # if record['cz'] is None:
-    #     print('Posten {} er ikke lenket til NZ. Vi må redigere den i IZ. Ikke implementert enda!'.format(record['iz']))
-    #     break
+    def save(self):
+        response = self.alma.put('/bibs/{}'.format(self.mms_id), data=etree.tostring(self.doc),
+                                 headers={'Content-Type': 'application/xml'})
+        if response.status_code != response.codes.ok:
+            raise RuntimeError('Failed to save record. Status: {}. ' +
+                               'Response: {}'.format(response.status_code, response.text))
 
-    print('{:d}/{:d} : {}'.format(n + 1, len(valid_records), mms_id))
 
-    response = requests.get(bib_url.format(region=region, mms_id=mms_id),
-                            params={'apikey': apikey_nz_sandbox})
-    root = ET.fromstring(response.text.encode('utf-8'))
-    marc_record = root.find('.//record')
-    subject_fields = finn_realfagstermer(marc_record, gammelord)
+class Alma(object):
 
-    if len(subject_fields) == 0:
-        print('Snodig, ingen emneord allikevel')
-        continue
+    def __init__(self, api_region, api_key):
+        self.api_region = api_region
+        self.api_key = api_key
+        self.session = Session()
+        self.session.headers.update({'Authorization': 'apikey %s' % api_key})
+        self.base_url = 'https://api-{region}.hosted.exlibrisgroup.com/almaws/v1'.format(region=self.api_region)
 
-    strenger = []
+    def bibs(self, mms_id):
+        response = self.get('/bibs/{}'.format(mms_id))
+        doc = etree.fromstring(response.text.encode('utf-8'))
 
-    for field in subject_fields:
-        streng = []
-        for subfield in field.findall('subfield'):
-            if subfield.get('code') in ['a', 'x']:
-                streng.append(subfield.text)
-            elif subfield.get('code') not in ['2', '0']:
-                print('Emnefeltet inneholdt uventede delfelt: ' + ET.tostring(subfield))
-                sys.exit(1)
-        if streng in strenger:
-            print('Fjerner duplikat emnefelt: ', streng.join(' : '))
-            marc_record.remove(field)
-            continue
+        return Bib(self, mms_id, doc)
 
-        strenger.append(streng)
-        field.find('subfield[@code="a"]').text = nyord
+    def get(self, url, *args, **kwargs):
+        response = self.session.get(self.base_url + url, *args, **kwargs)
+        response.raise_for_status()
+        return response
 
-    response = requests.put(bib_url.format(region=region, mms_id=mms_id),
-                            params={'apikey': apikey_nz_sandbox},
-                            data=ET.tostring(root),
-                            headers={'Content-Type': 'application/xml'})
+    def put(self, url, *args, **kwargs):
+        response = self.session.put(self.base_url + url, *args, **kwargs)
+        response.raise_for_status()
+        return response
 
-    if response.status_code != 200:
-        print(' -> Kunne ikke lagre post. Status: {}'.format(response.status_code))
-        print(response.text)
-        break
+
+def main(args=None):
+
+    config = configparser.ConfigParser()
+    config.read(['lokar.cfg'])
+    vocabulary = 'noubomn'
+
+    sru_url = 'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK'
+    # sru_url='https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK'
+    api_region = 'eu'
+    api_key_index = 'apikey_nz_sandbox'
+    api_key = config.get('alma', api_key_index)
+
+    print('{:_<80}'.format(''))
+    print('{:^80}'.format('LOKAR'))
+    print('{:^80}'.format('OBS: Kun oppdatering av 650-feltet støttes foreløpig'))
+    print('{:^80}'.format('Vokabular: %s' % vocabulary))
+    print('{:^80}'.format('API-nøkkel: %s' % api_key_index))
+    print('{:_<80}'.format(''))
+    print()
+
+    gammelord = input(' Det gamle emneordet: ').strip()
+    nyord = input(' Det nye emneordet: ').strip()
+    print()
+
+    # ------------------------------------------------------------------------------------
+    # Del 1: Søk mot SRU for å finne over alle bibliografiske poster med emneordet.
+    # Vi må filtrere resultatlista i etterkant fordi
+    #  - vi mangler en egen indeks for Realfagstermer, så vi må søke mot `alma.subjects`
+    #  - søket er ikke presist, så f.eks. "Monstre" vil gi treff i "Mønstre"
+    #
+    # I fremtiden, når vi får $0 på alle poster, kan vi bruke indeksen `alma.authority_id`
+    # i stedet.
+
+    valid_records = []
+    pbar = None
+    for n, m, marc_record in sru_search('alma.subjects="%s"' % gammelord, sru_url):
+        # @TODO: Vis diag: feilmelding fra respons
+        if pbar is None and m != 0:
+            pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
+
+        if subject_fields(marc_record, vocabulary=vocabulary, term=gammelord):
+            valid_records.append(marc_record.findtext('./controlfield[@tag="001"]'))
+
+        if pbar is not None:
+            pbar.update()
+    if pbar is not None:
+        pbar.close()
+
+    if len(valid_records) == 0:
+        print(' Fant ingen poster, avslutter')
+        print()
+        return
+
+    print()
+    print(' Antall poster som vil bli endret: {:d}'.format(len(valid_records)))
+    print(' Trykk Ctrl-C innen 3 sekunder for å avbryte.')
+    print()
+    time.sleep(3)
+
+    # ------------------------------------------------------------------------------------
+    # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
+    # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
+
+    print('Oppdaterer poster')
+    for n, mms_id in enumerate(valid_records):
+
+        # if record['cz'] is None:
+        #     print('Posten {} er lenket til CZ! Vi bør kanskje ikke redigere den!'))
+        #     break
+
+        print('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
+        # alma_edit(alma_session, api_region, mms_id, vocabulary, gammelord, nyord)
+    print(' Finito')
+
+
+if __name__ == '__main__':
+    main()

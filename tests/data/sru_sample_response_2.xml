@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
+  <version>1.2</version>
+  <numberOfRecords>2</numberOfRecords>
+  <records>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>01134cam a2200301 c 4500</leader>
+          <controlfield tag="001">990314778524702201</controlfield>
+          <controlfield tag="005">20140123114615.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">140123s2003    xx#|||||||||||000|u|eng|d</controlfield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">0713667168</subfield>
+            <subfield code="q">h.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">031477852-47bibsys_network</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(NO-TrBIB)031477852</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="040">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="080">
+            <subfield code="a">7.048</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="080">
+            <subfield code="a">745</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="0" tag="245">
+            <subfield code="a">1000 patterns</subfield>
+            <subfield code="c">general editor: Drusilla Cole ; contributors: Alan Bridgewater, Christine Davis, &amp; Iain Zaczek</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="260">
+            <subfield code="a">London</subfield>
+            <subfield code="b">A &amp; C Black</subfield>
+            <subfield code="c">2003</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="300">
+            <subfield code="a">320 s.</subfield>
+            <subfield code="b">ill.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="650">
+            <subfield code="a">Decoration and ornament</subfield>
+            <subfield code="x">Themes, motives</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">Ornamentikk</subfield>
+            <subfield code="2">tekord</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">Kunsthåndverk</subfield>
+            <subfield code="2">tekord</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="653">
+            <subfield code="a">mønstre</subfield>
+            <subfield code="a">tekstil</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="700">
+            <subfield code="a">Cole, Drusilla</subfield>
+            <subfield code="0">(NO-TrBIB)4023988</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="740">
+            <subfield code="a">One thousand patterns</subfield>
+          </datafield>
+          <datafield ind1="4" ind2="2" tag="856">
+            <subfield code="3">Beskrivelse fra forlaget (kort)</subfield>
+            <subfield code="u">http://content.bibsys.no/content/?type=descr_publ_brief&amp;isbn=0713667168</subfield>
+          </datafield>
+          <datafield ind1="4" ind2="2" tag="856">
+            <subfield code="3">Beskrivelse fra forlaget (lang)</subfield>
+            <subfield code="u">http://content.bibsys.no/content/?type=descr_publ_full&amp;isbn=0713667168</subfield>
+          </datafield>
+          <datafield ind1="4" ind2="2" tag="856">
+            <subfield code="3">Omslagsbilde</subfield>
+            <subfield code="u">http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=0713667168.JPG</subfield>
+            <subfield code="q">image/jpeg</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="1" tag="852">
+            <subfield code="a">47BIBSYS_UBA</subfield>
+            <subfield code="6">990314778524702209</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="1" tag="852">
+            <subfield code="a">47BIBSYS_AHO</subfield>
+            <subfield code="6">990314778524702237</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="1" tag="852">
+            <subfield code="a">47BIBSYS_UBTO</subfield>
+            <subfield code="6">990314778524702205</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="1" tag="852">
+            <subfield code="a">47BIBSYS_KHIO</subfield>
+            <subfield code="6">990314778524702243</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="1" tag="852">
+            <subfield code="a">47BIBSYS_NTNU_UB</subfield>
+            <subfield code="6">990314778524702203</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="901">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>1</recordPosition>
+    </record>
+  </records>
+  <nextRecordPosition>2</nextRecordPosition>
+  <diagnostics/>
+  <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
+    <xb:exact>true</xb:exact>
+    <xb:responseDate>2016-05-03T19:57:53+0200</xb:responseDate>
+  </extraResponseData>
+</searchRetrieveResponse>
