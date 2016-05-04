@@ -10,6 +10,8 @@ import sys
 import time
 from requests import Session
 from tqdm import tqdm
+import logging
+import logging.handlers
 
 try:
     # Use lxml if installed, since it's faster ...
@@ -17,6 +19,19 @@ try:
 except ImportError:
     # ... but also support standard ElementTree, since installation of lxml can be cumbersome
     import xml.etree.ElementTree as etree
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s')
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+file_handler = logging.FileHandler('lokar.log')
+file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.INFO)
+logger.addHandler(file_handler)
 
 nsmap = {
     'e20': 'http://explain.z3950.org/dtd/2.0/',
@@ -78,8 +93,6 @@ class Bib(object):
         self.mms_id = mms_id
         self.doc = doc
         self.marc_record = self.doc.find('record')
-        if self.marc_record is None:
-            raise RuntimeError('marc record not found')
 
     def remove_duplicate_fields(self, vocabulary, term):
         strenger = []
@@ -89,10 +102,9 @@ class Bib(object):
                 if subfield.get('code') in ['a', 'x']:
                     streng.append(subfield.text)
                 elif subfield.get('code') not in ['2', '0']:
-                    print('ERROR: Emnefeltet inneholdt uventede delfelt: ' + etree.tostring(subfield))
-                    return False
+                    logger.info('Emnefeltet inneholdt uventede delfelt: %s', etree.tostring(subfield))
             if streng in strenger:
-                print('INFO: Fjerner duplikat emnefelt: ', streng.join(' : '))
+                logger.info('Fjerner duplikat emnefelt: ', streng.join(' : '))
                 self.marc_record.remove(field)
                 continue
             strenger.append(streng)
@@ -191,13 +203,13 @@ def main(args=None):
         pbar.close()
 
     if len(valid_records) == 0:
-        print(' Fant ingen poster, avslutter')
+        print('Fant ingen poster, avslutter')
         print()
         return
 
     print()
-    print(' Antall poster som vil bli endret: {:d}'.format(len(valid_records)))
-    print(' Trykk Ctrl-C innen 3 sekunder for å avbryte.')
+    print('Antall poster som vil bli endret: {:d}'.format(len(valid_records)))
+    print('Trykk Ctrl-C innen 3 sekunder for å avbryte.')
     print()
     time.sleep(3)
 
@@ -205,16 +217,16 @@ def main(args=None):
     # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
     # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
-    print('Oppdaterer poster')
+    logger.info('Endrer fra "%s" til "%s" på %d poster', gammelord, nyord, len(valid_records))
+
     for n, mms_id in enumerate(valid_records):
 
         # if record['cz'] is None:
         #     print('Posten {} er lenket til CZ! Vi bør kanskje ikke redigere den!'))
         #     break
 
-        print('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
-        # alma_edit(alma_session, api_region, mms_id, vocabulary, gammelord, nyord)
-    print(' Finito')
+        logger.info('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
+        alma_edit(alma_session, api_region, mms_id, vocabulary, gammelord, nyord)
 
 
 if __name__ == '__main__':
