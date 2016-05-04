@@ -4,7 +4,7 @@ import unittest
 import pytest
 import xml.etree.ElementTree as etree
 import responses
-from unittest.mock import Mock
+from mock import Mock
 from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib
 
 
