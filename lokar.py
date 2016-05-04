@@ -204,7 +204,6 @@ def main(args=None):
     valid_records = []
     pbar = None
     for n, m, marc_record in sru_search('alma.subjects="%s"' % gammelord, config['sru_url']):
-        # @TODO: Vis diag: feilmelding fra respons
         if pbar is None and m != 0:
             pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
 
