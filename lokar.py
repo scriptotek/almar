@@ -1,16 +1,18 @@
 # coding=utf-8
 from __future__ import print_function
 from __future__ import unicode_literals
-
+import argparse
 import logging.handlers
 from io import open
 
 import requests
+import sys
 from requests import Session
 from requests.exceptions import HTTPError
 from six.moves import configparser
 from six.moves import input
 from tqdm import tqdm
+from prompter import yesno
 
 try:
     # Use lxml if installed, since it's faster ...
@@ -27,11 +29,6 @@ formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s')
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
-
-file_handler = logging.FileHandler('lokar.log')
-file_handler.setFormatter(formatter)
-file_handler.setLevel(logging.INFO)
-logger.addHandler(file_handler)
 
 nsmap = {
     'e20': 'http://explain.z3950.org/dtd/2.0/',
@@ -195,7 +192,9 @@ class Alma(object):
     def bibs(self, mms_id):
         response = self.get('/bibs/{}'.format(mms_id))
         doc = etree.fromstring(response.text.encode('utf-8'))
-
+        if doc.findtext('mms_id') != mms_id:
+            raise RuntimeError('Response does not contain the requested MMS ID. %s != %s'
+                               % (doc.findtext('mms_id'), mms_id))
         return Bib(self, doc)
 
     def get(self, url, *args, **kwargs):
@@ -241,56 +240,7 @@ def authorize_term(term, concept_type, vocabulary):
     return results[0]
 
 
-def main(config=None, env='nz_sandbox'):
-
-    try:
-        with config or open('lokar.cfg') as f:
-            config = read_config(f, env)
-    except IOError:
-        logger.error('Fant ikke lokar.cfg. Se README.md for mer info.')
-        return
-
-    print('{:_<80}'.format(''))
-    print('{:^80}'.format('LOKAR'))
-    print(' Miljø: %s' % env)
-    print(' Vokabular: %s' % config['vocabulary'])
-    print()
-    print(' Kan gjøre streng-erstatninger av typen "A : B" → "C : D" og "A : B" → "C",')
-    print(' men pass på at du har med mellomrom før og etter kolon.')
-    print()
-    print('{:_<80}'.format(''))
-    print()
-
-    tag = input(' MARC-felt [650]: ').strip() or '650'
-    if tag not in ['648', '650', '651', '655']:
-        logger.error('Ugyldig felt. Støtter kun 648, 650, 651 og 655')
-        return
-    gammelord = normalize_term(input(' Det gamle emneordet: '))
-    nyord = normalize_term(input(' Det nye emneordet: '))
-
-    if len(gammelord) == 0:
-        logger.error('Old term cannot be blank')
-        return
-
-    oc = gammelord.split(' : ')
-    nc = nyord.split(' : ')
-    if len(oc) == 2 and len(nc) == 2:
-        logger.info('Erstatter "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s $x %(n2)s"',
-                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0], 'n2': nc[1]})
-    elif len(oc) == 2 and len(nc) == 1:
-        logger.info('Erstatter "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s"',
-                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0]})
-    elif len(oc) == 1 and len(nc) == 1:
-        if nyord == '':
-            logger.info('Fjerner "%(p)s $a %(o)s"',
-                        {'p': tag + ' $2 noubomn', 'o': oc[0]})
-        else:
-            logger.info('Erstatter "%(o)s" med "%(n)s" i %(p)s $a og $x',
-                        {'p': tag + ' $2 noubomn', 'o': oc[0], 'n': nc[0]})
-    else:
-        logger.error('Unsupported number of components in old or new term')
-        return
-
+def skosmos_check(vocab, tag, old_term, new_term):
     concept_types = {
         '648': 'http://data.ub.uio.no/onto#Temporal',
         '650': 'http://data.ub.uio.no/onto#Topic',
@@ -298,17 +248,96 @@ def main(config=None, env='nz_sandbox'):
         '655': 'http://data.ub.uio.no/onto#GenreForm',
     }
     concept_type = concept_types[tag]
-    old_concept = authorize_term(gammelord, concept_type, config['skosmos_vocab'])
-    new_concept = authorize_term(nyord, concept_type, config['skosmos_vocab'])
+    old_concept = authorize_term(old_term, concept_type, vocab)
+    new_concept = authorize_term(new_term, concept_type, vocab)
     if old_concept is not None:
         local_id = old_concept['localname'].strip('c')
-        logger.info('Termen "%s" ble autorisert med ID %s', gammelord, local_id)
+        logger.info('Termen "%s" ble autorisert med ID %s', old_term, local_id)
     if new_concept is not None:
         local_id = new_concept['localname'].strip('c')
-        logger.info('Termen "%s" ble autorisert med ID %s', nyord, local_id)
+        logger.info('Termen "%s" ble autorisert med ID %s', new_term, local_id)
     if old_concept is None and new_concept is None:
-        logger.error('Fant verken "%s" eller "%s" som <%s> i <%s>',
-                     gammelord, nyord, concept_type, config['vocabulary'])
+        terms = [old_term]
+        if len(new_term) != 0:
+            terms.append(new_term)
+        logger.error('Fant ikke %s som <%s> i <%s>',
+                     ' eller '.join(['"%s"' % term for term in terms]), concept_type, vocab)
+        return False
+    return True
+
+
+def parse_args(args):
+    parser = argparse.ArgumentParser(description='LOKAR')
+    parser.add_argument('old_term', nargs=1, help='Old term')
+    parser.add_argument('new_term', nargs='?', default='', help='New term')
+
+    parser.add_argument('-t', '--tag', dest='tag', nargs='?',
+                        help='MARC tag (648/650/651/655). Default: 650',
+                        default='650', choices=['648', '650', '651', '655'])
+
+    parser.add_argument('-e', '--env', dest='env', nargs='?',
+                        help='Environment from config file. Default: nz_sandbox',
+                        default='nz_sandbox')
+
+    parser.add_argument('-d', '--dry_run', dest='dry_run', action='store_true',
+                        help='Dry run without doing any edits.')
+
+    # parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='More verbose output')
+
+    args = parser.parse_args(args)
+    args.env = args.env.strip()
+    args.old_term = args.old_term[0]
+    args.new_term = args.new_term
+
+    return args
+
+
+def main(config=None, args=None):
+
+    args = parse_args(args or sys.argv[1:])
+
+    try:
+        with config or open('lokar.cfg') as f:
+            config = read_config(f, args.env)
+    except IOError:
+        logger.error('Fant ikke lokar.cfg. Se README.md for mer info.')
+        return
+
+    if not args.dry_run:
+        file_handler = logging.FileHandler('lokar.log')
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+
+    tag = args.tag
+    old_term = normalize_term(args.old_term)
+    new_term = normalize_term(args.new_term)
+
+    logger.info('{:=^80}'.format(' LOKAR '))
+    logger.info('[ Miljø: %s ] [ Vokabular: %s ] [ Tørrkjøring? %s ]'
+                % (args.env, config['vocabulary'], 'JA' if args.dry_run else 'NEI'))
+
+    if not skosmos_check(config['skosmos_vocab'], tag, old_term, new_term):
+        if yesno('Vil du fortsette allikevel?', default='no'):
+            return
+
+    oc = old_term.split(' : ')
+    nc = new_term.split(' : ')
+    if len(oc) == 2 and len(nc) == 2:
+        logger.info('Vil erstatte "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s $x %(n2)s"',
+                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0], 'n2': nc[1]})
+    elif len(oc) == 2 and len(nc) == 1:
+        logger.info('Vil erstatte "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s"',
+                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0]})
+    elif len(oc) == 1 and len(nc) == 1:
+        if new_term == '':
+            logger.info('Vil fjerne "%(p)s $a %(o)s"',
+                        {'p': tag + ' $2 noubomn', 'o': oc[0]})
+        else:
+            logger.info('Vil erstatte "%(o)s" med "%(n)s" i %(p)s $a og $x',
+                        {'p': tag + ' $2 noubomn', 'o': oc[0], 'n': nc[0]})
+    else:
+        logger.error('Antall strengkomponenter i gammel eller ny term er ikke støttet')
         return
 
     # ------------------------------------------------------------------------------------
@@ -322,12 +351,12 @@ def main(config=None, env='nz_sandbox'):
 
     valid_records = []
     pbar = None
-    cql_query = 'alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (gammelord, config['vocabulary'])
+    cql_query = 'alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, config['vocabulary'])
     for n, m, marc_record in sru_search(cql_query, config['sru_url']):
-        if pbar is None and m != 0:
+        if pbar is None and m > 50:
             pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
 
-        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=gammelord, tag=tag):
+        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=old_term, tag=tag):
             valid_records.append(marc_record.findtext('./controlfield[@tag="001"]'))
 
         if pbar is not None:
@@ -343,11 +372,6 @@ def main(config=None, env='nz_sandbox'):
     # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
     # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
-    if nyord == '':
-        logger.info('Fjerner "%s" fra %d poster', gammelord, len(valid_records))
-    else:
-        logger.info('Endrer fra "%s" til "%s" på %d poster', gammelord, nyord, len(valid_records))
-
     alma = Alma(config['api_region'], config['api_key'])
 
     for n, mms_id in enumerate(valid_records):
@@ -357,10 +381,13 @@ def main(config=None, env='nz_sandbox'):
         #     break
 
         logger.info('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
-        if nyord == '':
-            alma.bibs(mms_id).remove_subject(config['vocabulary'], gammelord, nyord, tag=tag)
+        bib = alma.bibs(mms_id)
+        if new_term == '':
+            bib.remove_subject(config['vocabulary'], old_term, tag=tag)
         else:
-            alma.bibs(mms_id).edit_subject(config['vocabulary'], gammelord, nyord, tag=tag)
+            bib.edit_subject(config['vocabulary'], old_term, new_term, tag=tag)
+        if not args.dry_run:
+            bib.save()
 
     return valid_records
 

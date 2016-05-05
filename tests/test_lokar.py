@@ -11,7 +11,8 @@ from mock import ANY
 from six import StringIO
 from io import open
 
-from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term
+from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term, \
+    parse_args
 from textwrap import dedent
 
 try:
@@ -143,7 +144,7 @@ class TestAlma(unittest.TestCase):
 
     @responses.activate
     def testBibs(self):
-        mms_id = '123'
+        mms_id = '991416299674702204'
         alma = Alma('test', 'key')
         url = '{}/bibs/{}'.format(alma.base_url, mms_id)
         body = get_sample('bib_response.xml')
@@ -154,7 +155,7 @@ class TestAlma(unittest.TestCase):
 
     @responses.activate
     def testPut(self):
-        mms_id = '123'
+        mms_id = '991416299674702204'
         alma = Alma('test', 'key')
         url = '/bibs/{}'.format(mms_id)
         body = get_sample('bib_response.xml')
@@ -437,19 +438,16 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    @patch('lokar.input')
-    def testMain(self, mock_input, MockAlma, mock_sru, mock_authorize_term):
+    def testMain(self, MockAlma, mock_sru, mock_authorize_term):
         old_term = 'Statistiske modeller'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
-        mock_input.side_effect = ['', old_term, new_term]
         mock_authorize_term.return_value = {'localname': 'c030697'}
 
-        valid_records = main(self.conf(), 'test_env')
+        valid_records = main(self.conf(), [old_term, new_term, '-e test_env'])
 
         alma = MockAlma.return_value
 
-        assert mock_input.call_count == 3
         assert len(valid_records) == 14
         mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
@@ -459,19 +457,16 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    @patch('lokar.input')
-    def testMainNoHits(self, mock_input, MockAlma, mock_sru, mock_authorize_term):
+    def testMainNoHits(self, MockAlma, mock_sru, mock_authorize_term):
         old_term = 'Something else'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
-        mock_input.side_effect = ['', old_term, new_term]
         mock_authorize_term.return_value = {'localname': 'c030697'}
 
-        valid_records = main(self.conf(), 'test_env')
+        valid_records = main(self.conf(), [old_term, new_term, '-e test_env'])
 
         alma = MockAlma.return_value
 
-        assert mock_input.call_count == 3
         assert valid_records is None
         mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
@@ -481,19 +476,15 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    @patch('lokar.input')
-    def testRemoveTerm(self, mock_input, MockAlma, mock_sru, mock_authorize_term):
+    def testRemoveTerm(self, MockAlma, mock_sru, mock_authorize_term):
         old_term = 'Statistiske modeller'
-        new_term = ''
         mock_sru.side_effect = TestLokar.sru_search_mock
-        mock_input.side_effect = ['', old_term, new_term]
         mock_authorize_term.return_value = {'localname': 'c030697'}
 
-        valid_records = main(self.conf(), 'test_env')
+        valid_records = main(self.conf(), [old_term, '', '-e test_env'])
 
         alma = MockAlma.return_value
 
-        assert mock_input.call_count == 3
         assert len(valid_records) == 14
         mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
@@ -503,8 +494,24 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.open', autospec=True)
     def testConfigMissing(self, mock_open):
         mock_open.side_effect = IOError('File not found')
-        main()
+        main(args=['old', 'new'])
         mock_open.assert_called_once_with('lokar.cfg')
+
+
+class TestParseArgs(unittest.TestCase):
+
+    def test_parser_missing_arguments(self):
+        with pytest.raises(SystemExit):
+            parse_args([])
+
+    def test_parser(self):
+        parser = parse_args(['Sekvensering', 'Sekvenseringsmetoder'])
+
+        assert parser.dry_run is False
+        assert parser.tag == '650'
+        assert parser.old_term == 'Sekvensering'
+        assert parser.new_term == 'Sekvenseringsmetoder'
+
 
 if __name__ == '__main__':
     unittest.main()
