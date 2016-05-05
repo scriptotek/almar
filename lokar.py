@@ -45,9 +45,12 @@ class SruErrorResponse(RuntimeError):
 
 
 def normalize_term(term):
+    # Normalize term so it starts with a capital letter. If the term is a subject string
+    # fused by " : ", normalize all components.
     if term is None or len(term) == 0:
         return term
-    return term[0].upper() + term[1:]
+
+    return ' : '.join([component[0].upper() + component[1:] for component in term.strip().split(' : ')])
 
 
 def subject_fields(marc_record, term, vocabulary, tag='650', exact_only=False):
@@ -61,6 +64,7 @@ def subject_fields(marc_record, term, vocabulary, tag='650', exact_only=False):
                        False to return fields with the term in either $a or $x
     :return:
     """
+
     fields = []
     for field in marc_record.findall('./datafield[@tag="{}"]'.format(tag)):
         if field.findtext('subfield[@code="2"]') != vocabulary:
@@ -70,7 +74,11 @@ def subject_fields(marc_record, term, vocabulary, tag='650', exact_only=False):
         sfa = normalize_term(field.findtext('subfield[@code="a"]'))
         sfx = normalize_term(field.findtext('subfield[@code="x"]'))
 
-        if exact_only:
+        components = term.split(' : ')
+        if len(components) == 2:
+            if sfa == components[0] and sfx == components[1]:
+                fields.append(field)
+        elif exact_only:
             if sfa == term and sfx is None:
                 fields.append(field)
         else:
@@ -134,12 +142,29 @@ class Bib(object):
     def edit_subject(self, vocabulary, old_term, new_term, tag='650'):
         self.remove_duplicate_fields(vocabulary, old_term, tag)
 
+        old_term_comp = old_term.split(' : ')
+        new_term_comp = new_term.split(' : ')
+
         for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=old_term, tag=tag):
-            for code in ['a', 'x']:
-                subfield = field.find('subfield[@code="{}"]'.format(code))
-                if subfield is not None and subfield.text == old_term:
-                    subfield.text = new_term
-                    break
+            sfa = field.find('subfield[@code="a"]')
+            sfx = field.find('subfield[@code="x"]')
+            sfa_m0 = sfa is not None and normalize_term(sfa.text) == old_term_comp[0]
+            sfx_m0 = sfx is not None and normalize_term(sfx.text) == old_term_comp[0]
+            if len(old_term_comp) == 2:
+                sfx_m1 = sfx is not None and normalize_term(sfx.text) == old_term_comp[1]
+                if sfa_m0 and sfx_m1:
+                    if len(new_term_comp) == 2:
+                        sfa.text = new_term_comp[0]
+                        sfx.text = new_term_comp[1]
+                    else:
+                        sfa.text = new_term_comp[0]
+                        field.remove(sfx)
+            else:
+                if sfa_m0:
+                    sfa.text = new_term_comp[0]
+                elif sfx_m0:
+                    sfx.text = new_term_comp[0]
+
         return self  # for chaining
 
     def remove_subject(self, vocabulary, term, tag='650'):
@@ -226,15 +251,40 @@ def main(config=None, env='nz_sandbox'):
 
     print('{:_<80}'.format(''))
     print('{:^80}'.format('LOKAR'))
-    print('{:^80}'.format('OBS: Kun oppdatering av 650-feltet støttes foreløpig'))
-    print('{:^80}'.format('Miljø: %s' % env))
-    print('{:^80}'.format('Vokabular: %s' % config['vocabulary']))
+    print(' Miljø: %s' % env)
+    print(' Vokabular: %s' % config['vocabulary'])
+    print()
+    print(' Kan gjøre streng-erstatninger av typen "A : B" → "C : D" og "A : B" → "C",')
+    print(' men pass på at du har med mellomrom før og etter kolon.')
+    print()
     print('{:_<80}'.format(''))
     print()
 
-    gammelord = input(' Det gamle emneordet: ').strip()
-    nyord = input(' Det nye emneordet: ').strip()
-    print()
+    gammelord = normalize_term(input(' Det gamle emneordet: '))
+    nyord = normalize_term(input(' Det nye emneordet: '))
+
+    if len(gammelord) == 0:
+        logger.error('Old term cannot be blank')
+        return
+
+    oc = gammelord.split(' : ')
+    nc = nyord.split(' : ')
+    if len(oc) == 2 and len(nc) == 2:
+        logger.info('Erstatter "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s $x %(n2)s"',
+                    {'p': '650 $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0], 'n2': nc[1]})
+    elif len(oc) == 2 and len(nc) == 1:
+        logger.info('Erstatter "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s"',
+                    {'p': '650 $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0]})
+    elif len(oc) == 1 and len(nc) == 1:
+        if nyord == '':
+            logger.info('Fjerner "%(p)s $a %(o)s"',
+                        {'p': '650 $2 noubomn', 'o': oc[0]})
+        else:
+            logger.info('Erstatter "%(o)s" med "%(n)s" i %(p)s $a og $x',
+                        {'p': '650 $2 noubomn', 'o': oc[0], 'n': nc[0]})
+    else:
+        logger.error('Unsupported number of components in old or new term')
+        return
 
     concept_type = 'http://data.ub.uio.no/onto#Topic'
     old_concept = authorize_term(gammelord, concept_type, config['skosmos_vocab'])

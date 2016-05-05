@@ -204,6 +204,44 @@ class TestBib(unittest.TestCase):
         assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')  # $a should not change!
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
 
+    def testModify650ax(self):
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="x">Atferd</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+
+        """)
+        bib = Bib(Mock(), rec)
+        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Mønstre : Dagbøker')
+
+        assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
+        assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
+
+    def testModify650_ax_to_a(self):
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="x">Atferd</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+
+        """)
+        bib = Bib(Mock(), rec)
+        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Monsteratferd')
+
+        assert 'Monsteratferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
+        assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
+
     def testRemoveTerm(self):
         rec = etree.fromstring("""
             <bib>
@@ -213,7 +251,8 @@ class TestBib(unittest.TestCase):
                     <subfield code="2">noubomn</subfield>
                   </datafield>
                   <datafield ind1=" " ind2="7" tag="650">
-                    <subfield code="a">Mønstre</subfield>
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="x">atferd</subfield>
                     <subfield code="2">noubomn</subfield>
                   </datafield>
                 </record>
@@ -224,7 +263,32 @@ class TestBib(unittest.TestCase):
         fields = rec.findall('record/datafield[@tag="650"]')
 
         assert len(fields) == 1
-        assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
+        assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
+        assert 'atferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
+
+    def testRemoveSubjectString(self):
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="x">atferd</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """)
+        bib = Bib(Mock(), rec)
+        bib.remove_subject('noubomn', 'Monstre : Atferd')
+        fields = rec.findall('record/datafield[@tag="650"]')
+
+        assert len(fields) == 1
+        assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
+        assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
 
     def testSave(self):
         alma = Mock()
@@ -369,6 +433,28 @@ class TestLokar(unittest.TestCase):
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
 
         assert alma.bibs.call_count == 0
+
+    @patch('lokar.authorize_term', autospec=True)
+    @patch('lokar.sru_search', autospec=True)
+    @patch('lokar.Alma', autospec=True, spec_set=True)
+    @patch('lokar.input')
+    def testRemoveTerm(self, mock_input, MockAlma, mock_sru, mock_authorize_term):
+        old_term = 'Statistiske modeller'
+        new_term = ''
+        mock_sru.side_effect = TestLokar.sru_search_mock
+        mock_input.side_effect = [old_term, new_term]
+        mock_authorize_term.return_value = {'localname': 'c030697'}
+
+        valid_records = main(self.conf(), 'test_env')
+
+        alma = MockAlma.return_value
+
+        assert mock_input.call_count == 2
+        assert len(valid_records) == 14
+        mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
+                                         'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
+
+        assert alma.bibs.call_count == 14
 
     @patch('lokar.open', autospec=True)
     def testConfigMissing(self, mock_open):
