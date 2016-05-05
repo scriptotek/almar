@@ -8,7 +8,7 @@ import pytest
 import responses
 from mock import Mock, patch
 from mock import ANY
-from six import StringIO
+from io import StringIO
 from io import open
 
 from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term, \
