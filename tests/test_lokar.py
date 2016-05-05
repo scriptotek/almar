@@ -204,6 +204,28 @@ class TestBib(unittest.TestCase):
         assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')  # $a should not change!
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
 
+    def testRemoveTerm(self):
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Mønstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """)
+        bib = Bib(Mock(), rec)
+        bib.remove_subject('noubomn', 'Monstre')
+        fields = rec.findall('record/datafield[@tag="650"]')
+
+        assert len(fields) == 1
+        assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
+
     def testSave(self):
         alma = Mock()
         doc = get_sample('bib_response.xml', True)

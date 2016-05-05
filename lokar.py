@@ -44,16 +44,39 @@ class SruErrorResponse(RuntimeError):
     pass
 
 
-def subject_fields(marc_record, term, vocabulary):
-    # For a given MARC record, return subject fields matching the vocabulary and term
+def normalize_term(term):
+    if term is None or len(term) == 0:
+        return term
+    return term[0].upper() + term[1:]
+
+
+def subject_fields(marc_record, term, vocabulary, tag='650', exact_only=False):
+    """
+    For a given MARC record, return subject fields matching the vocabulary and term.
+    :param marc_record:
+    :param term:
+    :param vocabulary:
+    :param tag:
+    :param exact_only: True to only return fields with the term in $a and with no $x
+                       False to return fields with the term in either $a or $x
+    :return:
+    """
     fields = []
-    for field in marc_record.findall('./datafield[@tag="650"]'):  # @TODO: 648, 651, 655
+    for field in marc_record.findall('./datafield[@tag="{}"]'.format(tag)):
         if field.findtext('subfield[@code="2"]') != vocabulary:
+            # Wrong vocabulary
             continue
-        if field.findtext('subfield[@code="a"]') == term:
-            fields.append(field)
-        elif field.findtext('subfield[@code="x"]') == term:
-            fields.append(field)
+
+        sfa = normalize_term(field.findtext('subfield[@code="a"]'))
+        sfx = normalize_term(field.findtext('subfield[@code="x"]'))
+
+        if exact_only:
+            if sfa == term and sfx is None:
+                fields.append(field)
+        else:
+            if sfa == term or sfx == term:
+                fields.append(field)
+
     return fields
 
 
@@ -93,9 +116,9 @@ class Bib(object):
         self.mms_id = self.doc.findtext('mms_id')
         self.marc_record = self.doc.find('record')
 
-    def remove_duplicate_fields(self, vocabulary, term):
+    def remove_duplicate_fields(self, vocabulary, term, tag='650'):
         strenger = []
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term):
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tag=tag):
             streng = []
             for subfield in field.findall('subfield'):
                 if subfield.get('code') in ['a', 'x']:
@@ -108,15 +131,20 @@ class Bib(object):
                 continue
             strenger.append(streng)
 
-    def edit_subject(self, vocabulary, old_term, new_term):
-        self.remove_duplicate_fields(vocabulary, old_term)
+    def edit_subject(self, vocabulary, old_term, new_term, tag='650'):
+        self.remove_duplicate_fields(vocabulary, old_term, tag)
 
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=old_term):
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=old_term, tag=tag):
             for code in ['a', 'x']:
                 subfield = field.find('subfield[@code="{}"]'.format(code))
                 if subfield is not None and subfield.text == old_term:
                     subfield.text = new_term
                     break
+        return self  # for chaining
+
+    def remove_subject(self, vocabulary, term, tag='650'):
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tag=tag, exact_only=True):
+            self.marc_record.remove(field)
         return self  # for chaining
 
     def save(self):
@@ -253,7 +281,10 @@ def main(config=None, env='nz_sandbox'):
     # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
     # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
-    logger.info('Endrer fra "%s" til "%s" på %d poster', gammelord, nyord, len(valid_records))
+    if nyord == '':
+        logger.info('Fjerner "%s" fra %d poster', gammelord, len(valid_records))
+    else:
+        logger.info('Endrer fra "%s" til "%s" på %d poster', gammelord, nyord, len(valid_records))
 
     alma = Alma(config['api_region'], config['api_key'])
 
@@ -264,7 +295,10 @@ def main(config=None, env='nz_sandbox'):
         #     break
 
         logger.info('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
-        alma.bibs(mms_id).edit_subject(config['vocabulary'], gammelord, nyord)
+        if nyord == '':
+            alma.bibs(mms_id).remove_subject(config['vocabulary'], gammelord, nyord)
+        else:
+            alma.bibs(mms_id).edit_subject(config['vocabulary'], gammelord, nyord)
 
     return valid_records
 
