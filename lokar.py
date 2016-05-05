@@ -21,6 +21,7 @@ except ImportError:
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+logging.getLogger('requests').setLevel(logging.WARNING)
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s')
 
 console_handler = logging.StreamHandler()
