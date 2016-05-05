@@ -164,10 +164,27 @@ def read_config(f, section):
     for key in ['sru_url', 'api_key', 'api_region']:
         config[key] = parser.get(section, key)
 
-    for key in ['user', 'vocabulary']:
+    for key in ['user', 'vocabulary', 'skosmos_vocab']:
         config[key] = parser.get('general', key)
 
     return config
+
+
+def authorize_term(term, concept_type, vocabulary):
+    # Lookup term in Skosmos to get identifier, etc.
+    if term == '':
+        return None
+
+    response = requests.get('http://data.ub.uio.no/skosmos/rest/v1/%s/search' % vocabulary, params={
+        'lang': 'nb',
+        'query': term
+    }).json()
+
+    results = [res for res in response['results'] if concept_type in res['type']]
+
+    if len(results) == 0:
+        return None
+    return results[0]
 
 
 def main(config=None, env='nz_sandbox'):
@@ -190,6 +207,20 @@ def main(config=None, env='nz_sandbox'):
     gammelord = input(' Det gamle emneordet: ').strip()
     nyord = input(' Det nye emneordet: ').strip()
     print()
+
+    concept_type = 'http://data.ub.uio.no/onto#Topic'
+    old_concept = authorize_term(gammelord, concept_type, config['skosmos_vocab'])
+    new_concept = authorize_term(nyord, concept_type, config['skosmos_vocab'])
+    if old_concept is not None:
+        local_id = old_concept['localname'].strip('c')
+        logger.info('Termen "%s" ble autorisert med ID %s', gammelord, local_id)
+    if new_concept is not None:
+        local_id = new_concept['localname'].strip('c')
+        logger.info('Termen "%s" ble autorisert med ID %s', nyord, local_id)
+    if old_concept is None and new_concept is None:
+        logger.error('Fant verken "%s" eller "%s" som <%s> i <%s>',
+                     gammelord, nyord, concept_type, config['vocabulary'])
+        return
 
     # ------------------------------------------------------------------------------------
     # Del 1: Søk mot SRU for å finne over alle bibliografiske poster med emneordet.

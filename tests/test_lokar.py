@@ -11,7 +11,7 @@ from mock import ANY
 from six import StringIO
 from io import open
 
-from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main
+from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term
 from textwrap import dedent
 
 try:
@@ -238,6 +238,44 @@ class TestBib(unittest.TestCase):
         assert len(marc_record.findall('record/datafield[@tag="650"]')) == 1
 
 
+class TestAuthorizeTerm(unittest.TestCase):
+
+    @staticmethod
+    def init(results):
+        url = 'http://data.ub.uio.no/skosmos/rest/v1/realfagstermer/search'
+        body = {'results': results}
+        responses.add(responses.GET, url, body=json.dumps(body), content_type='application/json')
+
+    @responses.activate
+    def testAuthorizeTermNoResults(self):
+        self.init([])
+
+        res = authorize_term('test', 'some type', 'realfagstermer')
+
+        assert res is None
+        assert len(responses.calls) == 1
+
+    @responses.activate
+    def testAuthorizeTerm(self):
+        self.init([{'localName': 'c123', 'type': 'some type'}])
+
+        res = authorize_term('test', 'some type', 'realfagstermer')
+
+        assert res['localName'] == 'c123'
+        assert len(responses.calls) == 1
+
+    @responses.activate
+    def testAuthorizeEmptyTerm(self):
+        url = 'http://data.ub.uio.no/skosmos/rest/v1/realfagstermer/search'
+        body = {'results': []}
+        responses.add(responses.GET, url, body=json.dumps(body), content_type='application/json')
+
+        res = authorize_term('', 'some type', 'realfagstermer')
+
+        assert res is None
+        assert len(responses.calls) == 0
+
+
 class TestLokar(unittest.TestCase):
 
     @staticmethod
@@ -246,6 +284,7 @@ class TestLokar(unittest.TestCase):
         [general]
         vocabulary=noubomn
         user=someuser
+        skosmos_vocab=realfagstermer
 
         [test_env]
         api_key=secret1
@@ -265,14 +304,16 @@ class TestLokar(unittest.TestCase):
         for n, rec in enumerate(recs):
             yield n, len(recs), rec
 
+    @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
     @patch('lokar.input')
-    def testMain(self, mock_input, MockAlma, mock_sru):
+    def testMain(self, mock_input, MockAlma, mock_sru, mock_authorize_term):
         old_term = 'Statistiske modeller'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
         mock_input.side_effect = [old_term, new_term]
+        mock_authorize_term.return_value = {'localname': 'c030697'}
 
         valid_records = main(self.conf(), 'test_env')
 
@@ -285,14 +326,16 @@ class TestLokar(unittest.TestCase):
 
         assert alma.bibs.call_count == 14
 
+    @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
     @patch('lokar.input')
-    def testMainNoHits(self, mock_input, MockAlma, mock_sru):
+    def testMainNoHits(self, mock_input, MockAlma, mock_sru, mock_authorize_term):
         old_term = 'Something else'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
         mock_input.side_effect = [old_term, new_term]
+        mock_authorize_term.return_value = {'localname': 'c030697'}
 
         valid_records = main(self.conf(), 'test_env')
 
