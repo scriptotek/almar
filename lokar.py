@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import argparse
 import logging.handlers
 from io import open
+import io
 
 import requests
 import sys
@@ -23,11 +24,17 @@ except ImportError:
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logging.getLogger('requests').setLevel(logging.WARNING)
-formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s')
+formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
 
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
+log_capture_string = io.StringIO()
+capture_handler = logging.StreamHandler(log_capture_string)
+capture_handler.setLevel(logging.DEBUG)
+capture_handler.setFormatter(formatter)
+logger.addHandler(capture_handler)
 
 nsmap = {
     'e20': 'http://explain.z3950.org/dtd/2.0/',
@@ -220,6 +227,9 @@ def read_config(f, section):
     for key in ['user', 'vocabulary', 'skosmos_vocab']:
         config[key] = parser.get('general', key)
 
+    for key in ['domain', 'api_key', 'sender', 'recipient']:
+        config['mailgun.' + key] = parser.get('mailgun', key)
+
     return config
 
 
@@ -292,6 +302,17 @@ def parse_args(args):
     return args
 
 
+def email(domain, api_key, sender, recipient, subject, body):
+    request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(domain)
+    request = requests.post(request_url, auth=('api', api_key), data={
+        'from': sender,
+        'to': recipient,
+        'subject': subject,
+        'text': body
+    })
+    request.raise_for_status()
+
+
 def main(config=None, args=None):
 
     args = parse_args(args or sys.argv[1:])
@@ -312,7 +333,7 @@ def main(config=None, args=None):
     old_term = normalize_term(args.old_term)
     new_term = normalize_term(args.new_term)
 
-    logger.info('{:=^80}'.format(' LOKAR '))
+    logger.info('{:=^70}'.format(' Starter jobb '))
     logger.info('[ Miljø: %s ] [ Vokabular: %s ] [ Tørrkjøring? %s ]'
                 % (args.env, config['vocabulary'], 'JA' if args.dry_run else 'NEI'))
 
@@ -332,15 +353,19 @@ def main(config=None, args=None):
     if len(oc) == 2 and len(nc) == 2:
         reporting_info['o2'] = oc[1]
         reporting_info['n2'] = nc[1]
-        logger.info('Vil erstatte "$a %(o)s $x %(o2)s" med "$a %(n)s $x %(n2)s" i %(t)s-felt som har $2 %(v)s',
+        logger.info('Erstatter "$a %(o)s $x %(o2)s" med "$a %(n)s $x %(n2)s" i %(t)s-felt som har $2 %(v)s',
                     reporting_info)
     elif len(oc) == 2 and len(nc) == 1:
-        logger.info('Vil erstatte "$a %(o)s $x %(o2)s" med "$a %(n)s" i %(t)s-felt som har $2 %(v)s"', reporting_info)
+        reporting_info['o2'] = oc[1]
+        if new_term == '':
+            logger.info('Fjerner %(t)s-felt som har "$a %(o)s $x %(o2)s $2 %(v)s"', reporting_info)
+        else:
+            logger.info('Erstatter "$a %(o)s $x %(o2)s" med "$a %(n)s" i %(t)s-felt som har $2 %(v)s"', reporting_info)
     elif len(oc) == 1 and len(nc) == 1:
         if new_term == '':
-            logger.info('Vil fjerne %(t)s-felt som har "$a %(o)s $2 %(v)s"', reporting_info)
+            logger.info('Fjerner %(t)s-felt som har "$a %(o)s $2 %(v)s"', reporting_info)
         else:
-            logger.info('Vil erstatte "%(o)s" med "%(n)s" i $a og $x i %(t)s-felt som har $2 %(v)s', reporting_info)
+            logger.info('Erstatter "%(o)s" med "%(n)s" i $a og $x i %(t)s-felt som har $2 %(v)s', reporting_info)
     else:
         logger.error('Antall strengkomponenter i gammel eller ny term er ikke støttet')
         return
@@ -393,6 +418,14 @@ def main(config=None, args=None):
             bib.edit_subject(config['vocabulary'], old_term, new_term, tags=tags)
         if not args.dry_run:
             bib.save()
+
+    logger.info('{:=^70}'.format(' Jobb ferdig '))
+
+    if not args.dry_run:
+        subject = '[{}] "{}" → "{}" endret i {:d} post(er)'.format(args.tag, old_term, new_term, len(valid_records))
+        body = log_capture_string.getvalue()
+        email(domain=config['mailgun.domain'], api_key=config['mailgun.api_key'], sender=config['mailgun.sender'],
+              recipient=config['mailgun.recipient'], subject=subject, body=body)
 
     return valid_records
 

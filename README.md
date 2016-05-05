@@ -17,6 +17,12 @@ vocabulary=noubomn
 skosmos_vocab=realfagstermer
 user=FYLL INN NAVN
 
+[mailgun]
+api_key=FYLL INN API-NØKKEL
+domain=FYLL INN AVSENDER-DOMENE
+sender=FYLL INN AVSENDER-EPOST
+recipient=FYLL INN MOTTAKER-EPOST
+
 [nz_sandbox]
 api_key=FYLL INN API-NØKKEL
 api_region=eu

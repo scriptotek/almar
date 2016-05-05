@@ -438,6 +438,12 @@ class TestLokar(unittest.TestCase):
         user=someuser
         skosmos_vocab=realfagstermer
 
+        [mailgun]
+        domain=example.com
+        api_key=key
+        sender=sender@example.com
+        recipient=recipient@example.com
+
         [test_env]
         api_key=secret1
         api_region=eu
@@ -456,10 +462,11 @@ class TestLokar(unittest.TestCase):
         for n, rec in enumerate(recs):
             yield n, len(recs), rec
 
+    @patch('lokar.email', autospec=True)
     @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    def testMain(self, MockAlma, mock_sru, mock_authorize_term):
+    def testMain(self, MockAlma, mock_sru, mock_authorize_term, email):
         old_term = 'Statistiske modeller'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
@@ -475,10 +482,11 @@ class TestLokar(unittest.TestCase):
 
         assert alma.bibs.call_count == 14
 
+    @patch('lokar.email', autospec=True)
     @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    def testMainNoHits(self, MockAlma, mock_sru, mock_authorize_term):
+    def testMainNoHits(self, MockAlma, mock_sru, mock_authorize_term, email):
         old_term = 'Something else'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
@@ -494,10 +502,11 @@ class TestLokar(unittest.TestCase):
 
         assert alma.bibs.call_count == 0
 
+    @patch('lokar.email', autospec=True)
     @patch('lokar.authorize_term', autospec=True)
     @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    def testRemoveTerm(self, MockAlma, mock_sru, mock_authorize_term):
+    def testRemoveTerm(self, MockAlma, mock_sru, mock_authorize_term, mock_email):
         old_term = 'Statistiske modeller'
         mock_sru.side_effect = TestLokar.sru_search_mock
         mock_authorize_term.return_value = {'localname': 'c030697'}
