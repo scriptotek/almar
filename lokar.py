@@ -1,18 +1,16 @@
 # coding=utf-8
 from __future__ import print_function
 from __future__ import unicode_literals
-from six.moves import input
-from six.moves import configparser
-from six.moves import urllib
-from six import BytesIO
-import requests
-import sys
-import time
-from requests import Session
-from tqdm import tqdm
-import logging
+
 import logging.handlers
+from io import open
+
+import requests
+from requests import Session
 from requests.exceptions import HTTPError
+from six.moves import configparser
+from six.moves import input
+from tqdm import tqdm
 
 try:
     # Use lxml if installed, since it's faster ...
@@ -105,7 +103,7 @@ class Bib(object):
                 elif subfield.get('code') not in ['2', '0']:
                     logger.info('Emnefeltet inneholdt uventede delfelt: %s', etree.tostring(subfield))
             if streng in strenger:
-                logger.info('Fjerner duplikat emnefelt: ', streng.join(' : '))
+                logger.info('Fjerner duplikat emnefelt: "%s" ', ' : '.join(streng))
                 self.marc_record.remove(field)
                 continue
             strenger.append(streng)
@@ -172,12 +170,10 @@ def read_config(f, section):
     return config
 
 
-def main(args=None):
-
-    env = 'nz_sandbox'
+def main(config=None, env='nz_sandbox'):
 
     try:
-        with open('lokar.cfg') as f:
+        with config or open('lokar.cfg') as f:
             config = read_config(f, env)
     except IOError:
         logger.error('Fant ikke lokar.cfg. Se README.md for mer info.')
@@ -219,21 +215,16 @@ def main(args=None):
         pbar.close()
 
     if len(valid_records) == 0:
-        print('Fant ingen poster, avslutter')
-        print()
+        logger.info('Fant ingen poster, avslutter')
         return
-
-    print()
-    print('Antall poster som vil bli endret: {:d}'.format(len(valid_records)))
-    print('Trykk Ctrl-C innen 3 sekunder for å avbryte.')
-    print()
-    time.sleep(3)
 
     # ------------------------------------------------------------------------------------
     # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
     # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
     logger.info('Endrer fra "%s" til "%s" på %d poster', gammelord, nyord, len(valid_records))
+
+    alma = Alma(config['api_region'], config['api_key'])
 
     for n, mms_id in enumerate(valid_records):
 
@@ -242,8 +233,13 @@ def main(args=None):
         #     break
 
         logger.info('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
-        alma_edit(alma_session, api_region, mms_id, vocabulary, gammelord, nyord)
+        alma.bibs(mms_id).edit_subject(config['vocabulary'], gammelord, nyord)
+
+    return valid_records
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.exception('Uncaught exception:')

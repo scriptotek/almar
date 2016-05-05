@@ -1,15 +1,17 @@
 # encoding=utf-8
 from __future__ import unicode_literals
+
+import json
 import os
 import unittest
 import pytest
 import responses
-from mock import Mock
+from mock import Mock, patch
 from mock import ANY
 from six import StringIO
 from io import open
 
-from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config
+from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main
 from textwrap import dedent
 
 try:
@@ -104,7 +106,7 @@ class TestSruSearch(unittest.TestCase):
         records = list(sru_search('alma.subjects="test"', url))
 
         assert len(responses.calls) == 1
-        assert len(records) == 40
+        assert len(records) == 18
 
     @responses.activate
     def testIteration(self):
@@ -137,7 +139,7 @@ class TestSruSearch(unittest.TestCase):
         assert len(responses.calls) == 1
 
 
-class TestAlmaEdit(unittest.TestCase):
+class TestAlma(unittest.TestCase):
 
     @responses.activate
     def testBibs(self):
@@ -149,6 +151,18 @@ class TestAlmaEdit(unittest.TestCase):
         alma.bibs(mms_id).edit_subject('humord', 'abc', 'def')
 
         assert len(responses.calls) == 1
+
+    @responses.activate
+    def testPut(self):
+        mms_id = '123'
+        alma = Alma('test', 'key')
+        url = '/bibs/{}'.format(mms_id)
+        body = get_sample('bib_response.xml')
+        responses.add(responses.PUT, alma.base_url + url, body=body, content_type='application/xml')
+        alma.put(url, data=body, headers={'Content-Type': 'application/xml'})
+
+        assert len(responses.calls) == 1
+        assert responses.calls[0].request.body == body
 
 
 class TestBib(unittest.TestCase):
@@ -199,30 +213,103 @@ class TestBib(unittest.TestCase):
 
         alma.put.assert_called_once_with('/bibs/991416299674702204', data=ANY, headers={'Content-Type': 'application/xml'})
 
+    def testDups(self):
+        marc_record = etree.fromstring('''
+             <bib> <record>
+                <datafield tag="650" ind1=" " ind2="7">
+                  <subfield code="a">Monstre</subfield>
+                  <subfield code="x">Atferd</subfield>
+                  <subfield code="2">noubomn</subfield>
+                </datafield>
+                <datafield tag="650" ind1=" " ind2="7">
+                  <subfield code="a">Monstre</subfield>
+                  <subfield code="x">Atferd</subfield>
+                  <subfield code="2">noubomn</subfield>
+                </datafield>
+              </record></bib>
+        '''.encode('utf-8'))
+
+        bib = Bib(Mock(), marc_record)
+
+        assert len(marc_record.findall('record/datafield[@tag="650"]')) == 2
+
+        bib.remove_duplicate_fields('noubomn', 'Monstre')
+
+        assert len(marc_record.findall('record/datafield[@tag="650"]')) == 1
+
 
 class TestLokar(unittest.TestCase):
 
-    def testConfig(self):
-        config = read_config(StringIO(dedent('''
+    @staticmethod
+    def conf():
+        return StringIO(dedent('''
         [general]
-        vocabulary=testvoc
+        vocabulary=noubomn
         user=someuser
 
-        [nz_sandbox]
+        [test_env]
         api_key=secret1
         api_region=eu
         sru_url=https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK
+        '''))
 
-        [nz_prod]
-        api_key=secret2
-        api_region=us
-        sru_url=https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_UBO
-
-        ''')), 'nz_sandbox')
+    def testConfig(self):
+        config = read_config(self.conf(), 'test_env')
 
         assert config['api_key'] == 'secret1'
-        assert config['vocabulary'] == 'testvoc'
+        assert config['vocabulary'] == 'noubomn'
 
+    @staticmethod
+    def sru_search_mock(*args, **kwargs):
+        recs = get_sample('sru_sample_response_1.xml', True).findall('srw:records/srw:record/srw:recordData/record', nsmap)
+        for n, rec in enumerate(recs):
+            yield n, len(recs), rec
+
+    @patch('lokar.sru_search', autospec=True)
+    @patch('lokar.Alma', autospec=True, spec_set=True)
+    @patch('lokar.input')
+    def testMain(self, mock_input, MockAlma, mock_sru):
+        old_term = 'Statistiske modeller'
+        new_term = 'Test æøå'
+        mock_sru.side_effect = TestLokar.sru_search_mock
+        mock_input.side_effect = [old_term, new_term]
+
+        valid_records = main(self.conf(), 'test_env')
+
+        alma = MockAlma.return_value
+
+        assert mock_input.call_count == 2
+        assert len(valid_records) == 14
+        mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
+                                         'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
+
+        assert alma.bibs.call_count == 14
+
+    @patch('lokar.sru_search', autospec=True)
+    @patch('lokar.Alma', autospec=True, spec_set=True)
+    @patch('lokar.input')
+    def testMainNoHits(self, mock_input, MockAlma, mock_sru):
+        old_term = 'Something else'
+        new_term = 'Test æøå'
+        mock_sru.side_effect = TestLokar.sru_search_mock
+        mock_input.side_effect = [old_term, new_term]
+
+        valid_records = main(self.conf(), 'test_env')
+
+        alma = MockAlma.return_value
+
+        assert mock_input.call_count == 2
+        assert valid_records is None
+        mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
+                                         'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
+
+        assert alma.bibs.call_count == 0
+
+    @patch('lokar.open', autospec=True)
+    def testConfigMissing(self, mock_open):
+        mock_open.side_effect = IOError('File not found')
+        main()
+        mock_open.assert_called_once_with('lokar.cfg')
 
 if __name__ == '__main__':
     unittest.main()

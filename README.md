@@ -1,8 +1,15 @@
 ## LOKAR
 
+[![Travis](https://img.shields.io/travis/scriptotek/lokar.svg?maxAge=2592000)](https://travis-ci.org/scriptotek/lokar)
+[![Codecov](https://img.shields.io/codecov/c/github/scriptotek/lokar.svg?maxAge=2592000)](https://codecov.io/gh/scriptotek/lokar)
+[![Code Health](https://landscape.io/github/scriptotek/lokar/master/landscape.svg?style=flat)](https://landscape.io/github/scriptotek/lokar/master)
+
 Kode for gjennomgående endringer i bibliografiske poster
 
 Skal bli: Funksjonalitet som henter ut gitte emneord fra Alma, og legger oppdaterte emneord tilbake i postene. 
+
+@TODO: avgrens til alma.authority_vocabulary="noubomn"
+@TODO: Første bokstav bør være case-insentiv..
 
 ### Bruk
 
