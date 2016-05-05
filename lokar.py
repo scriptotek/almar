@@ -321,7 +321,8 @@ def main(config=None, env='nz_sandbox'):
 
     valid_records = []
     pbar = None
-    for n, m, marc_record in sru_search('alma.subjects="%s"' % gammelord, config['sru_url']):
+    cql_query = 'alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (gammelord, config['vocabulary'])
+    for n, m, marc_record in sru_search(cql_query, config['sru_url']):
         if pbar is None and m != 0:
             pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
 

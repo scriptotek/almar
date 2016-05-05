@@ -451,7 +451,7 @@ class TestLokar(unittest.TestCase):
 
         assert mock_input.call_count == 3
         assert len(valid_records) == 14
-        mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
+        mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
 
         assert alma.bibs.call_count == 14
@@ -473,7 +473,7 @@ class TestLokar(unittest.TestCase):
 
         assert mock_input.call_count == 3
         assert valid_records is None
-        mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
+        mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
 
         assert alma.bibs.call_count == 0
@@ -495,7 +495,7 @@ class TestLokar(unittest.TestCase):
 
         assert mock_input.call_count == 3
         assert len(valid_records) == 14
-        mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
+        mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
 
         assert alma.bibs.call_count == 14
