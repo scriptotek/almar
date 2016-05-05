@@ -176,8 +176,8 @@ class Bib(object):
                           data=etree.tostring(self.doc),
                           headers={'Content-Type': 'application/xml'})
         except HTTPError as error:
-            raise RuntimeError('Failed to save record. Status: {}. ' +
-                               'Response: {}'.format(error.response.status_code, error.response.text))
+            raise RuntimeError('Failed to save record. Status: %s. Response: %s'
+                               % (error.response.status_code, error.response.text))
 
 
 class Alma(object):
