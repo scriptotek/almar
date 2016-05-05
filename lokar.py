@@ -260,6 +260,10 @@ def main(config=None, env='nz_sandbox'):
     print('{:_<80}'.format(''))
     print()
 
+    tag = input(' MARC-felt [650]: ').strip() or '650'
+    if tag not in ['648', '650', '651', '655']:
+        logger.error('Ugyldig felt. Støtter kun 648, 650, 651 og 655')
+        return
     gammelord = normalize_term(input(' Det gamle emneordet: '))
     nyord = normalize_term(input(' Det nye emneordet: '))
 
@@ -271,22 +275,28 @@ def main(config=None, env='nz_sandbox'):
     nc = nyord.split(' : ')
     if len(oc) == 2 and len(nc) == 2:
         logger.info('Erstatter "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s $x %(n2)s"',
-                    {'p': '650 $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0], 'n2': nc[1]})
+                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0], 'n2': nc[1]})
     elif len(oc) == 2 and len(nc) == 1:
         logger.info('Erstatter "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s"',
-                    {'p': '650 $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0]})
+                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0]})
     elif len(oc) == 1 and len(nc) == 1:
         if nyord == '':
             logger.info('Fjerner "%(p)s $a %(o)s"',
-                        {'p': '650 $2 noubomn', 'o': oc[0]})
+                        {'p': tag + ' $2 noubomn', 'o': oc[0]})
         else:
             logger.info('Erstatter "%(o)s" med "%(n)s" i %(p)s $a og $x',
-                        {'p': '650 $2 noubomn', 'o': oc[0], 'n': nc[0]})
+                        {'p': tag + ' $2 noubomn', 'o': oc[0], 'n': nc[0]})
     else:
         logger.error('Unsupported number of components in old or new term')
         return
 
-    concept_type = 'http://data.ub.uio.no/onto#Topic'
+    concept_types = {
+        '648': 'http://data.ub.uio.no/onto#Temporal',
+        '650': 'http://data.ub.uio.no/onto#Topic',
+        '651': 'http://data.ub.uio.no/onto#Place',
+        '655': 'http://data.ub.uio.no/onto#GenreForm',
+    }
+    concept_type = concept_types[tag]
     old_concept = authorize_term(gammelord, concept_type, config['skosmos_vocab'])
     new_concept = authorize_term(nyord, concept_type, config['skosmos_vocab'])
     if old_concept is not None:
@@ -315,7 +325,7 @@ def main(config=None, env='nz_sandbox'):
         if pbar is None and m != 0:
             pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
 
-        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=gammelord):
+        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=gammelord, tag=tag):
             valid_records.append(marc_record.findtext('./controlfield[@tag="001"]'))
 
         if pbar is not None:
@@ -346,9 +356,9 @@ def main(config=None, env='nz_sandbox'):
 
         logger.info('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
         if nyord == '':
-            alma.bibs(mms_id).remove_subject(config['vocabulary'], gammelord, nyord)
+            alma.bibs(mms_id).remove_subject(config['vocabulary'], gammelord, nyord, tag=tag)
         else:
-            alma.bibs(mms_id).edit_subject(config['vocabulary'], gammelord, nyord)
+            alma.bibs(mms_id).edit_subject(config['vocabulary'], gammelord, nyord, tag=tag)
 
     return valid_records
 

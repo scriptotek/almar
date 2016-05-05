@@ -242,6 +242,27 @@ class TestBib(unittest.TestCase):
         assert 'Monsteratferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
 
+    def testModify651(self):
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield tag="650" ind1=" " ind2="7">
+                    <subfield code="a">Oslo</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                  <datafield tag="651" ind1=" " ind2="7">
+                    <subfield code="a">Oslo</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """)
+        bib = Bib(Mock(), rec)
+        bib.edit_subject('noubomn', 'Oslo', 'Bergen', tag='651')
+
+        assert 'Bergen' == rec.findtext('record/datafield[@tag="651"]/subfield[@code="a"]')
+        assert 'Oslo' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')   # 650 should not change!
+
     def testRemoveTerm(self):
         rec = etree.fromstring("""
             <bib>
@@ -289,6 +310,29 @@ class TestBib(unittest.TestCase):
         assert len(fields) == 1
         assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
+
+    def testRemoveGeoTerm(self):
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield tag="650" ind1=" " ind2="7">
+                    <subfield code="a">Oslo</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                  <datafield tag="651" ind1=" " ind2="7">
+                    <subfield code="a">Oslo</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """)
+        bib = Bib(Mock(), rec)
+        bib.remove_subject('noubomn', 'Oslo', tag='651')
+        f650 = rec.findall('record/datafield[@tag="650"]')
+        f651 = rec.findall('record/datafield[@tag="651"]')
+
+        assert len(f650) == 1
+        assert len(f651) == 0
 
     def testSave(self):
         alma = Mock()
@@ -398,14 +442,14 @@ class TestLokar(unittest.TestCase):
         old_term = 'Statistiske modeller'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
-        mock_input.side_effect = [old_term, new_term]
+        mock_input.side_effect = ['', old_term, new_term]
         mock_authorize_term.return_value = {'localname': 'c030697'}
 
         valid_records = main(self.conf(), 'test_env')
 
         alma = MockAlma.return_value
 
-        assert mock_input.call_count == 2
+        assert mock_input.call_count == 3
         assert len(valid_records) == 14
         mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
@@ -420,14 +464,14 @@ class TestLokar(unittest.TestCase):
         old_term = 'Something else'
         new_term = 'Test æøå'
         mock_sru.side_effect = TestLokar.sru_search_mock
-        mock_input.side_effect = [old_term, new_term]
+        mock_input.side_effect = ['', old_term, new_term]
         mock_authorize_term.return_value = {'localname': 'c030697'}
 
         valid_records = main(self.conf(), 'test_env')
 
         alma = MockAlma.return_value
 
-        assert mock_input.call_count == 2
+        assert mock_input.call_count == 3
         assert valid_records is None
         mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
@@ -442,14 +486,14 @@ class TestLokar(unittest.TestCase):
         old_term = 'Statistiske modeller'
         new_term = ''
         mock_sru.side_effect = TestLokar.sru_search_mock
-        mock_input.side_effect = [old_term, new_term]
+        mock_input.side_effect = ['', old_term, new_term]
         mock_authorize_term.return_value = {'localname': 'c030697'}
 
         valid_records = main(self.conf(), 'test_env')
 
         alma = MockAlma.return_value
 
-        assert mock_input.call_count == 2
+        assert mock_input.call_count == 3
         assert len(valid_records) == 14
         mock_sru.assert_called_once_with('alma.subjects="%s"' % old_term,
                                          'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
