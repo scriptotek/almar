@@ -10,7 +10,6 @@ import sys
 from requests import Session
 from requests.exceptions import HTTPError
 from six.moves import configparser
-from six.moves import input
 from tqdm import tqdm
 from prompter import yesno
 
@@ -51,37 +50,38 @@ def normalize_term(term):
     return ' : '.join([component[0].upper() + component[1:] for component in term.strip().split(' : ')])
 
 
-def subject_fields(marc_record, term, vocabulary, tag='650', exact_only=False):
+def subject_fields(marc_record, term, vocabulary, tags, exact_only=False):
     """
     For a given MARC record, return subject fields matching the vocabulary and term.
     :param marc_record:
     :param term:
     :param vocabulary:
-    :param tag:
+    :param tags:
     :param exact_only: True to only return fields with the term in $a and with no $x
                        False to return fields with the term in either $a or $x
     :return:
     """
 
     fields = []
-    for field in marc_record.findall('./datafield[@tag="{}"]'.format(tag)):
-        if field.findtext('subfield[@code="2"]') != vocabulary:
-            # Wrong vocabulary
-            continue
+    for tag in tags:
+        for field in marc_record.findall('./datafield[@tag="{}"]'.format(tag)):
+            if field.findtext('subfield[@code="2"]') != vocabulary:
+                # Wrong vocabulary
+                continue
 
-        sfa = normalize_term(field.findtext('subfield[@code="a"]'))
-        sfx = normalize_term(field.findtext('subfield[@code="x"]'))
+            sfa = normalize_term(field.findtext('subfield[@code="a"]'))
+            sfx = normalize_term(field.findtext('subfield[@code="x"]'))
 
-        components = term.split(' : ')
-        if len(components) == 2:
-            if sfa == components[0] and sfx == components[1]:
-                fields.append(field)
-        elif exact_only:
-            if sfa == term and sfx is None:
-                fields.append(field)
-        else:
-            if sfa == term or sfx == term:
-                fields.append(field)
+            components = term.split(' : ')
+            if len(components) == 2:
+                if sfa == components[0] and sfx == components[1]:
+                    fields.append(field)
+            elif exact_only:
+                if sfa == term and sfx is None:
+                    fields.append(field)
+            else:
+                if sfa == term or sfx == term:
+                    fields.append(field)
 
     return fields
 
@@ -122,10 +122,10 @@ class Bib(object):
         self.mms_id = self.doc.findtext('mms_id')
         self.marc_record = self.doc.find('record')
 
-    def remove_duplicate_fields(self, vocabulary, term, tag='650'):
+    def remove_duplicate_fields(self, vocabulary, term, tags):
         strenger = []
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tag=tag):
-            streng = []
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tags=tags):
+            streng = [field.get('tag')]
             for subfield in field.findall('subfield'):
                 if subfield.get('code') in ['a', 'x']:
                     streng.append(subfield.text)
@@ -137,13 +137,13 @@ class Bib(object):
                 continue
             strenger.append(streng)
 
-    def edit_subject(self, vocabulary, old_term, new_term, tag='650'):
-        self.remove_duplicate_fields(vocabulary, old_term, tag)
+    def edit_subject(self, vocabulary, old_term, new_term, tags):
+        self.remove_duplicate_fields(vocabulary, old_term, tags)
 
         old_term_comp = old_term.split(' : ')
         new_term_comp = new_term.split(' : ')
 
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=old_term, tag=tag):
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=old_term, tags=tags):
             sfa = field.find('subfield[@code="a"]')
             sfx = field.find('subfield[@code="x"]')
             sfa_m0 = sfa is not None and normalize_term(sfa.text) == old_term_comp[0]
@@ -165,8 +165,8 @@ class Bib(object):
 
         return self  # for chaining
 
-    def remove_subject(self, vocabulary, term, tag='650'):
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tag=tag, exact_only=True):
+    def remove_subject(self, vocabulary, term, tags):
+        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tags=tags, exact_only=True):
             self.marc_record.remove(field)
         return self  # for chaining
 
@@ -242,7 +242,7 @@ def authorize_term(term, concept_type, vocabulary):
 
 def skosmos_check(vocab, tag, old_term, new_term):
     concept_types = {
-        '648': 'http://data.ub.uio.no/onto#Temporal',
+        '648': 'http://data.ub.uio.no/onto#Time',
         '650': 'http://data.ub.uio.no/onto#Topic',
         '651': 'http://data.ub.uio.no/onto#Place',
         '655': 'http://data.ub.uio.no/onto#GenreForm',
@@ -309,7 +309,6 @@ def main(config=None, args=None):
         file_handler.setLevel(logging.INFO)
         logger.addHandler(file_handler)
 
-    tag = args.tag
     old_term = normalize_term(args.old_term)
     new_term = normalize_term(args.new_term)
 
@@ -317,25 +316,31 @@ def main(config=None, args=None):
     logger.info('[ Miljø: %s ] [ Vokabular: %s ] [ Tørrkjøring? %s ]'
                 % (args.env, config['vocabulary'], 'JA' if args.dry_run else 'NEI'))
 
-    if not skosmos_check(config['skosmos_vocab'], tag, old_term, new_term):
+    if not skosmos_check(config['skosmos_vocab'], args.tag, old_term, new_term):
         if yesno('Vil du fortsette allikevel?', default='no'):
             return
 
+    tags = [args.tag]
+    if args.tag == '648':
+        tags.append('650')
+        logger.info('MERK: For 648 gjør vi også erstatning i duplikaten i 650')
+
     oc = old_term.split(' : ')
     nc = new_term.split(' : ')
+
+    reporting_info = {'t': ','.join(tags), 'v': config['vocabulary'], 'o': oc[0], 'n': nc[0]}
     if len(oc) == 2 and len(nc) == 2:
-        logger.info('Vil erstatte "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s $x %(n2)s"',
-                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0], 'n2': nc[1]})
+        reporting_info['o2'] = oc[1]
+        reporting_info['n2'] = nc[1]
+        logger.info('Vil erstatte "$a %(o)s $x %(o2)s" med "$a %(n)s $x %(n2)s" i %(t)s-felt som har $2 %(v)s',
+                    reporting_info)
     elif len(oc) == 2 and len(nc) == 1:
-        logger.info('Vil erstatte "%(p)s $a %(o1)s $x %(o2)s" med "%(p)s $a %(n1)s"',
-                    {'p': tag + ' $2 noubomn', 'o1': oc[0], 'o2': oc[1], 'n1': nc[0]})
+        logger.info('Vil erstatte "$a %(o)s $x %(o2)s" med "$a %(n)s" i %(t)s-felt som har $2 %(v)s"', reporting_info)
     elif len(oc) == 1 and len(nc) == 1:
         if new_term == '':
-            logger.info('Vil fjerne "%(p)s $a %(o)s"',
-                        {'p': tag + ' $2 noubomn', 'o': oc[0]})
+            logger.info('Vil fjerne %(t)s-felt som har "$a %(o)s $2 %(v)s"', reporting_info)
         else:
-            logger.info('Vil erstatte "%(o)s" med "%(n)s" i %(p)s $a og $x',
-                        {'p': tag + ' $2 noubomn', 'o': oc[0], 'n': nc[0]})
+            logger.info('Vil erstatte "%(o)s" med "%(n)s" i $a og $x i %(t)s-felt som har $2 %(v)s', reporting_info)
     else:
         logger.error('Antall strengkomponenter i gammel eller ny term er ikke støttet')
         return
@@ -356,7 +361,7 @@ def main(config=None, args=None):
         if pbar is None and m > 50:
             pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
 
-        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=old_term, tag=tag):
+        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=old_term, tags=tags):
             valid_records.append(marc_record.findtext('./controlfield[@tag="001"]'))
 
         if pbar is not None:
@@ -383,9 +388,9 @@ def main(config=None, args=None):
         logger.info('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
         bib = alma.bibs(mms_id)
         if new_term == '':
-            bib.remove_subject(config['vocabulary'], old_term, tag=tag)
+            bib.remove_subject(config['vocabulary'], old_term, tags=tags)
         else:
-            bib.edit_subject(config['vocabulary'], old_term, new_term, tag=tag)
+            bib.edit_subject(config['vocabulary'], old_term, new_term, tags=tags)
         if not args.dry_run:
             bib.save()
 

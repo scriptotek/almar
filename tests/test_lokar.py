@@ -55,7 +55,7 @@ class TestFindSubjectFields(unittest.TestCase):
               </record>
         '''.encode('utf-8'))
 
-        fields = subject_fields(marc_record, vocabulary='noubomn', term='Monstre')
+        fields = subject_fields(marc_record, vocabulary='noubomn', term='Monstre', tags=['650'])
 
         assert len(fields) == 1
         assert fields[0].findtext('subfield[@code="a"]') == 'Monstre'
@@ -88,7 +88,7 @@ class TestFindSubjectFields(unittest.TestCase):
               </record>
         '''.encode('utf-8'))
 
-        fields = subject_fields(marc_record, vocabulary='noubomn', term='Atferd')
+        fields = subject_fields(marc_record, vocabulary='noubomn', term='Atferd', tags=['650'])
 
         assert len(fields) == 2
         assert fields[1].findtext('subfield[@code="a"]') == 'Monstre'
@@ -149,7 +149,7 @@ class TestAlma(unittest.TestCase):
         url = '{}/bibs/{}'.format(alma.base_url, mms_id)
         body = get_sample('bib_response.xml')
         responses.add(responses.GET, url, body=body, content_type='application/xml')
-        alma.bibs(mms_id).edit_subject('humord', 'abc', 'def')
+        alma.bibs(mms_id).edit_subject('humord', 'abc', 'def', tags=['650'])
 
         assert len(responses.calls) == 1
 
@@ -181,7 +181,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Monstre', 'Mønstre')
+        bib.edit_subject('noubomn', 'Monstre', 'Mønstre', tags=['650'])
 
         assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert 'Atferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')  # $x should not change!
@@ -200,7 +200,7 @@ class TestBib(unittest.TestCase):
 
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Atferd', 'Dagbøker')
+        bib.edit_subject('noubomn', 'Atferd', 'Dagbøker', tags=['650'])
 
         assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')  # $a should not change!
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
@@ -219,7 +219,7 @@ class TestBib(unittest.TestCase):
 
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Mønstre : Dagbøker')
+        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Mønstre : Dagbøker', tags=['650'])
 
         assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
@@ -238,7 +238,7 @@ class TestBib(unittest.TestCase):
 
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Monsteratferd')
+        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Monsteratferd', tags=['650'])
 
         assert 'Monsteratferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
@@ -259,10 +259,31 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Oslo', 'Bergen', tag='651')
+        bib.edit_subject('noubomn', 'Oslo', 'Bergen', tags=['651'])
 
         assert 'Bergen' == rec.findtext('record/datafield[@tag="651"]/subfield[@code="a"]')
         assert 'Oslo' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')   # 650 should not change!
+
+    def testModify648(self):
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield tag="648" ind1=" " ind2="7">
+                    <subfield code="a">Middelalder</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                  <datafield tag="650" ind1=" " ind2="7">
+                    <subfield code="a">Middelalder</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """)
+        bib = Bib(Mock(), rec)
+        bib.edit_subject('noubomn', 'Middelalder', 'Middelalderen', tags=['648', '650'])
+
+        assert 'Middelalderen' == rec.findtext('record/datafield[@tag="648"]/subfield[@code="a"]')
+        assert 'Middelalderen' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
 
     def testRemoveTerm(self):
         rec = etree.fromstring("""
@@ -281,7 +302,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.remove_subject('noubomn', 'Monstre')
+        bib.remove_subject('noubomn', 'Monstre', tags=['650'])
         fields = rec.findall('record/datafield[@tag="650"]')
 
         assert len(fields) == 1
@@ -305,7 +326,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.remove_subject('noubomn', 'Monstre : Atferd')
+        bib.remove_subject('noubomn', 'Monstre : Atferd', tags=['650'])
         fields = rec.findall('record/datafield[@tag="650"]')
 
         assert len(fields) == 1
@@ -328,7 +349,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.remove_subject('noubomn', 'Oslo', tag='651')
+        bib.remove_subject('noubomn', 'Oslo', tags=['651'])
         f650 = rec.findall('record/datafield[@tag="650"]')
         f651 = rec.findall('record/datafield[@tag="651"]')
 
@@ -339,7 +360,7 @@ class TestBib(unittest.TestCase):
         alma = Mock()
         doc = get_sample('bib_response.xml', True)
         bib = Bib(alma, doc)
-        bib.edit_subject('noubomn', 'Kryptozoologi', 'KryptoÆØÅ')
+        bib.edit_subject('noubomn', 'Kryptozoologi', 'KryptoÆØÅ', tags=['650'])
         bib.save()
 
         alma.put.assert_called_once_with('/bibs/991416299674702204', data=ANY, headers={'Content-Type': 'application/xml'})
@@ -364,7 +385,7 @@ class TestBib(unittest.TestCase):
 
         assert len(marc_record.findall('record/datafield[@tag="650"]')) == 2
 
-        bib.remove_duplicate_fields('noubomn', 'Monstre')
+        bib.remove_duplicate_fields('noubomn', 'Monstre', tags=['650'])
 
         assert len(marc_record.findall('record/datafield[@tag="650"]')) == 1
 
