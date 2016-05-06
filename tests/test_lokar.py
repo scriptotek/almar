@@ -286,6 +286,27 @@ class TestBib(unittest.TestCase):
         assert 'Middelalderen' == rec.findtext('record/datafield[@tag="648"]/subfield[@code="a"]')
         assert 'Middelalderen' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
 
+    def testDontCreateDuplicates(self):
+        # If the new term already exists, don't duplicate it
+        rec = etree.fromstring("""
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Mønstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """)
+        bib = Bib(Mock(), rec)
+        bib.edit_subject('noubomn', 'Monstre', 'Mønstre', tags=['650'])
+
+        assert len(rec.findall('record/datafield[@tag="650"]')) == 1
+
     def testRemoveTerm(self):
         rec = etree.fromstring("""
             <bib>

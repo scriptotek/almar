@@ -152,7 +152,6 @@ class Bib(object):
             strenger.append(streng)
 
     def edit_subject(self, vocabulary, old_term, new_term, tags):
-        self.remove_duplicate_fields(vocabulary, old_term, tags)
 
         old_term_comp = old_term.split(' : ')
         new_term_comp = new_term.split(' : ')
@@ -177,6 +176,7 @@ class Bib(object):
                 elif sfx_m0:
                     sfx.text = new_term_comp[0]
 
+        self.remove_duplicate_fields(vocabulary, new_term, tags)
         return self  # for chaining
 
     def remove_subject(self, vocabulary, term, tags):
