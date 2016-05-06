@@ -8,6 +8,8 @@ import io
 
 import requests
 import sys
+import os
+from datetime import datetime
 from requests import Session
 from requests.exceptions import HTTPError
 from six.moves import configparser
@@ -125,6 +127,9 @@ class Bib(object):
 
     def __init__(self, alma, doc):
         self.alma = alma
+        self.init_from_doc(doc)
+
+    def init_from_doc(self, doc):
         self.doc = doc
         self.mms_id = self.doc.findtext('mms_id')
         self.marc_record = self.doc.find('record')
@@ -187,12 +192,18 @@ class Bib(object):
             logger.info(' -> Oppdaterer posten. Koblingen til CZ blir brutt.')
 
         try:
-            self.alma.put('/bibs/{}'.format(self.mms_id),
+            response = self.alma.put('/bibs/{}'.format(self.mms_id),
                           data=etree.tostring(self.doc),
                           headers={'Content-Type': 'application/xml'})
         except HTTPError as error:
             raise RuntimeError('Failed to save record. Status: %s. Response: %s'
                                % (error.response.status_code, error.response.text))
+
+        self.init_from_doc(etree.fromstring(response.text.encode('utf-8')))
+
+    def dump(self, filename):
+        with open(filename, 'wb') as f:
+            f.write(etree.tostring(self.doc, pretty_print=True))
 
 
 class Alma(object):
@@ -342,12 +353,14 @@ def main(config=None, args=None):
     new_term = normalize_term(args.new_term)
 
     logger.info('{:=^70}'.format(' Starter jobb '))
-    logger.info('[ Miljø: %s ] [ Vokabular: %s ] [ Tørrkjøring? %s ]'
-                % (args.env, config['vocabulary'], 'JA' if args.dry_run else 'NEI'))
+    logger.info('[ Miljø: %s ] [ Vokabular: %s ] [ Bruker: %s] [ Tørrkjøring? %s ]'
+                % (args.env, config['vocabulary'], config['user'], 'JA' if args.dry_run else 'NEI'))
 
     if not skosmos_check(config['skosmos_vocab'], args.tag, old_term, new_term):
         if yesno('Vil du fortsette allikevel?', default='no'):
             return
+
+    job_name = datetime.now().isoformat()
 
     tags = [args.tag]
     if args.tag == '648':
@@ -420,12 +433,17 @@ def main(config=None, args=None):
 
         logger.info('[{:3d}/{:3d}] {}'.format(n + 1, len(valid_records), mms_id))
         bib = alma.bibs(mms_id)
+        if not args.dry_run:
+            if not os.path.exists('jobs/%s' % job_name):
+                os.makedirs('jobs/%s' % job_name)
+            bib.dump('jobs/%s/%s.before.xml' % (job_name, mms_id))
         if new_term == '':
             bib.remove_subject(config['vocabulary'], old_term, tags=tags)
         else:
             bib.edit_subject(config['vocabulary'], old_term, new_term, tags=tags)
         if not args.dry_run:
-            bib.save()
+            txt = bib.save()
+            bib.dump('jobs/%s/%s.after.xml' % (job_name, mms_id))
 
     logger.info('{:=^70}'.format(' Jobb ferdig '))
 
