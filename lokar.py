@@ -128,6 +128,7 @@ class Bib(object):
         self.doc = doc
         self.mms_id = self.doc.findtext('mms_id')
         self.marc_record = self.doc.find('record')
+        self.linked_to_cz = self.doc.findtext('linked_record_id[@type="CZ"]') or None
 
     def remove_duplicate_fields(self, vocabulary, term, tags):
         strenger = []
@@ -178,6 +179,13 @@ class Bib(object):
         return self  # for chaining
 
     def save(self):
+        if self.linked_to_cz:
+            logger.info(' -> OBS! Posten er koblet til CZ! Koblingen blir brutt hvis du oppdaterer posten!')
+            if yesno('Vil du fortsette allikevel?', default='no'):
+                logger.info(' -> Hopper over denne posten')
+                return
+            logger.info(' -> Oppdaterer posten. Koblingen til CZ blir brutt.')
+
         try:
             self.alma.put('/bibs/{}'.format(self.mms_id),
                           data=etree.tostring(self.doc),
