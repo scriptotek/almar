@@ -10,9 +10,10 @@ from mock import Mock, patch
 from mock import ANY
 from io import StringIO
 from io import open
+from six import text_type, binary_type
 
 from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term, \
-    parse_args
+    parse_args, normalize_term
 from textwrap import dedent
 
 try:
@@ -358,6 +359,7 @@ class TestBib(unittest.TestCase):
 
     def testSave(self):
         alma = Mock()
+        alma.put.return_value = '<bib><mms_id>991416299674702204</mms_id><record></record></bib>'
         doc = get_sample('bib_response.xml', True)
         bib = Bib(alma, doc)
         bib.edit_subject('noubomn', 'Kryptozoologi', 'KryptoÆØÅ', tags=['650'])
@@ -527,14 +529,21 @@ class TestLokar(unittest.TestCase):
         main(args=['old', 'new'])
         mock_open.assert_called_once_with('lokar.cfg')
 
+    def testNormalizeTerm(self):
+        term1 = normalize_term('byer : økologi')
+        term2 = normalize_term('administrativ historie')
+
+        assert term1 == 'Byer : Økologi'
+        assert term2 == 'Administrativ historie'
+
 
 class TestParseArgs(unittest.TestCase):
 
-    def test_parser_missing_arguments(self):
+    def test_missing_arguments(self):
         with pytest.raises(SystemExit):
             parse_args([])
 
-    def test_parser(self):
+    def test_defaults(self):
         parser = parse_args(['Sekvensering', 'Sekvenseringsmetoder'])
 
         assert parser.dry_run is False
@@ -542,6 +551,13 @@ class TestParseArgs(unittest.TestCase):
         assert parser.old_term == 'Sekvensering'
         assert parser.new_term == 'Sekvenseringsmetoder'
 
+    def test_non_unicode_input(self):
+        parser = parse_args(['Byer : Økologi'.encode('utf-8'), 'Byøkologi'.encode('utf-8')])
+
+        assert parser.old_term == 'Byer : Økologi'
+        assert parser.new_term == 'Byøkologi'
+        assert type(parser.old_term) == text_type
+        assert type(parser.new_term) == text_type
 
 if __name__ == '__main__':
     unittest.main()

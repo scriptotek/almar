@@ -9,6 +9,7 @@ import io
 import requests
 import sys
 import os
+from six import text_type, binary_type
 from datetime import datetime
 from requests import Session
 from requests.exceptions import HTTPError
@@ -193,13 +194,13 @@ class Bib(object):
 
         try:
             response = self.alma.put('/bibs/{}'.format(self.mms_id),
-                          data=etree.tostring(self.doc),
-                          headers={'Content-Type': 'application/xml'})
+                                     data=etree.tostring(self.doc),
+                                     headers={'Content-Type': 'application/xml'})
         except HTTPError as error:
             raise RuntimeError('Failed to save record. Status: %s. Response: %s'
                                % (error.response.status_code, error.response.text))
 
-        self.init_from_doc(etree.fromstring(response.text.encode('utf-8')))
+        self.init_from_doc(etree.fromstring(response.encode('utf-8')))
 
     def dump(self, filename):
         with open(filename, 'wb') as f:
@@ -231,7 +232,7 @@ class Alma(object):
     def put(self, url, *args, **kwargs):
         response = self.session.put(self.base_url + url, *args, **kwargs)
         response.raise_for_status()
-        return response
+        return response.text
 
 
 def read_config(f, section):
@@ -317,6 +318,13 @@ def parse_args(args):
     args.env = args.env.strip()
     args.old_term = args.old_term[0]
     args.new_term = args.new_term
+
+    if type(args.old_term) == binary_type:
+        args.old_term = args.old_term.decode('utf-8')
+    if type(args.new_term) == binary_type:
+        args.new_term = args.new_term.decode('utf-8')
+    if type(args.env) == binary_type:
+        args.env = args.env.decode('utf-8')
 
     return args
 
