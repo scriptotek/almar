@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<bib>
+	<mms_id>999919926696702201</mms_id>
+	<record_format>marc21</record_format>
+	<linked_record_id type="CZ">991000000000364280</linked_record_id>
+	<title>An Introduction to Dynamic Meteorology</title>
+	<author>Holton, James R.</author>
+	<isbn>0-12-354015-1</isbn>
+	<complete_edition>4th ed.</complete_edition>
+	<network_numbers>
+		<network_number>(OCoLC)469399529</network_number>
+		<network_number>(EBL)286647</network_number>
+		<network_number>(CKB)1000000000364280</network_number>
+		<network_number>(EXLCZ)991000000000364280</network_number>
+	</network_numbers>
+	<place_of_publication>Burlington :</place_of_publication>
+	<publisher_const>Elsevier Science</publisher_const>
+	<holdings link="https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/999919926696702201/holdings"/>
+	<created_by>CKB</created_by>
+	<created_date>2015-11-17Z</created_date>
+	<last_modified_by>Ex Libris</last_modified_by>
+	<last_modified_date>2015-11-17Z</last_modified_date>
+	<suppress_from_publishing>false</suppress_from_publishing>
+	<originating_system>CKB</originating_system>
+	<originating_system_id>991000000000364280</originating_system_id>
+	<record>
+		<leader>04862nam a22004573u 4500</leader>
+		<controlfield tag="001">999919926696702201</controlfield>
+		<controlfield tag="005">20140113011041.0</controlfield>
+		<controlfield tag="006">m        d        </controlfield>
+		<controlfield tag="007">cr -n---------</controlfield>
+		<controlfield tag="008">140113s2004|||||||     s|||||||||||eng|d</controlfield>
+		<datafield ind1=" " ind2=" " tag="020">
+			<subfield code="e">1-280-96137-6</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="020">
+			<subfield code="e">9786610961375</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="020">
+			<subfield code="e">0-08-047021-1</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="020">
+			<subfield code="a">0-12-354015-1</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="035">
+			<subfield code="a">(CKB)1000000000364280</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="035">
+			<subfield code="a">(EBL)286647</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="035">
+			<subfield code="a">(OCoLC)469399529</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="035">
+			<subfield code="a">(EXLCZ)991000000000364280</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="040">
+			<subfield code="a">AU-PeEL</subfield>
+			<subfield code="b">eng</subfield>
+			<subfield code="c">AU-PeEL</subfield>
+			<subfield code="d">AU-PeEL</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="4" tag="050">
+			<subfield code="a">QC880</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="4" tag="050">
+			<subfield code="a">QC880 .H65 2004</subfield>
+		</datafield>
+		<datafield ind1="0" ind2="0" tag="082">
+			<subfield code="a">551.51/5</subfield>
+			<subfield code="a">551.515</subfield>
+		</datafield>
+		<datafield ind1="1" ind2=" " tag="100">
+			<subfield code="a">Holton, James R.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="210">
+			<subfield code="a">AN INTRODUCTION TO DYNAMIC METEOROLOGY </subfield>
+		</datafield>
+		<datafield ind1="1" ind2="3" tag="245">
+			<subfield code="a">An Introduction to Dynamic Meteorology</subfield>
+			<subfield code="h">[electronic resource].</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="250">
+			<subfield code="a">4th ed.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="260">
+			<subfield code="a">Burlington :</subfield>
+			<subfield code="b">Elsevier Science,</subfield>
+			<subfield code="c">2004.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="300">
+			<subfield code="a">1 online resource (553 p.)</subfield>
+		</datafield>
+		<datafield ind1="1" ind2=" " tag="490">
+			<subfield code="a">International Geophysics</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="500">
+			<subfield code="a">Description based upon print version of record.</subfield>
+		</datafield>
+		<datafield ind1="0" ind2=" " tag="505">
+			<subfield code="a">Cover; Contents; Preface; 1. Introduction; 1.1 THE ATMOSPHERIC CONTINUUM; 1.2 PHYSICAL DIMENSIONS AND UNITS; 1.3 SCALE ANALYSIS; 1.4 FUNDAMENTAL FORCES; 1.4.1 Pressure Gradient Force; 1.4.2 Gravitational Force; 1.4.3 Viscous Force; 1.5 NONINERTIALREFERENCEFRAMESAND?APPARENTŽ FORCES; 1.5.1 Centripetal Acceleration and Centrifugal Force; 1.5.2 Gravity Force; 1.5.3 The Coriolis Force and the Curvature Effect; 1.5.4 Constant Angular Momentum Oscillations; 1.6 STRUCTURE OF THE STATIC ATMOSPHERE; 1.6.1 The Hydrostatic Equation; 1.6.2 Pressure as a Vertical Coordinate</subfield>
+		</datafield>
+		<datafield ind1="8" ind2=" " tag="505">
+			<subfield code="a">1.6.3 A Generalized Vertical CoordinatePROBLEMS 1; MATLAB EXERCISES 1; Suggested References 1; 2. Basic Conservation Laws; 2.1 TOTAL DIFFERENTIATION; 2.1.1 Total Differentiation of a Vector in a Rotating System; 2.2 THE VECTORIAL FORM OF THE MOMENTUM EQUATION IN ROTATING COORDINATES; 2.3 COMPONENT EQUATIONS IN SPHERICAL COORDINATES; 2.4 SCALE ANALYSIS OF THE EQUATIONS OF MOTION; 2.4.1 Geostrophic Approximation and GeostrophicWind; 2.4.2 Approximate Prognostic Equations;  the Rossby Number; 2.4.3 The Hydrostatic Approximation; 2.5 THE CONTINUITY EQUATION; 2.5.1 An Eulerian Derivation</subfield>
+		</datafield>
+		<datafield ind1="8" ind2=" " tag="505">
+			<subfield code="a">2.5.2 A Lagrangian Derivation2.5.3 Scale Analysis of the Continuity Equation; 2.6 THE THERMODYNAMIC ENERGY EQUATION; 2.7 THERMODYNAMICS OF THE DRY ATMOSPHERE; 2.7.1 Potential Temperature; 2.7.2 The Adiabatic Lapse Rate; 2.7.3 Static Stability; 2.7.4 Scale Analysis of the Thermodynamic Energy Equation; PROBLEMS 2; MATLAB EXERCISES 2; Suggested References 2; 3. Elementary Applications of the Basic Equations; 3.1 BASIC EQUATIONS IN ISOBARIC COORDINATES; 3.1.1 The Horizontal Momentum Equation; 3.1.2 The Continuity Equation; 3.1.3 The Thermodynamic Energy Equation; 3.2 BALANCED FLOW</subfield>
+		</datafield>
+		<datafield ind1="8" ind2=" " tag="505">
+			<subfield code="a">3.2.1 Natural Coordinates3.2.2 Geostrophic Flow; 3.2.3 Inertial Flow; 3.2.4 Cyclostrophic Flow; 3.2.5 The GradientWind Approximation; 3.3 TRAJECTORIES AND STREAMLINES; 3.4 THE THERMAL WIND; 3.4.1 Barotropic and Baroclinic Atmospheres; 3.5 VERTICAL MOTION; 3.5.1 The Kinematic Method; 3.5.2 The Adiabatic Method; 3.6 SURFACE PRESSURE TENDENCY; PROBLEMS 3; MATLAB EXERCISES 3; 4. Circulation and Vorticity; 4.1 THE CIRCULATION THEOREM; 4.2 VORTICITY; 4.2.1 Vorticity in Natural Coordinates; 4.3 POTENTIAL VORTICITY; 4.4 THE VORTICITY EQUATION; 4.4.1 Cartesian Coordinate Form</subfield>
+		</datafield>
+		<datafield ind1="8" ind2=" " tag="505">
+			<subfield code="a">4.4.2 The Vorticity Equation in Isobaric Coordinates4.4.3 Scale Analysis of the Vorticity Equation; 4.5 VORTICITY IN BAROTROPIC FLUIDS; 4.5.1 The Barotropic (Rossby) Potential Vorticity Equation; 4.5.2 The Barotropic Vorticity Equation; 4.6 THEBAROCLINIC (ERTEL) POTENTIALVORTICITYEQUATION; 4.6.1 Equations of Motion in Isentropic Coordinates; 4.6.2 The Potential Vorticity Equation; 4.6.3 Integral Constraints on Isentropic Vorticity; PROBLEMS 4; MATLAB EXERCISES 4; Suggested References 4; 5. The Planetary Boundary Layer; 5.1 ATMOSPHERIC TURBULENCE; 5.1.1 The Boussinesq Approximation</subfield>
+		</datafield>
+		<datafield ind1="8" ind2=" " tag="505">
+			<subfield code="a">5.1.2 Reynolds Averaging</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="520">
+			<subfield code="a">This revised text presents a cogent explanation of the fundamentals of meteorology, and explains storm dynamics for weather-oriented meteorologists. It discusses climate dynamics and the implications posed for global change. The Fourth Edition features a CD-ROM with MATLAB® exercises and updated treatments of several key topics. Much of the material is based on a two-term course for seniors majoring in atmospheric sciences.* Provides clear physical explanations of key dynamical principles * Contains a wealth of illustrations to elucidate text and equations, plus   end-of-chapter pr</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="4" tag="650">
+			<subfield code="a">Dynamic meteorology.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="4" tag="650">
+			<subfield code="a">Dynamic meteorology.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="4" tag="650">
+			<subfield code="a">Geophgysics.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="4" tag="650">
+			<subfield code="a">Geophysics.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="4" tag="650">
+			<subfield code="a">Meteorology.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="0" tag="655">
+			<subfield code="a">Electronic books.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="0" tag="830">
+			<subfield code="a">International Geophysics</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="906">
+			<subfield code="a">BOOK</subfield>
+		</datafield>
+	</record>
+</bib>
