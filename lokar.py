@@ -310,11 +310,11 @@ def parse_args(args):
     return args
 
 
-def email(domain, api_key, sender, recipient, subject, body):
-    request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(domain)
-    request = requests.post(request_url, auth=('api', api_key), data={
-        'from': sender,
-        'to': recipient,
+def email(subject, body, config):
+    request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(config['mailgun.domain'])
+    request = requests.post(request_url, auth=('api', config['mailgun.api_key']), data={
+        'from': config['mailgun.sender'],
+        'to': config['mailgun.recipient'],
         'subject': subject,
         'text': body
     })
@@ -432,8 +432,7 @@ def main(config=None, args=None):
     if not args.dry_run:
         subject = '[{}] "{}" → "{}" endret i {:d} post(er)'.format(args.tag, old_term, new_term, len(valid_records))
         body = log_capture_string.getvalue()
-        email(domain=config['mailgun.domain'], api_key=config['mailgun.api_key'], sender=config['mailgun.sender'],
-              recipient=config['mailgun.recipient'], subject=subject, body=body)
+        email(subject, body, config)
 
     return valid_records
 
