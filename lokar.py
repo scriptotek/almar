@@ -47,10 +47,6 @@ nsmap = {
 }
 
 
-class SruErrorResponse(RuntimeError):
-    pass
-
-
 def normalize_term(term):
     # Normalize term so it starts with a capital letter. If the term is a subject string
     # fused by " : ", normalize all components.
@@ -60,85 +56,93 @@ def normalize_term(term):
     return ' : '.join([component[0].upper() + component[1:] for component in term.strip().split(' : ')])
 
 
-def subject_fields(marc_record, term, vocabulary, tags, exact_only=False):
-    """
-    For a given MARC record, return subject fields matching the vocabulary and term.
-    :param marc_record:
-    :param term:
-    :param vocabulary:
-    :param tags:
-    :param exact_only: True to only return fields with the term in $a and with no $x
-                       False to return fields with the term in either $a or $x
-    :return:
-    """
+class SruErrorResponse(RuntimeError):
+    pass
 
-    fields = []
-    for tag in tags:
-        for field in marc_record.findall('./datafield[@tag="{}"]'.format(tag)):
-            if field.findtext('subfield[@code="2"]') != vocabulary:
-                # Wrong vocabulary
-                continue
 
-            sfa = normalize_term(field.findtext('subfield[@code="a"]'))
-            sfx = normalize_term(field.findtext('subfield[@code="x"]'))
+class SruClient(object):
 
-            components = term.split(' : ')
-            if len(components) == 2:
-                if sfa == components[0] and sfx == components[1]:
-                    fields.append(field)
-            elif exact_only:
-                if sfa == term and sfx is None:
-                    fields.append(field)
+    def __init__(self, endpoint_url):
+        self.endpoint_url = endpoint_url
+        self.record_no = 0  # from last response
+        self.num_records = 0  # from last response
+
+    def search(self, query):
+        # A searchRetrieve generator that yields MarcRecord objects
+        start_record = 1
+        while True:
+            response = requests.get(self.endpoint_url, params={
+                'version': '1.2',
+                'operation': 'searchRetrieve',
+                'startRecord': start_record,
+                'maximumRecords': '50',
+                'query': query,
+            })
+            root = etree.fromstring(response.text.encode('utf-8'))  # Takes ~ 4 seconds for 50 records!
+
+            for diagnostic in root.findall('srw:diagnostics/diag:diagnostic', namespaces=nsmap):
+                raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=nsmap))
+
+            self.num_records = int(root.findtext('srw:numberOfRecords', namespaces=nsmap))
+            for record in root.iterfind('srw:records/srw:record', namespaces=nsmap):
+                self.record_no = int(record.findtext('srw:recordPosition', namespaces=nsmap))
+
+                yield MarcRecord(record.find('srw:recordData/record', namespaces=nsmap))
+
+            nrp = root.find('srw:nextRecordPosition', namespaces=nsmap)
+            if nrp is not None:
+                start_record = nrp.text
             else:
-                if sfa == term or sfx == term:
-                    fields.append(field)
-
-    return fields
+                break  # Enden er nær, den er faktisk her!
 
 
-def sru_search(query, url):
-    # A SRU search generator that returns MARC records
-    start_record = 1
-    while True:
-        response = requests.get(url, params={
-            'version': '1.2',
-            'operation': 'searchRetrieve',
-            'startRecord': start_record,
-            'maximumRecords': '50',
-            'query': query,
-        })
-        root = etree.fromstring(response.text.encode('utf-8'))  # Takes ~ 4 seconds for 50 records!
+class MarcRecord(object):
+    """ A Marc21 record """
 
-        for diagnostic in root.findall('srw:diagnostics/diag:diagnostic', namespaces=nsmap):
-            raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=nsmap))
+    def __init__(self, el):
+        # el: xml.etree.ElementTree.Element
+        self.el = el
 
-        num_records = root.findtext('srw:numberOfRecords', namespaces=nsmap)
-        for record in root.iterfind('srw:records/srw:record', namespaces=nsmap):
-            record_no = record.findtext('srw:recordPosition', namespaces=nsmap)
-            yield int(record_no), int(num_records), record.find('srw:recordData/record', namespaces=nsmap)
+    def id(self):
+        return self.el.findtext('./controlfield[@tag="001"]')
 
-        nrp = root.find('srw:nextRecordPosition', namespaces=nsmap)
-        if nrp is not None:
-            start_record = nrp.text
-        else:
-            break  # Enden er nær, den er faktisk her!
+    def subjects(self, term, vocabulary, tags, exact_only=False):
+        """
+        For a given MARC record, return subject fields matching the vocabulary and term.
+        :param term:
+        :param vocabulary:
+        :param tags:
+        :param exact_only: True to only return fields with the term in $a and with no $x
+                           False to return fields with the term in either $a or $x
+        :return:
+        """
 
+        fields = []
+        for tag in tags:
+            for field in self.el.findall('./datafield[@tag="{}"]'.format(tag)):
+                if field.findtext('subfield[@code="2"]') != vocabulary:
+                    # Wrong vocabulary
+                    continue
 
-class Bib(object):
+                sfa = normalize_term(field.findtext('subfield[@code="a"]'))
+                sfx = normalize_term(field.findtext('subfield[@code="x"]'))
 
-    def __init__(self, alma, doc):
-        self.alma = alma
-        self.init_from_doc(doc)
+                components = term.split(' : ')
+                if len(components) == 2:
+                    if sfa == components[0] and sfx == components[1]:
+                        fields.append(field)
+                elif exact_only:
+                    if sfa == term and sfx is None:
+                        fields.append(field)
+                else:
+                    if sfa == term or sfx == term:
+                        fields.append(field)
 
-    def init_from_doc(self, doc):
-        self.doc = doc
-        self.mms_id = self.doc.findtext('mms_id')
-        self.marc_record = self.doc.find('record')
-        self.linked_to_cz = self.doc.findtext('linked_record_id[@type="CZ"]') or None
+        return fields
 
     def remove_duplicate_fields(self, vocabulary, term, tags):
         strenger = []
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tags=tags):
+        for field in self.subjects(vocabulary=vocabulary, term=term, tags=tags):
             streng = [field.get('tag')]
             for subfield in field.findall('subfield'):
                 if subfield.get('code') in ['a', 'x']:
@@ -147,7 +151,7 @@ class Bib(object):
                     logger.info('Emnefeltet inneholdt uventede delfelt: %s', etree.tostring(subfield))
             if streng in strenger:
                 logger.info('Fjerner duplikat emnefelt: "%s" ', ' : '.join(streng))
-                self.marc_record.remove(field)
+                self.el.remove(field)
                 continue
             strenger.append(streng)
 
@@ -156,7 +160,7 @@ class Bib(object):
         old_term_comp = old_term.split(' : ')
         new_term_comp = new_term.split(' : ')
 
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=old_term, tags=tags):
+        for field in self.subjects(vocabulary=vocabulary, term=old_term, tags=tags):
             sfa = field.find('subfield[@code="a"]')
             sfx = field.find('subfield[@code="x"]')
             sfa_m0 = sfa is not None and normalize_term(sfa.text) == old_term_comp[0]
@@ -180,11 +184,26 @@ class Bib(object):
         return self  # for chaining
 
     def remove_subject(self, vocabulary, term, tags):
-        for field in subject_fields(self.marc_record, vocabulary=vocabulary, term=term, tags=tags, exact_only=True):
-            self.marc_record.remove(field)
+        for field in self.subjects(vocabulary=vocabulary, term=term, tags=tags, exact_only=True):
+            self.el.remove(field)
         return self  # for chaining
 
+
+class Bib(object):
+    """ An Alma Bib record """
+
+    def __init__(self, alma, doc):
+        self.alma = alma
+        self.init_from_doc(doc)
+
+    def init_from_doc(self, doc):
+        self.doc = doc
+        self.mms_id = self.doc.findtext('mms_id')
+        self.marc_record = MarcRecord(self.doc.find('record'))
+        self.linked_to_cz = self.doc.findtext('linked_record_id[@type="CZ"]') or None
+
     def save(self):
+        # Save record back to Alma
         if self.linked_to_cz:
             logger.info(' -> OBS! Posten er koblet til CZ! Koblingen blir brutt hvis du oppdaterer posten!')
             if yesno('Vil du fortsette allikevel?', default='no'):
@@ -203,6 +222,7 @@ class Bib(object):
         self.init_from_doc(etree.fromstring(response.encode('utf-8')))
 
     def dump(self, filename):
+        # Dump record to file
         with open(filename, 'wb') as f:
             f.write(etree.tostring(self.doc, pretty_print=True))
 
@@ -410,13 +430,14 @@ def main(config=None, args=None):
 
     valid_records = []
     pbar = None
+    sru = SruClient(config['sru_url'])
     cql_query = 'alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, config['vocabulary'])
-    for n, m, marc_record in sru_search(cql_query, config['sru_url']):
-        if pbar is None and m > 50:
-            pbar = tqdm(total=m, desc='Filtrerer SRU-resultater')
+    for marc_record in sru.search(cql_query):
+        if pbar is None and sru.num_records > 50:
+            pbar = tqdm(total=sru.num_records, desc='Filtrerer SRU-resultater')
 
-        if subject_fields(marc_record, vocabulary=config['vocabulary'], term=old_term, tags=tags):
-            valid_records.append(marc_record.findtext('./controlfield[@tag="001"]'))
+        if marc_record.subjects(vocabulary=config['vocabulary'], term=old_term, tags=tags):
+            valid_records.append(marc_record.id())
 
         if pbar is not None:
             pbar.update()
@@ -446,9 +467,9 @@ def main(config=None, args=None):
                 os.makedirs('jobs/%s' % job_name)
             bib.dump('jobs/%s/%s.before.xml' % (job_name, mms_id))
         if new_term == '':
-            bib.remove_subject(config['vocabulary'], old_term, tags=tags)
+            bib.marc_record.remove_subject(config['vocabulary'], old_term, tags=tags)
         else:
-            bib.edit_subject(config['vocabulary'], old_term, new_term, tags=tags)
+            bib.marc_record.edit_subject(config['vocabulary'], old_term, new_term, tags=tags)
         if not args.dry_run:
             txt = bib.save()
             bib.dump('jobs/%s/%s.after.xml' % (job_name, mms_id))

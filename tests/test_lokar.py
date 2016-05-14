@@ -11,9 +11,11 @@ from mock import ANY
 from io import StringIO
 from io import open
 from six import text_type, binary_type
+from contextlib import contextmanager
+from functools import wraps
 
-from lokar import subject_fields, sru_search, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term, \
-    parse_args, normalize_term
+from lokar import SruClient, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term, \
+    parse_args, normalize_term, MarcRecord
 from textwrap import dedent
 
 try:
@@ -32,10 +34,10 @@ def get_sample(filename, as_xml=False):
     return body
 
 
-class TestFindSubjectFields(unittest.TestCase):
+class TestMarcRecord(unittest.TestCase):
 
     def test650a(self):
-        marc_record = etree.fromstring('''
+        record = MarcRecord(etree.fromstring('''
               <record>
                 <datafield tag="650" ind1=" " ind2="7">
                   <subfield code="a">Monstre</subfield>
@@ -54,15 +56,15 @@ class TestFindSubjectFields(unittest.TestCase):
                   <subfield code="a">Algoritmer</subfield>
                 </datafield>
               </record>
-        '''.encode('utf-8'))
+        '''.encode('utf-8')))
 
-        fields = subject_fields(marc_record, vocabulary='noubomn', term='Monstre', tags=['650'])
+        fields = record.subjects(vocabulary='noubomn', term='Monstre', tags=['650'])
 
         assert len(fields) == 1
         assert fields[0].findtext('subfield[@code="a"]') == 'Monstre'
 
     def test650x(self):
-        marc_record = etree.fromstring('''
+        record = MarcRecord(etree.fromstring('''
               <record>
                 <datafield tag="650" ind1=" " ind2="7">
                   <subfield code="a">Monstre</subfield>
@@ -87,9 +89,9 @@ class TestFindSubjectFields(unittest.TestCase):
                   <subfield code="a">Algoritmer</subfield>
                 </datafield>
               </record>
-        '''.encode('utf-8'))
+        '''.encode('utf-8')))
 
-        fields = subject_fields(marc_record, vocabulary='noubomn', term='Atferd', tags=['650'])
+        fields = record.subjects(vocabulary='noubomn', term='Atferd', tags=['650'])
 
         assert len(fields) == 2
         assert fields[1].findtext('subfield[@code="a"]') == 'Monstre'
@@ -105,7 +107,7 @@ class TestSruSearch(unittest.TestCase):
         body = get_sample('sru_sample_response_1.xml')
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
-        records = list(sru_search('alma.subjects="test"', url))
+        records = list(SruClient(url).search('alma.subjects="test"'))
 
         assert len(responses.calls) == 1
         assert len(records) == 18
@@ -123,7 +125,7 @@ class TestSruSearch(unittest.TestCase):
 
         responses.add_callback(responses.GET, url, callback=request_callback, content_type='application/xml')
 
-        records = list(sru_search('alma.subjects="test"', url))
+        records = list(SruClient(url).search('alma.subjects="test"'))
 
         assert len(responses.calls) == 2
         assert len(records) == 2
@@ -136,7 +138,7 @@ class TestSruSearch(unittest.TestCase):
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
         with pytest.raises(SruErrorResponse):
-            records = list(sru_search('alma.subjects="test"', url))
+            records = list(SruClient(url).search('alma.subjects="test"'))
 
         assert len(responses.calls) == 1
 
@@ -150,7 +152,7 @@ class TestAlma(unittest.TestCase):
         url = '{}/bibs/{}'.format(alma.base_url, mms_id)
         body = get_sample('bib_response.xml')
         responses.add(responses.GET, url, body=body, content_type='application/xml')
-        alma.bibs(mms_id).edit_subject('humord', 'abc', 'def', tags=['650'])
+        alma.bibs(mms_id).marc_record.edit_subject('humord', 'abc', 'def', tags=['650'])
 
         assert len(responses.calls) == 1
 
@@ -182,7 +184,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Monstre', 'Mønstre', tags=['650'])
+        bib.marc_record.edit_subject('noubomn', 'Monstre', 'Mønstre', tags=['650'])
 
         assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert 'Atferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')  # $x should not change!
@@ -201,7 +203,7 @@ class TestBib(unittest.TestCase):
 
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Atferd', 'Dagbøker', tags=['650'])
+        bib.marc_record.edit_subject('noubomn', 'Atferd', 'Dagbøker', tags=['650'])
 
         assert 'Monstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')  # $a should not change!
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
@@ -220,7 +222,7 @@ class TestBib(unittest.TestCase):
 
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Mønstre : Dagbøker', tags=['650'])
+        bib.marc_record.edit_subject('noubomn', 'Monstre : Atferd', 'Mønstre : Dagbøker', tags=['650'])
 
         assert 'Mønstre' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
@@ -239,7 +241,7 @@ class TestBib(unittest.TestCase):
 
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Monstre : Atferd', 'Monsteratferd', tags=['650'])
+        bib.marc_record.edit_subject('noubomn', 'Monstre : Atferd', 'Monsteratferd', tags=['650'])
 
         assert 'Monsteratferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
@@ -260,7 +262,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Oslo', 'Bergen', tags=['651'])
+        bib.marc_record.edit_subject('noubomn', 'Oslo', 'Bergen', tags=['651'])
 
         assert 'Bergen' == rec.findtext('record/datafield[@tag="651"]/subfield[@code="a"]')
         assert 'Oslo' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')   # 650 should not change!
@@ -281,7 +283,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Middelalder', 'Middelalderen', tags=['648', '650'])
+        bib.marc_record.edit_subject('noubomn', 'Middelalder', 'Middelalderen', tags=['648', '650'])
 
         assert 'Middelalderen' == rec.findtext('record/datafield[@tag="648"]/subfield[@code="a"]')
         assert 'Middelalderen' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
@@ -303,7 +305,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.edit_subject('noubomn', 'Monstre', 'Mønstre', tags=['650'])
+        bib.marc_record.edit_subject('noubomn', 'Monstre', 'Mønstre', tags=['650'])
 
         assert len(rec.findall('record/datafield[@tag="650"]')) == 1
 
@@ -324,7 +326,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.remove_subject('noubomn', 'Monstre', tags=['650'])
+        bib.marc_record.remove_subject('noubomn', 'Monstre', tags=['650'])
         fields = rec.findall('record/datafield[@tag="650"]')
 
         assert len(fields) == 1
@@ -348,7 +350,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.remove_subject('noubomn', 'Monstre : Atferd', tags=['650'])
+        bib.marc_record.remove_subject('noubomn', 'Monstre : Atferd', tags=['650'])
         fields = rec.findall('record/datafield[@tag="650"]')
 
         assert len(fields) == 1
@@ -371,7 +373,7 @@ class TestBib(unittest.TestCase):
             </bib>
         """)
         bib = Bib(Mock(), rec)
-        bib.remove_subject('noubomn', 'Oslo', tags=['651'])
+        bib.marc_record.remove_subject('noubomn', 'Oslo', tags=['651'])
         f650 = rec.findall('record/datafield[@tag="650"]')
         f651 = rec.findall('record/datafield[@tag="651"]')
 
@@ -383,7 +385,7 @@ class TestBib(unittest.TestCase):
         alma.put.return_value = '<bib><mms_id>991416299674702204</mms_id><record></record></bib>'
         doc = get_sample('bib_response.xml', True)
         bib = Bib(alma, doc)
-        bib.edit_subject('noubomn', 'Kryptozoologi', 'KryptoÆØÅ', tags=['650'])
+        bib.marc_record.edit_subject('noubomn', 'Kryptozoologi', 'KryptoÆØÅ', tags=['650'])
         bib.save()
 
         alma.put.assert_called_once_with('/bibs/991416299674702204', data=ANY, headers={'Content-Type': 'application/xml'})
@@ -408,7 +410,7 @@ class TestBib(unittest.TestCase):
 
         assert len(marc_record.findall('record/datafield[@tag="650"]')) == 2
 
-        bib.remove_duplicate_fields('noubomn', 'Monstre', tags=['650'])
+        bib.marc_record.remove_duplicate_fields('noubomn', 'Monstre', tags=['650'])
 
         assert len(marc_record.findall('record/datafield[@tag="650"]')) == 1
 
@@ -451,6 +453,46 @@ class TestAuthorizeTerm(unittest.TestCase):
         assert len(responses.calls) == 0
 
 
+class SruMock(Mock):
+
+    def __init__(self, **kwargs):
+        super(SruMock, self).__init__(**kwargs)
+
+
+def patch_sru_search(xml_response_file):
+    # Decorator
+
+    def setup_mock(mock_class):
+        recs = get_sample(xml_response_file, True).findall('srw:records/srw:record/srw:recordData/record', nsmap)
+        recs = [MarcRecord(rec) for rec in recs]
+
+        def search(arg):
+            for rec in recs:
+                yield rec
+
+        mock = mock_class.return_value
+        mock.num_records = len(recs)
+        mock.search.side_effect = search
+        return mock
+
+    @contextmanager
+    def patch_fn():
+        patcher = patch('lokar.SruClient', autospec=True)
+        mock_sru_class = patcher.start()
+        mock_sru = setup_mock(mock_sru_class)
+        yield mock_sru
+        patcher.stop()
+
+    def decorator_fn(func):
+        @wraps(func)
+        def wrapper_fn(*args, **kwargs):
+            with patch_fn() as sru:
+                args = tuple([args[0], sru] + list(args[1:]))
+                func(*args, **kwargs)
+        return wrapper_fn
+    return decorator_fn
+
+
 class TestLokar(unittest.TestCase):
 
     @staticmethod
@@ -483,65 +525,51 @@ class TestLokar(unittest.TestCase):
     def sru_search_mock(*args, **kwargs):
         recs = get_sample('sru_sample_response_1.xml', True).findall('srw:records/srw:record/srw:recordData/record', nsmap)
         for n, rec in enumerate(recs):
-            yield n, len(recs), rec
+            yield rec
 
     @patch('lokar.email', autospec=True)
     @patch('lokar.authorize_term', autospec=True)
-    @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    def testMain(self, MockAlma, mock_sru, mock_authorize_term, email):
+    @patch_sru_search('sru_sample_response_1.xml')
+    def testMain(self, sru, MockAlma, mock_authorize_term, email):
+        print(type(sru))
+        print(type(MockAlma))
         old_term = 'Statistiske modeller'
         new_term = 'Test æøå'
-        mock_sru.side_effect = TestLokar.sru_search_mock
+        alma = MockAlma.return_value
         mock_authorize_term.return_value = {'localname': 'c030697'}
-
         valid_records = main(self.conf(), [old_term, new_term, '-e test_env'])
 
-        alma = MockAlma.return_value
-
         assert len(valid_records) == 14
-        mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
-                                         'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
+        sru.search.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
 
         assert alma.bibs.call_count == 14
 
     @patch('lokar.email', autospec=True)
     @patch('lokar.authorize_term', autospec=True)
-    @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    def testMainNoHits(self, MockAlma, mock_sru, mock_authorize_term, email):
+    @patch_sru_search('sru_sample_response_1.xml')
+    def testMainNoHits(self, sru, MockAlma, mock_authorize_term, email):
         old_term = 'Something else'
         new_term = 'Test æøå'
-        mock_sru.side_effect = TestLokar.sru_search_mock
         mock_authorize_term.return_value = {'localname': 'c030697'}
-
-        valid_records = main(self.conf(), [old_term, new_term, '-e test_env'])
-
         alma = MockAlma.return_value
-
+        valid_records = main(self.conf(), [old_term, new_term, '-e test_env'])
         assert valid_records is None
-        mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
-                                         'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
-
+        sru.search.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
     @patch('lokar.email', autospec=True)
     @patch('lokar.authorize_term', autospec=True)
-    @patch('lokar.sru_search', autospec=True)
     @patch('lokar.Alma', autospec=True, spec_set=True)
-    def testRemoveTerm(self, MockAlma, mock_sru, mock_authorize_term, mock_email):
+    @patch_sru_search('sru_sample_response_1.xml')
+    def testRemoveTerm(self, sru, MockAlma, mock_authorize_term, mock_email):
         old_term = 'Statistiske modeller'
-        mock_sru.side_effect = TestLokar.sru_search_mock
         mock_authorize_term.return_value = {'localname': 'c030697'}
-
-        valid_records = main(self.conf(), [old_term, '', '-e test_env'])
-
         alma = MockAlma.return_value
-
+        valid_records = main(self.conf(), [old_term, '', '-e test_env'])
         assert len(valid_records) == 14
-        mock_sru.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'),
-                                         'https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK')
-
+        sru.search.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
         assert alma.bibs.call_count == 14
 
     @patch('lokar.open', autospec=True)
