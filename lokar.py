@@ -336,6 +336,9 @@ def parse_args(args):
     parser.add_argument('-d', '--dry_run', dest='dry_run', action='store_true',
                         help='Dry run without doing any edits.')
 
+    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+                        help='Non-interactive mode. Don\'t ask for any confirmation.')
+
     # parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='More verbose output')
 
     args = parser.parse_args(args)
@@ -388,7 +391,7 @@ def main(config=None, args=None):
     logger.info('[ Miljø: %s ] [ Vokabular: %s ] [ Bruker: %s] [ Tørrkjøring? %s ]'
                 % (args.env, config['vocabulary'], config['user'], 'JA' if args.dry_run else 'NEI'))
 
-    if not skosmos_check(config['skosmos_vocab'], args.tag, old_term, new_term):
+    if not skosmos_check(config['skosmos_vocab'], args.tag, old_term, new_term) and not args.quiet:
         if yesno('Vil du fortsette allikevel?', default='no'):
             return
 
