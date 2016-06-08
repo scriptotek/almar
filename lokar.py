@@ -189,6 +189,10 @@ class MarcRecord(object):
         return self  # for chaining
 
 
+class BibSaveError(RuntimeError):
+    pass
+
+
 class Bib(object):
     """ An Alma Bib record """
 
@@ -216,7 +220,7 @@ class Bib(object):
                                      data=etree.tostring(self.doc),
                                      headers={'Content-Type': 'application/xml'})
         except HTTPError as error:
-            raise RuntimeError('Failed to save record. Status: %s. Response: %s'
+            raise BibSaveError('Failed to save record. Status: %s. Response: %s'
                                % (error.response.status_code, error.response.text))
 
         self.init_from_doc(etree.fromstring(response.encode('utf-8')))
