@@ -314,7 +314,7 @@ def skosmos_check(vocab, tag, old_term, new_term):
         terms = [old_term]
         if len(new_term) != 0:
             terms.append(new_term)
-        logger.error('Fant ikke %s som <%s> i <%s>',
+        logger.warning('Fant ikke %s som <%s> i <%s>',
                      ' eller '.join(['"%s"' % term for term in terms]), concept_type, vocab)
         return False
     return True
@@ -449,7 +449,7 @@ def main(config=None, args=None):
         pbar.close()
 
     if len(valid_records) == 0:
-        logger.info('Fant ingen poster, avslutter')
+        logger.info('Sjekket %d poster, fant ingen som trengte endringer. Avslutter', sru.num_records)
         return
 
     # ------------------------------------------------------------------------------------
