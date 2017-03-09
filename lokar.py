@@ -47,6 +47,14 @@ nsmap = {
 }
 
 
+def parse_xml(txt):
+    if isinstance(txt, text_type):
+        return etree.fromstring(txt.encode('utf-8'))
+    elif isinstance(txt, binary_type):
+        return etree.fromstring(txt)
+    return txt
+
+
 def normalize_term(term):
     # Normalize term so it starts with a capital letter. If the term is a subject string
     # fused by " : ", normalize all components.
@@ -78,7 +86,7 @@ class SruClient(object):
                 'maximumRecords': '50',
                 'query': query,
             })
-            root = etree.fromstring(response.text.encode('utf-8'))  # Takes ~ 4 seconds for 50 records!
+            root = parse_xml(response.text)  # Takes ~ 4 seconds for 50 records!
 
             for diagnostic in root.findall('srw:diagnostics/diag:diagnostic', namespaces=nsmap):
                 raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=nsmap))
@@ -223,7 +231,7 @@ class Bib(object):
             raise BibSaveError('Failed to save record. Status: %s. Response: %s'
                                % (error.response.status_code, error.response.text))
 
-        self.init_from_doc(etree.fromstring(response.encode('utf-8')))
+        self.init_from_doc(parse_xml(response))
 
     def dump(self, filename):
         # Dump record to file

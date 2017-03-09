@@ -15,29 +15,22 @@ from contextlib import contextmanager
 from functools import wraps
 
 from lokar import SruClient, nsmap, SruErrorResponse, Alma, Bib, read_config, main, authorize_term, \
-    parse_args, normalize_term, MarcRecord
+    parse_args, normalize_term, MarcRecord, parse_xml
 from textwrap import dedent
-
-try:
-    # Use lxml if installed, since it's faster ...
-    from lxml import etree
-except ImportError:
-    # ... but also support standard ElementTree, since installation of lxml can be cumbersome
-    import xml.etree.ElementTree as etree
 
 
 def get_sample(filename, as_xml=False):
     with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data/%s' % filename), encoding='utf-8') as fp:
         body = fp.read()
     if as_xml:
-        return etree.fromstring(body.encode('utf-8'))
+        return parse_xml(body)
     return body
 
 
 class TestMarcRecord(unittest.TestCase):
 
     def test650a(self):
-        record = MarcRecord(etree.fromstring('''
+        record = MarcRecord(parse_xml('''
               <record>
                 <datafield tag="650" ind1=" " ind2="7">
                   <subfield code="a">Monstre</subfield>
@@ -64,7 +57,7 @@ class TestMarcRecord(unittest.TestCase):
         assert fields[0].findtext('subfield[@code="a"]') == 'Monstre'
 
     def test650x(self):
-        record = MarcRecord(etree.fromstring('''
+        record = MarcRecord(parse_xml('''
               <record>
                 <datafield tag="650" ind1=" " ind2="7">
                   <subfield code="a">Monstre</subfield>
@@ -172,7 +165,7 @@ class TestAlma(unittest.TestCase):
 class TestBib(unittest.TestCase):
 
     def testModify650a(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -190,7 +183,7 @@ class TestBib(unittest.TestCase):
         assert 'Atferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')  # $x should not change!
 
     def testModify650x(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
                         <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -209,7 +202,7 @@ class TestBib(unittest.TestCase):
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
 
     def testModify650ax(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -228,7 +221,7 @@ class TestBib(unittest.TestCase):
         assert 'Dagbøker' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
 
     def testModify650_ax_to_a(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -247,7 +240,7 @@ class TestBib(unittest.TestCase):
         assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
 
     def testModify651(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield tag="650" ind1=" " ind2="7">
@@ -268,7 +261,7 @@ class TestBib(unittest.TestCase):
         assert 'Oslo' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')   # 650 should not change!
 
     def testModify648(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield tag="648" ind1=" " ind2="7">
@@ -290,7 +283,7 @@ class TestBib(unittest.TestCase):
 
     def testDontCreateDuplicates(self):
         # If the new term already exists, don't duplicate it
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -310,7 +303,7 @@ class TestBib(unittest.TestCase):
         assert len(rec.findall('record/datafield[@tag="650"]')) == 1
 
     def testRemoveTerm(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -334,7 +327,7 @@ class TestBib(unittest.TestCase):
         assert 'atferd' == rec.findtext('record/datafield[@tag="650"]/subfield[@code="x"]')
 
     def testRemoveSubjectString(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -358,7 +351,7 @@ class TestBib(unittest.TestCase):
         assert rec.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
 
     def testRemoveGeoTerm(self):
-        rec = etree.fromstring("""
+        rec = parse_xml("""
             <bib>
                 <record>
                   <datafield tag="650" ind1=" " ind2="7">
@@ -391,7 +384,7 @@ class TestBib(unittest.TestCase):
         alma.put.assert_called_once_with('/bibs/991416299674702204', data=ANY, headers={'Content-Type': 'application/xml'})
 
     def testDups(self):
-        marc_record = etree.fromstring('''
+        marc_record = parse_xml('''
              <bib> <record>
                 <datafield tag="650" ind1=" " ind2="7">
                   <subfield code="a">Monstre</subfield>
