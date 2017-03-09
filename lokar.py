@@ -5,14 +5,14 @@ import argparse
 import logging.handlers
 from io import open
 import io
-
-import requests
 import sys
 import os
-from six import text_type, binary_type
 from datetime import datetime
+
+import requests
 from requests import Session
 from requests.exceptions import HTTPError
+from six import text_type, binary_type
 from six.moves import configparser
 from tqdm import tqdm
 from prompter import yesno
