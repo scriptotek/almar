@@ -323,7 +323,7 @@ def skosmos_check(vocab, tag, old_term, new_term):
         if len(new_term) != 0:
             terms.append(new_term)
         logger.warning('Fant ikke %s som <%s> i <%s>',
-                     ' eller '.join(['"%s"' % term for term in terms]), concept_type, vocab)
+                       ' eller '.join(['"%s"' % term for term in terms]), concept_type, vocab)
         return False
     return True
 
