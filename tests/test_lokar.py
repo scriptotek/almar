@@ -593,8 +593,8 @@ class TestParseArgs(unittest.TestCase):
         assert parser.old_term == 'Sekvensering'
         assert parser.new_term == 'Sekvenseringsmetoder'
 
-    def test_non_unicode_input(self):
-        parser = parse_args(['Byer : Økologi'.encode('utf-8'), 'Byøkologi'.encode('utf-8')])
+    def test_unicode_input(self):
+        parser = parse_args(['Byer : Økologi', 'Byøkologi'])
 
         assert parser.old_term == 'Byer : Økologi'
         assert parser.new_term == 'Byøkologi'
