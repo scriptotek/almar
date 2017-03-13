@@ -46,7 +46,8 @@ class Job(object):
         if dry_run:
             log.info('Dry run: No catalog records will be touched!')
 
-        self.skosmos.check(self.tag, self.old_term, self.new_term, self.dest_tag)
+        if self.new_term != '':
+            self.skosmos.check(self.tag, self.old_term, self.new_term, self.dest_tag)
 
         # if not skosmos.check(self.vocabulary.skosmos_code, self.tag, self.old_term, self.new_term):
         #     if non_interative or yesno('Vil du fortsette allikevel?', default='no'):
@@ -183,7 +184,7 @@ class Job(object):
         if not dry_run:
             n_posts = '{:d} {}'.format(len(valid_records), 'record' if len(valid_records) == 1 else 'records')
             if self.new_term == '':
-                subject = '{}: Removed "{}" in {}'.format(self.tag, self.old_term, self.new_term, n_posts)
+                subject = '{}: Removed "{}" in {}'.format(self.tag, self.old_term, n_posts)
             else:
                 subject = '{}: Changed "{}" to "{}" in {}'.format(self.tag, self.old_term, self.new_term, n_posts)
             body = log_capture_string.getvalue()
