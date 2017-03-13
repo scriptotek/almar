@@ -59,8 +59,8 @@ env:
 
 ### Usage
 
-Note: The tool will only work with subject fields where the `$2` value matches the `general.vocabulary` code in
-`lokar.yml`. If you've set `general.vocabulary` to e.g. `noubomn`, the tool will never make any changes to
+Note: The tool will only work with subject fields where the `$2` value matches the `vocabulary.marc_code` code in
+`lokar.yml`. If you've set `vocabulary.marc_code` to e.g. `noubomn`, the tool will never make any changes to
 subject fields that do not have `$2 noubomn`.
 
 * `lokar -h` to show help
