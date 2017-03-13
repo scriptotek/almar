@@ -57,7 +57,7 @@ class Mailer(object):
         msg['To'] = self.config.get('recipient')
         msg['Subject'] = subject
         p = Popen(['sendmail', '-t'], stdin=PIPE)
-        p.communicate(msg.as_string())
+        p.communicate(msg.as_string().encode('utf-8'))
 
     def send_using_mailgun(self, subject, body):
         request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(self.config['domain'])
