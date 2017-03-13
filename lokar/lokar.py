@@ -8,6 +8,7 @@ import sys
 import os
 
 from email.mime.text import MIMEText
+from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from subprocess import Popen, PIPE
 
@@ -51,13 +52,13 @@ class Mailer(object):
             raise RuntimeError('Unknown mail driver')
 
     def send_using_sendmail(self, subject, body):
-        msg = MIMEText(body)
+        msg = MIMEText(body.encode('utf-8'), 'plain', 'utf-8')
         if self.config.get('sender') is not None:
             msg['From'] = self.config.get('sender')
         msg['To'] = self.config.get('recipient')
-        msg['Subject'] = subject
+        msg['Subject'] = Header(subject, 'utf-8')
         p = Popen(['sendmail', '-t'], stdin=PIPE)
-        p.communicate(msg.as_string().encode('utf-8'))
+        p.communicate(msg.as_string())
 
     def send_using_mailgun(self, subject, body):
         request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(self.config['domain'])
