@@ -52,7 +52,8 @@ class Mailer(object):
 
     def send_using_sendmail(self, subject, body):
         msg = MIMEText(body)
-        msg['From'] = self.config.get('sender')
+        if self.config.get('sender') is not None:
+            msg['From'] = self.config.get('sender')
         msg['To'] = self.config.get('recipient')
         msg['Subject'] = subject
         p = Popen(['sendmail', '-t'], stdin=PIPE)

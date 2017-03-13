@@ -178,14 +178,14 @@ class Job(object):
                 bib.save()
                 bib.dump('jobs/%s/%s.after.xml' % (self.job_name, mms_id))
 
-        log.info('{:=^70}'.format(' Jobb ferdig '))
+        log.info('{:=^70}'.format(' Job complete '))
 
         if not dry_run:
             n_posts = '{:d} {}'.format(len(valid_records), 'record' if len(valid_records) == 1 else 'records')
             if self.new_term == '':
-                subject = '[{}] Removed "{}" in {}'.format(self.tag, self.old_term, self.new_term, n_posts)
+                subject = '{}: Removed "{}" in {}'.format(self.tag, self.old_term, self.new_term, n_posts)
             else:
-                subject = '[{}] Changed "{}" to "{}" in {}'.format(self.tag, self.old_term, self.new_term, n_posts)
+                subject = '{}: Changed "{}" to "{}" in {}'.format(self.tag, self.old_term, self.new_term, n_posts)
             body = log_capture_string.getvalue()
 
             self.mailer.send(subject, body)
