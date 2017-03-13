@@ -31,6 +31,6 @@ setup(name='lokar',
       setup_requires=['pytest-runner'],
       tests_require=['pytest', 'pytest-pep8', 'pytest-cov', 'responses', 'mock'],
       entry_points={'console_scripts': ['lokar=lokar.lokar:main']},
-      py_modules=['lokar']
+      packages=['lokar']
       # data_files=[(AppDirs('Lokar').user_config_dir, ['lokar.cfg'])]
       )
