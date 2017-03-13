@@ -46,7 +46,7 @@ class Job(object):
         if dry_run:
             log.info('Dry run: No catalog records will be touched!')
 
-        if self.new_term != '':
+        if self.dest_tag is not None or self.new_term != '':
             self.skosmos.check(self.tag, self.old_term, self.new_term, self.dest_tag)
 
         # if not skosmos.check(self.vocabulary.skosmos_code, self.tag, self.old_term, self.new_term):

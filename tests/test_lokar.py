@@ -615,7 +615,7 @@ class TestJob(unittest.TestCase):
         results = self.runJob('sru_sample_response_1.xml', 'Tekord', '650', 'Økologi : Statistiske modeller', '')
 
         assert len(results) == 1
-        assert authorize_term.called
+        assert not authorize_term.called
 
     @patch('lokar.job.Skosmos.authorize_term', autospec=True)
     def testMoveJob(self, authorize_term):
