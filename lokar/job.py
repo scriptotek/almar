@@ -122,7 +122,7 @@ class Job(object):
 
         for marc_record in self.sru.search(cql_query):
             if pbar is None and show_progress and self.sru.num_records > 50:
-                pbar = tqdm(total=self.sru.num_records, desc='Filtrerer SRU-resultater')
+                pbar = tqdm(total=self.sru.num_records, desc='Filtering SRU results')
 
             log.debug('Checking record %s', marc_record.id())
 

@@ -146,7 +146,7 @@ class Subjects(object):
         for field in self.find(vocabulary, term, tags):
             key = self.get_simple_subject_repr(field)
             if key in keys:
-                log.info('Posten hadde allerede termen: %s', key)
+                log.info('The new term was already present on the record: %s', key)
                 self.marc_record.remove_field(field)
                 continue
             keys.append(key)
