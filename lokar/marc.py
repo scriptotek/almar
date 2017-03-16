@@ -126,7 +126,6 @@ class Subjects(object):
         }
 
         for field in self.marc_record.fields(source_tag, query):
-            print('Setting', query, term, source_tag, dest_tag)
             field.set_tag(dest_tag)
 
         self.remove_duplicates(vocabulary, term, dest_tag)
@@ -207,7 +206,6 @@ class Field(object):
                         ch.text = x['replace']
             for code, value in subfield_query.items():
                 if value.get('replace') is not None:
-                    print('APPEND', code, value['replace'])
                     self.node.append(parse_xml('<subfield code="%s">%s</subfield>' % (code, value['replace'])))
 
     def set_tag(self, new_tag):
