@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import logging
 import os
 import io
+import getpass
 from textwrap import dedent
 from datetime import datetime
 from prompter import yesno
@@ -38,9 +39,11 @@ class Job(object):
         self.skosmos = Skosmos(self.vocabulary.skosmos_code)
 
     def start(self, dry_run=False, non_interactive=False, show_progress=True):
-        heading = ' Starting job '
+
+        username = getpass.getuser()
+        heading = ' {}: Starting job '.format(username)
         if self.alma.name is not None:
-            heading += 'in the {} environment '.format(self.alma.name)
+            heading += 'in env: {} '.format(self.alma.name)
 
         log.info('{:=^70}'.format(heading))
         if dry_run:

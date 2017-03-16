@@ -6,6 +6,9 @@ from io import open
 import io
 import sys
 import os
+import getpass
+
+from raven import Client
 
 from email.mime.text import MIMEText
 from email.header import Header
@@ -117,6 +120,8 @@ def parse_args(args):
 
 def main(config=None, args=None):
 
+    username = getpass.getuser()
+
     args = parse_args(args or sys.argv[1:])
 
     try:
@@ -126,26 +131,35 @@ def main(config=None, args=None):
         logger.error('Fant ikke lokar.yml. Se README.md for mer info.')
         return
 
-    env = config['env'][args.env]
+    if config.get('sentry') is not None:
+        raven = Client(config['sentry']['dsn'])
+        raven.context.merge({'user': {
+            'username': username
+        }})
 
-    if not args.dry_run:
-        file_handler = logging.FileHandler('lokar.log')
-        file_handler.setFormatter(formatter)
-        file_handler.setLevel(logging.INFO)
-        logger.addHandler(file_handler)
+    try:
+        env = config['env'][args.env]
 
-    sru = SruClient(env['sru_url'], args.env)
-    alma = Alma(env['api_region'], env['api_key'], args.env)
+        if not args.dry_run:
+            file_handler = logging.FileHandler('lokar.log')
+            file_handler.setFormatter(formatter)
+            file_handler.setLevel(logging.INFO)
+            logger.addHandler(file_handler)
 
-    vocabulary = Vocabulary(config['vocabulary']['marc_code'], config['vocabulary'].get('skosmos_code'))
-    mailer = Mailer(config['mail'])
+        sru = SruClient(env['sru_url'], args.env)
+        alma = Alma(env['api_region'], env['api_key'], args.env)
 
-    job = Job(sru, alma, vocabulary, mailer, args.tag, args.old_term, args.new_term, dest_tag=args.dest_tag)
-    job.start(args.dry_run, args.non_interactive, not args.verbose)
+        vocabulary = Vocabulary(config['vocabulary']['marc_code'], config['vocabulary'].get('skosmos_code'))
+        mailer = Mailer(config['mail'])
+
+        job = Job(sru, alma, vocabulary, mailer, args.tag, args.old_term, args.new_term, dest_tag=args.dest_tag)
+        job.start(args.dry_run, args.non_interactive, not args.verbose)
+
+    except Exception as e:
+        if config.get('sentry') is not None:
+            raven.captureException()
+        logger.exception('Uncaught exception:')
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        logger.exception('Uncaught exception:')
+    main()
