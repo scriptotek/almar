@@ -582,7 +582,7 @@ class TestJob(unittest.TestCase):
         mailer = MockMailer({})
         voc = Vocabulary(vocabulary, 'realfagstermer')
         self.job = Job(self.sru, self.alma, voc, mailer, tag, old_term, new_term, new_tag)
-        return self.job.start(False, False)
+        return self.job.start(False, True)
 
     def tearDown(self):
         self.alma = None
@@ -662,7 +662,7 @@ class TestLokar(unittest.TestCase):
         new_term = 'Test æøå'
         alma = MockAlma.return_value
         mock_authorize_term.return_value = {'localname': 'c030697'}
-        main(self.conf(), [old_term, new_term, '-e test_env'])
+        main(self.conf(), [old_term, new_term, '-e test_env', '-n'])
 
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
 
@@ -677,7 +677,7 @@ class TestLokar(unittest.TestCase):
         new_term = 'Test æøå'
         mock_authorize_term.return_value = {'localname': 'c030697'}
         alma = MockAlma.return_value
-        main(self.conf(), [old_term, new_term, '-e test_env'])
+        main(self.conf(), [old_term, new_term, '-e test_env', '-n'])
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
@@ -689,7 +689,7 @@ class TestLokar(unittest.TestCase):
         old_term = 'Statistiske modeller'
         mock_authorize_term.return_value = {'localname': 'c030697'}
         alma = MockAlma.return_value
-        main(self.conf(), [old_term, '', '-e test_env'])
+        main(self.conf(), [old_term, '', '-e test_env', '-n'])
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
         assert alma.bibs.call_count == 14
 

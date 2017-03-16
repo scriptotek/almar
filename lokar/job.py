@@ -35,7 +35,6 @@ class Job(object):
         self.old_term = normalize_term(old_term)
         self.new_term = normalize_term(new_term)
         self.job_name = datetime.now().isoformat()
-        self.non_interactive = False
         self.skosmos = Skosmos(self.vocabulary.skosmos_code)
 
     def start(self, dry_run=False, non_interactive=False, show_progress=True):
@@ -141,7 +140,11 @@ class Job(object):
             log.info('No matching catalog records found')
             return
         else:
-            log.info('Updating %d catalog records' % len(valid_records))
+            log.info('%d catalog records will be updated' % len(valid_records))
+
+        if not non_interactive and not yesno('Continue?', default='yes'):
+            log.info('Bye')
+            return
 
         # ------------------------------------------------------------------------------------
         # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
