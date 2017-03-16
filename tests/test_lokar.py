@@ -147,7 +147,7 @@ class TestSruSearch(unittest.TestCase):
         body = get_sample('sru_sample_response_1.xml')
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
-        records = list(SruClient(url).search('alma.subjects="test"'))
+        records = list(SruClient(url).search('alma.subjects=="test"'))
 
         assert len(responses.calls) == 1
         assert len(records) == 18
@@ -165,7 +165,7 @@ class TestSruSearch(unittest.TestCase):
 
         responses.add_callback(responses.GET, url, callback=request_callback, content_type='application/xml')
 
-        records = list(SruClient(url).search('alma.subjects="test"'))
+        records = list(SruClient(url).search('alma.subjects=="test"'))
 
         assert len(responses.calls) == 2
         assert len(records) == 2
@@ -178,7 +178,7 @@ class TestSruSearch(unittest.TestCase):
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
         with pytest.raises(SruErrorResponse):
-            records = list(SruClient(url).search('alma.subjects="test"'))
+            records = list(SruClient(url).search('alma.subjects=="test"'))
 
         assert len(responses.calls) == 1
 
@@ -664,7 +664,7 @@ class TestLokar(unittest.TestCase):
         mock_authorize_term.return_value = {'localname': 'c030697'}
         main(self.conf(), [old_term, new_term, '-e test_env'])
 
-        sru.search.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
+        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
 
         assert alma.bibs.call_count == 14
 
@@ -678,7 +678,7 @@ class TestLokar(unittest.TestCase):
         mock_authorize_term.return_value = {'localname': 'c030697'}
         alma = MockAlma.return_value
         main(self.conf(), [old_term, new_term, '-e test_env'])
-        sru.search.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
+        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
     @patch('lokar.lokar.Mailer', autospec=True)
@@ -690,7 +690,7 @@ class TestLokar(unittest.TestCase):
         mock_authorize_term.return_value = {'localname': 'c030697'}
         alma = MockAlma.return_value
         main(self.conf(), [old_term, '', '-e test_env'])
-        sru.search.assert_called_once_with('alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
+        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
         assert alma.bibs.call_count == 14
 
     @patch('lokar.lokar.open', autospec=True)

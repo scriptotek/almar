@@ -117,8 +117,8 @@ class Job(object):
 
         valid_records = []
         pbar = None
-        cql_query = 'alma.subjects="%s" AND alma.authority_vocabulary = "%s"' % (self.old_term,
-                                                                                 self.vocabulary.marc_code)
+        cql_query = 'alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (self.old_term,
+                                                                                  self.vocabulary.marc_code)
 
         for marc_record in self.sru.search(cql_query):
             if pbar is None and show_progress and self.sru.num_records > 50:

@@ -1,9 +1,11 @@
 # coding=utf-8
 import requests
+import logging
 
 from .marc import Record
 from .util import parse_xml
 
+log = logging.getLogger(__name__)
 
 nsmap = {
     'e20': 'http://explain.z3950.org/dtd/2.0/',
