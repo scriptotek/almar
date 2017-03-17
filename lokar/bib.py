@@ -25,26 +25,30 @@ class BibSaveError(RuntimeError):
 class Bib(object):
     """ An Alma Bib record """
 
-    def __init__(self, alma, doc):
+    def __init__(self, alma, xml):
         self.alma = alma
-        self.init_from_doc(doc)
+        self.orig_xml = xml.encode('utf-8')
+        self.init(xml)
 
-    def init_from_doc(self, doc):
-        self.doc = doc
+    def init(self, xml):
+        self.doc = parse_xml(xml)
         self.mms_id = self.doc.findtext('mms_id')
         self.marc_record = Record(self.doc.find('record'))
         self.linked_to_cz = self.doc.findtext('linked_record_id[@type="CZ"]') or None
 
     def save(self):
         # Save record back to Alma
+
+        post_data = etree.tostring(self.doc, encoding='UTF-8')
+
         try:
             response = self.alma.put('/bibs/{}'.format(self.mms_id),
-                                     data=etree.tostring(self.doc),
+                                     data=post_data,
                                      headers={'Content-Type': 'application/xml'})
         except HTTPError as error:
             raise BibSaveError(error.response, etree.tostring(self.doc))
 
-        self.init_from_doc(parse_xml(response))
+        self.init(response)
 
     def dump(self, filename):
         # Dump record to file
