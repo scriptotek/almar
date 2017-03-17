@@ -2,6 +2,7 @@
 
 from __future__ import unicode_literals
 
+from io import BytesIO
 
 from .marc import Record
 from .util import etree, parse_xml, show_diff
@@ -24,13 +25,14 @@ class Bib(object):
     def save(self, diff=False):
         # Save record back to Alma
 
-        post_data = etree.tostring(self.doc, encoding='UTF-8')
+        post_data = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.encode('utf-8') +
+                     etree.tostring(self.doc, encoding='UTF-8'))
 
         if diff:
             show_diff(self.orig_xml, post_data)
 
         response = self.alma.put('/bibs/{}'.format(self.mms_id),
-                                 data=post_data,
+                                 data=BytesIO(post_data),
                                  headers={'Content-Type': 'application/xml'})
 
         self.init(response)
