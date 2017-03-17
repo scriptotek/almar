@@ -37,7 +37,7 @@ class Job(object):
         self.job_name = datetime.now().isoformat()
         self.skosmos = Skosmos(self.vocabulary.skosmos_code)
 
-    def start(self, dry_run=False, non_interactive=False, show_progress=True):
+    def start(self, dry_run=False, non_interactive=False, show_progress=True, show_diffs=False):
 
         username = getpass.getuser()
         heading = ' {}: Starting job '.format(username)
@@ -153,10 +153,6 @@ class Job(object):
         for n, mms_id in enumerate(valid_records):
             log.info(' {:3d}/{:d}: {}'.format(n + 1, len(valid_records), mms_id))
             bib = self.alma.bibs(mms_id)
-            if not dry_run:
-                if not os.path.exists('jobs/%s' % self.job_name):
-                    os.makedirs('jobs/%s' % self.job_name)
-                bib.dump('jobs/%s/%s.before.xml' % (self.job_name, mms_id))
 
             subjects = Subjects(bib.marc_record)
             if self.dest_tag is not None:
@@ -182,8 +178,7 @@ class Job(object):
 
                     log.warning(' -> Updating the record. The CZ connection will be lost!')
 
-                bib.save()
-                bib.dump('jobs/%s/%s.after.xml' % (self.job_name, mms_id))
+                bib.save(show_diffs)
 
         log.info('{:=^70}'.format(' Job complete '))
 

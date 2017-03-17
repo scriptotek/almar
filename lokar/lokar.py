@@ -100,6 +100,9 @@ def parse_args(args):
     parser.add_argument('-n', '--non-interactive', dest='non_interactive', action='store_true',
                         help='Non-interactive mode. Always use defaults rather than asking.')
 
+    parser.add_argument('--diffs', dest='show_diffs', action='store_true',
+                        help='Show diffs before saving.')
+
     args = parser.parse_args(args)
     args.env = args.env.strip()
     args.old_term = args.old_term[0]
@@ -153,7 +156,7 @@ def main(config=None, args=None):
         mailer = Mailer(config['mail'])
 
         job = Job(sru, alma, vocabulary, mailer, args.tag, args.old_term, args.new_term, dest_tag=args.dest_tag)
-        job.start(args.dry_run, args.non_interactive, not args.verbose)
+        job.start(args.dry_run, args.non_interactive, not args.verbose, args.show_diffs)
 
     except Exception as e:
         if config.get('sentry') is not None:

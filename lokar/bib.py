@@ -6,7 +6,6 @@ from requests.exceptions import HTTPError
 import six
 
 from .marc import Record
-from .util import etree, parse_xml
 
 
 @six.python_2_unicode_compatible
@@ -20,6 +19,7 @@ class BibSaveError(RuntimeError):
     def __str__(self):
         args = (self.response.status_code, self.response.text, self.request)
         return 'Failed to save record, status: %s\n\n%s\n\n%s' % args
+from .util import etree, parse_xml, show_diff
 
 
 class Bib(object):
@@ -36,10 +36,13 @@ class Bib(object):
         self.marc_record = Record(self.doc.find('record'))
         self.linked_to_cz = self.doc.findtext('linked_record_id[@type="CZ"]') or None
 
-    def save(self):
+    def save(self, diff=False):
         # Save record back to Alma
 
         post_data = etree.tostring(self.doc, encoding='UTF-8')
+
+        if diff:
+            show_diff(self.orig_xml, post_data)
 
         try:
             response = self.alma.put('/bibs/{}'.format(self.mms_id),
