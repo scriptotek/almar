@@ -286,6 +286,41 @@ class TestBib(unittest.TestCase):
         assert 'Monsteratferd' == bib.doc.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
         assert bib.doc.find('record/datafield[@tag="650"]/subfield[@code="x"]') is None
 
+    def testMoveTag(self):
+        rec = """
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """
+        bib = Bib(Mock(), rec)
+        Subjects(bib.marc_record).move('noubomn', 'Monstre', '650', '651')
+
+        assert len(bib.doc.findall('record/datafield[@tag="651"]/subfield[@code="a"]')) == 1
+
+    def testMoveAndRenameTag(self):
+        rec = """
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """
+        bib = Bib(Mock(), rec)
+        Subjects(bib.marc_record).move('noubomn', 'Monstre', '650', '651')
+        Subjects(bib.marc_record).rename('noubomn', 'Monstre', 'Monsteratferd', '651')
+
+        assert len(bib.doc.findall('record/datafield[@tag="650"]/subfield[@code="a"]')) == 0
+        assert len(bib.doc.findall('record/datafield[@tag="651"]/subfield[@code="a"]')) == 1
+        assert 'Monsteratferd' == bib.doc.findtext('record/datafield[@tag="651"]/subfield[@code="a"]')
+
     def testModify651(self):
         rec = """
             <bib>

@@ -158,10 +158,12 @@ class Job(object):
             subjects = Subjects(bib.marc_record)
             if self.dest_tag is not None:
                 subjects.move(self.vocabulary.marc_code, self.old_term, self.tag, self.dest_tag)
-            elif self.new_term == '':
-                subjects.remove(self.vocabulary.marc_code, self.old_term, tags)
-            else:
+                if self.new_term != '':
+                    subjects.rename(self.vocabulary.marc_code, self.old_term, self.new_term, self.dest_tag)
+            elif self.new_term != '':
                 subjects.rename(self.vocabulary.marc_code, self.old_term, self.new_term, tags)
+            else:
+                subjects.remove(self.vocabulary.marc_code, self.old_term, tags)
 
             if not dry_run:
                 if bib.linked_to_cz is True:
