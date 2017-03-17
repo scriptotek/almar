@@ -2,23 +2,8 @@
 
 from __future__ import unicode_literals
 
-from requests.exceptions import HTTPError
-import six
 
 from .marc import Record
-
-
-@six.python_2_unicode_compatible
-class BibSaveError(RuntimeError):
-
-    def __init__(self, response, request):
-        self.msg = 'Failed to save record'
-        self.response = response
-        self.request = request
-
-    def __str__(self):
-        args = (self.response.status_code, self.response.text, self.request)
-        return 'Failed to save record, status: %s\n\n%s\n\n%s' % args
 from .util import etree, parse_xml, show_diff
 
 
@@ -44,12 +29,9 @@ class Bib(object):
         if diff:
             show_diff(self.orig_xml, post_data)
 
-        try:
-            response = self.alma.put('/bibs/{}'.format(self.mms_id),
-                                     data=post_data,
-                                     headers={'Content-Type': 'application/xml'})
-        except HTTPError as error:
-            raise BibSaveError(error.response, etree.tostring(self.doc))
+        response = self.alma.put('/bibs/{}'.format(self.mms_id),
+                                 data=post_data,
+                                 headers={'Content-Type': 'application/xml'})
 
         self.init(response)
 

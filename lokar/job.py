@@ -8,6 +8,7 @@ from textwrap import dedent
 from datetime import datetime
 from prompter import yesno
 from tqdm import tqdm
+from requests.exceptions import HTTPError
 from .util import normalize_term
 from .skosmos import Skosmos
 from .marc import Subjects
@@ -178,7 +179,13 @@ class Job(object):
 
                     log.warning(' -> Updating the record. The CZ connection will be lost!')
 
-                bib.save(show_diffs)
+                try:
+                    bib.save(show_diffs)
+                except HTTPError as error:
+                    msg = '*** Failed to save record {} --- Please try to edit the record manually in Alma ***'
+                    log.error(msg.format(bib.mms_id))
+                    if not non_interactive and yesno('Continue?', default='yes') is False:
+                        return
 
         log.info('{:=^70}'.format(' Job complete '))
 
