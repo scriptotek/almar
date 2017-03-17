@@ -574,14 +574,14 @@ def patch_sru_search(xml_response_file):
 
 class TestJob(unittest.TestCase):
 
-    def runJob(self, sru_response, vocabulary, tag, old_term, new_term='', new_tag=None):
+    def runJob(self, sru_response, vocabulary, tag, term, new_term='', new_tag=None):
         self.sru = setup_sru_mock(sru_response)
         MockAlma = MagicMock(spec=Alma, spec_set=True)
         MockMailer = MagicMock(spec=Mailer, spec_set=True)
         self.alma = MockAlma('eu', 'dummy')
         mailer = MockMailer({})
         voc = Vocabulary(vocabulary, 'realfagstermer')
-        self.job = Job(self.sru, self.alma, voc, mailer, tag, old_term, new_term, new_tag)
+        self.job = Job(self.sru, self.alma, voc, mailer, tag, term, new_term, new_tag)
         return self.job.start(False, True)
 
     def tearDown(self):
@@ -658,13 +658,13 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testMain(self, sru, MockAlma, mock_authorize_term, Mailer):
-        old_term = 'Statistiske modeller'
+        term = 'Statistiske modeller'
         new_term = 'Test æøå'
         alma = MockAlma.return_value
         mock_authorize_term.return_value = {'localname': 'c030697'}
-        main(self.conf(), [old_term, new_term, '-e test_env', '-n'])
+        main(self.conf(), ['-e test_env', '-n', 'move', term, new_term])
 
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
+        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
 
         assert alma.bibs.call_count == 14
 
@@ -673,12 +673,12 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testMainNoHits(self, sru, MockAlma, mock_authorize_term, Mailer):
-        old_term = 'Something else'
+        term = 'Something else'
         new_term = 'Test æøå'
         mock_authorize_term.return_value = {'localname': 'c030697'}
         alma = MockAlma.return_value
-        main(self.conf(), [old_term, new_term, '-e test_env', '-n'])
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
+        main(self.conf(), ['-e test_env', '-n', 'move', term, new_term])
+        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
     @patch('lokar.lokar.Mailer', autospec=True)
@@ -686,17 +686,17 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testRemoveTerm(self, sru, MockAlma, mock_authorize_term, mock_Mailer):
-        old_term = 'Statistiske modeller'
+        term = 'Statistiske modeller'
         mock_authorize_term.return_value = {'localname': 'c030697'}
         alma = MockAlma.return_value
-        main(self.conf(), [old_term, '', '-e test_env', '-n'])
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (old_term, 'noubomn'))
+        main(self.conf(), ['-e test_env', '-n', 'delete', term])
+        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 14
 
     @patch('lokar.lokar.open', autospec=True)
     def testConfigMissing(self, mock_open):
         mock_open.side_effect = IOError('File not found')
-        main(args=['old', 'new'])
+        main(args=['move', 'old', 'new'])
         mock_open.assert_called_once_with('lokar.yml')
 
     def testNormalizeTerm(self):
@@ -714,19 +714,21 @@ class TestParseArgs(unittest.TestCase):
             parse_args([])
 
     def test_defaults(self):
-        parser = parse_args(['Sekvensering', 'Sekvenseringsmetoder'])
+        parser = parse_args(['move', 'Sekvensering', 'Sekvenseringsmetoder'])
 
         assert parser.dry_run is False
+        assert parser.action == 'move'
         assert parser.tag == '650'
-        assert parser.old_term == 'Sekvensering'
+        assert parser.term == 'Sekvensering'
         assert parser.new_term == 'Sekvenseringsmetoder'
 
     def test_unicode_input(self):
-        parser = parse_args(['Byer : Økologi', 'Byøkologi'])
+        parser = parse_args(['move', 'Byer : Økologi', 'Byøkologi'])
 
-        assert parser.old_term == 'Byer : Økologi'
+        assert parser.action == 'move'
+        assert parser.term == 'Byer : Økologi'
         assert parser.new_term == 'Byøkologi'
-        assert type(parser.old_term) == text_type
+        assert type(parser.term) == text_type
         assert type(parser.new_term) == text_type
 
 if __name__ == '__main__':

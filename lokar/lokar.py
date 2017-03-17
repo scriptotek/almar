@@ -75,18 +75,8 @@ class Mailer(object):
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(description='Edit or remove subject fields in Alma catalog records.')
-    parser.add_argument('old_term', nargs=1, help='Term to search for')
-    parser.add_argument('new_term', nargs='?', default='', help='Replacement term')
-
-    parser.add_argument('-t', '--tag', dest='tag', nargs='?',
-                        help='MARC tag (648/650/651/655). Default: 650',
-                        default='650', choices=['648', '650', '651', '655'])
-
-    parser.add_argument('-T', '--dest_tag', dest='dest_tag', nargs='?',
-                        help='Destination MARC tag if you want to move a subject to another tag (648/650/651/655).',
-                        choices=['648', '650', '651', '655'])
-
+    parser = argparse.ArgumentParser(prog='lokar',
+                                     description='Edit or remove subject fields in Alma catalog records.')
     parser.add_argument('-e', '--env', dest='env', nargs='?',
                         help='Environment from config file. Default: nz_sandbox',
                         default='nz_sandbox')
@@ -103,16 +93,43 @@ def parse_args(args):
     parser.add_argument('--diffs', dest='show_diffs', action='store_true',
                         help='Show diffs before saving.')
 
+    parser.add_argument('-t', '--tag', dest='tag', nargs='?',
+                        help='MARC tag (648/650/651/655). Default: 650',
+                        default='650', choices=['648', '650', '651', '655'])
+
+    subparsers = parser.add_subparsers(title='subcommands')
+
+    # Create parser for the "move" command
+    parser_move = subparsers.add_parser('move', help='Move/rename term')
+    parser_move.add_argument('term', nargs=1, help='Term to search for')
+    parser_move.add_argument('new_term', nargs='?', default='', help='Replacement term')
+    parser_move.add_argument('-T', '--to_tag', dest='dest_tag', nargs='?',
+                             help='Destination MARC tag if you want to move to another tag (648/650/651/655).',
+                             choices=['648', '650', '651', '655'])
+    parser_move.set_defaults(action='move')
+
+    # Create parser for the "delete" command
+    parser_del = subparsers.add_parser('delete', help='Delete term')
+    parser_del.add_argument('term', nargs=1, help='Term to delete')
+    parser_del.set_defaults(action='delete')
+
+    # Parse
     args = parser.parse_args(args)
     args.env = args.env.strip()
-    args.old_term = args.old_term[0]
-    args.new_term = args.new_term
+    args.term = args.term[0]
+
+    if args.action == 'move' and args.new_term == '' and args.dest_tag is None:
+        parser.error('too few arguments (at least one of "new_term" and "--to_tag" must be specified)')
+
+    if args.action == 'delete':
+        args.new_term = ''
+        args.dest_tag = None
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    if type(args.old_term) == binary_type:
-        args.old_term = args.old_term.decode('utf-8')
+    if type(args.term) == binary_type:
+        args.term = args.term.decode('utf-8')
     if type(args.new_term) == binary_type:
         args.new_term = args.new_term.decode('utf-8')
     if type(args.env) == binary_type:
@@ -155,7 +172,9 @@ def main(config=None, args=None):
         vocabulary = Vocabulary(config['vocabulary']['marc_code'], config['vocabulary'].get('skosmos_code'))
         mailer = Mailer(config['mail'])
 
-        job = Job(sru, alma, vocabulary, mailer, args.tag, args.old_term, args.new_term, dest_tag=args.dest_tag)
+        # if args.action == 'move':
+
+        job = Job(sru, alma, vocabulary, mailer, args.tag, args.term, args.new_term, dest_tag=args.dest_tag)
         job.start(args.dry_run, args.non_interactive, not args.verbose, args.show_diffs)
 
     except Exception as e:

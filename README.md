@@ -64,10 +64,11 @@ Note: The tool will only work with subject fields where the `$2` value matches t
 subject fields that do not have `$2 noubomn`.
 
 * `lokar -h` to show help
-* `lokar 'Old term' 'New term'` to replace "Old term" with "New term" in 650 fields (default).
-* `lokar 'Old term' 'New term' -d` to make a dry run to see what records would be modified without actually modifying any.
-* `lokar 'Old term' 'New term' -t 655` to replace "Old term" with "New temr" in 655 fields.
-* `lokar 'Old term'` to remove 650 fields having "$a Old term" or "$x Old term".
+* `lokar move -h` to show help for the move subcommand
+* `lokar move 'Term' 'New term'` to replace "Term" with "New term" in 650 fields (default).
+* `lokar move -d 'Term' 'New term'` to make a dry run to see what records would be modified without actually modifying any.
+* `lokar move -t 655 'Term' 'New term'` to replace "Term" with "New term" in 655 fields.
+* `lokar delete 'Term'` to remove 650 fields having "$a Term" or "$x Term".
 
 For emneord som består av mer enn ett ord må du bruke enkle eller doble anførselstegn rundt emneordet.
 For emneord som kun består av ett ord er dette valgfritt.
