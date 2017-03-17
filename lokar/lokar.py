@@ -100,13 +100,13 @@ def parse_args(args):
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Create parser for the "move" command
-    parser_move = subparsers.add_parser('move', help='Move/rename term')
+    parser_move = subparsers.add_parser('rename', help='Rename/move term')
     parser_move.add_argument('term', nargs=1, help='Term to search for')
     parser_move.add_argument('new_term', nargs='?', default='', help='Replacement term')
     parser_move.add_argument('-T', '--to_tag', dest='dest_tag', nargs='?',
                              help='Destination MARC tag if you want to move to another tag (648/650/651/655).',
                              choices=['648', '650', '651', '655'])
-    parser_move.set_defaults(action='move')
+    parser_move.set_defaults(action='rename')
 
     # Create parser for the "delete" command
     parser_del = subparsers.add_parser('delete', help='Delete term')
@@ -118,7 +118,7 @@ def parse_args(args):
     args.env = args.env.strip()
     args.term = args.term[0]
 
-    if args.action == 'move' and args.new_term == '' and args.dest_tag is None:
+    if args.action == 'rename' and args.new_term == '' and args.dest_tag is None:
         parser.error('too few arguments (at least one of "new_term" and "--to_tag" must be specified)')
 
     if args.action == 'delete':
@@ -172,7 +172,7 @@ def main(config=None, args=None):
         vocabulary = Vocabulary(config['vocabulary']['marc_code'], config['vocabulary'].get('skosmos_code'))
         mailer = Mailer(config['mail'])
 
-        # if args.action == 'move':
+        # if args.action == 'rename':
 
         job = Job(sru, alma, vocabulary, mailer, args.tag, args.term, args.new_term, dest_tag=args.dest_tag)
         job.start(args.dry_run, args.non_interactive, not args.verbose, args.show_diffs)

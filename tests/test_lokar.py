@@ -697,7 +697,7 @@ class TestLokar(unittest.TestCase):
         new_term = 'Test æøå'
         alma = MockAlma.return_value
         mock_authorize_term.return_value = {'localname': 'c030697'}
-        main(self.conf(), ['-e test_env', '-n', 'move', term, new_term])
+        main(self.conf(), ['-e test_env', '-n', 'rename', term, new_term])
 
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
 
@@ -712,7 +712,7 @@ class TestLokar(unittest.TestCase):
         new_term = 'Test æøå'
         mock_authorize_term.return_value = {'localname': 'c030697'}
         alma = MockAlma.return_value
-        main(self.conf(), ['-e test_env', '-n', 'move', term, new_term])
+        main(self.conf(), ['-e test_env', '-n', 'rename', term, new_term])
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
@@ -731,7 +731,7 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.lokar.open', autospec=True)
     def testConfigMissing(self, mock_open):
         mock_open.side_effect = IOError('File not found')
-        main(args=['move', 'old', 'new'])
+        main(args=['rename', 'old', 'new'])
         mock_open.assert_called_once_with('lokar.yml')
 
     def testNormalizeTerm(self):
@@ -749,18 +749,18 @@ class TestParseArgs(unittest.TestCase):
             parse_args([])
 
     def test_defaults(self):
-        parser = parse_args(['move', 'Sekvensering', 'Sekvenseringsmetoder'])
+        parser = parse_args(['rename', 'Sekvensering', 'Sekvenseringsmetoder'])
 
         assert parser.dry_run is False
-        assert parser.action == 'move'
+        assert parser.action == 'rename'
         assert parser.tag == '650'
         assert parser.term == 'Sekvensering'
         assert parser.new_term == 'Sekvenseringsmetoder'
 
     def test_unicode_input(self):
-        parser = parse_args(['move', 'Byer : Økologi', 'Byøkologi'])
+        parser = parse_args(['rename', 'Byer : Økologi', 'Byøkologi'])
 
-        assert parser.action == 'move'
+        assert parser.action == 'rename'
         assert parser.term == 'Byer : Økologi'
         assert parser.new_term == 'Byøkologi'
         assert type(parser.term) == text_type

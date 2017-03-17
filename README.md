@@ -64,11 +64,25 @@ Note: The tool will only work with subject fields where the `$2` value matches t
 subject fields that do not have `$2 noubomn`.
 
 * `lokar -h` to show help
-* `lokar move -h` to show help for the move subcommand
-* `lokar move 'Term' 'New term'` to replace "Term" with "New term" in 650 fields (default).
-* `lokar move -d 'Term' 'New term'` to make a dry run to see what records would be modified without actually modifying any.
-* `lokar move -t 655 'Term' 'New term'` to replace "Term" with "New term" in 655 fields.
+* `lokar rename -h` to show help for the move subcommand
+
+#### Renaming/moving
+
+* `lokar rename 'Term' 'New term'` to replace "Term" with "New term" in 650 fields (default).
+* `lokar rename -t 655 'Term' 'New term'` to replace "Term" with "New term" in 655 fields.
+
+Dry run:
+
+* `lokar rename -d 'Term' 'New term'` to do a dry run to see what records would be modified without actually modifying them.
+
+Moving a subject to another MARC tag:
+
+* `lokar rename -t 650 'Term' --to_tag 651` to move "Term" from 650 to 651 (replacing `650 $a Term` with `651 Term`).
+
+#### Deleting
+
 * `lokar delete 'Term'` to remove 650 fields having "$a Term" or "$x Term".
+* `lokar -t 651 delete 'Term'` to remove 651 fields having "$a Term" or "$x Term".
 
 For emneord som består av mer enn ett ord må du bruke enkle eller doble anførselstegn rundt emneordet.
 For emneord som kun består av ett ord er dette valgfritt.
