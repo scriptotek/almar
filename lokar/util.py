@@ -5,12 +5,7 @@ import sys
 from colorama import Fore, Back, Style, init
 
 # coding=utf-8
-try:
-    # Use lxml if installed, since it's faster ...
-    from lxml import etree
-except ImportError:
-    # ... but also support standard ElementTree, since installation of lxml can be cumbersome
-    import xml.etree.ElementTree as etree
+from lxml import etree
 
 ANY_VALUE = '___any_value___'
 
