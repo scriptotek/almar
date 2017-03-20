@@ -22,7 +22,7 @@ class Bib(object):
         self.marc_record = Record(self.doc.find('record'))
         self.linked_to_cz = self.doc.findtext('linked_record_id[@type="CZ"]') or None
 
-    def save(self, diff=False):
+    def save(self, diff=False, dry_run=False):
         # Save record back to Alma
 
         post_data = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.encode('utf-8') +
@@ -31,11 +31,11 @@ class Bib(object):
         if diff:
             show_diff(self.orig_xml, post_data)
 
-        response = self.alma.put('/bibs/{}'.format(self.mms_id),
-                                 data=BytesIO(post_data),
-                                 headers={'Content-Type': 'application/xml'})
-
-        self.init(response)
+        if not dry_run:
+            response = self.alma.put('/bibs/{}'.format(self.mms_id),
+                                     data=BytesIO(post_data),
+                                     headers={'Content-Type': 'application/xml'})
+            self.init(response)
 
     def dump(self, filename):
         # Dump record to file

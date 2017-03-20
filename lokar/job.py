@@ -174,29 +174,28 @@ class Job(object):
             else:
                 subjects.remove(self.vocabulary.marc_code, self.old_term, tags)
 
-            if not dry_run:
-                if bib.linked_to_cz is True:
+            if bib.linked_to_cz is True:
 
-                    log.warning(dedent(
-                        '''\
-                        Encountered a Community Zone record. Updating such records through the API will
-                        currently cause them to be de-linked from CZ, which is probably not what you want.
-                        Until Ex Libris fixes this, you're best off editing the record manually in Alma.
-                        '''))
+                log.warning(dedent(
+                    '''\
+                    Encountered a Community Zone record. Updating such records through the API will
+                    currently cause them to be de-linked from CZ, which is probably not what you want.
+                    Until Ex Libris fixes this, you're best off editing the record manually in Alma.
+                    '''))
 
-                    if non_interactive or yesno('Do you want to update the record and break CZ linkage?', default='no'):
-                        log.warning(' -> Skipping this record. You should update it manually in Alma!')
-                        continue
+                if non_interactive or yesno('Do you want to update the record and break CZ linkage?', default='no'):
+                    log.warning(' -> Skipping this record. You should update it manually in Alma!')
+                    continue
 
-                    log.warning(' -> Updating the record. The CZ connection will be lost!')
+                log.warning(' -> Updating the record. The CZ connection will be lost!')
 
-                try:
-                    bib.save(show_diffs)
-                except HTTPError as error:
-                    msg = '*** Failed to save record {} --- Please try to edit the record manually in Alma ***'
-                    log.error(msg.format(bib.mms_id))
-                    if not non_interactive and yesno('Continue?', default='yes') is False:
-                        return
+            try:
+                bib.save(show_diffs, dry_run)
+            except HTTPError as error:
+                msg = '*** Failed to save record {} --- Please try to edit the record manually in Alma ***'
+                log.error(msg.format(bib.mms_id))
+                if not non_interactive and yesno('Continue?', default='yes') is False:
+                    return
 
         log.info('{:=^70}'.format(' Job complete '))
 
