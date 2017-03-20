@@ -130,9 +130,6 @@ def parse_args(args, config):
     args.env = args.env.strip()
     args.term = args.term[0]
 
-    if args.action == 'rename' and args.new_term == '' and args.dest_tag is None:
-        parser.error('too few arguments (at least one of "new_term" and "--to_tag" must be specified)')
-
     if args.action == 'delete':
         args.new_term = ''
         args.dest_tag = None
@@ -146,6 +143,9 @@ def parse_args(args, config):
         args.new_term = args.new_term.decode('utf-8')
     if type(args.env) == binary_type:
         args.env = args.env.decode('utf-8')
+
+    if args.action == 'rename' and args.new_term == '' and args.dest_tag is None:
+        parser.error('too few arguments (at least one of "new_term" and "--to_tag" must be specified)')
 
     return args
 
