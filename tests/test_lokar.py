@@ -485,6 +485,49 @@ class TestBib(unittest.TestCase):
         assert len(f650) == 1
         assert len(f651) == 0
 
+    def testAddIdentifier(self):
+        rec = """
+            <bib>
+                <record>
+                  <datafield tag="650" ind1=" " ind2="7">
+                    <subfield code="a">Middelalder</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """
+        bib = Bib(Mock(), rec)
+        Subjects(bib.marc_record).rename('noubomn', 'Middelalder', 'Middelalderen', identifier='REAL12345')
+
+        f650 = bib.doc.findall('record/datafield[@tag="650"]')
+        assert len(f650) == 1
+        assert 'Middelalderen' == f650[0].findtext('subfield[@code="a"]')
+        assert 'REAL12345' == f650[0].findtext('subfield[@code="0"]')
+
+    def testModifyIdentifier(self):
+        rec = """
+            <bib>
+                <record>
+                  <datafield tag="650" ind1=" " ind2="7">
+                    <subfield code="a">Middelalder</subfield>
+                    <subfield code="2">noubomn</subfield>
+                    <subfield code="0">REAL00000</subfield>
+                  </datafield>
+                  <datafield tag="650" ind1=" " ind2="7">
+                    <subfield code="a">Middelalderen</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """
+        bib = Bib(Mock(), rec)
+        Subjects(bib.marc_record).rename('noubomn', 'Middelalder', 'Yngre middelalder', tags=['648', '650'], identifier='REAL12345')
+
+        f650 = bib.doc.findall('record/datafield[@tag="650"]')
+        assert len(f650) == 2
+        assert 'Yngre middelalder' == bib.doc.findtext('record/datafield[@tag="650"]/subfield[@code="a"]')
+        assert 'REAL12345' == bib.doc.findtext('record/datafield[@tag="650"]/subfield[@code="0"]')
+
     def testSave(self):
         alma = Mock()
         alma.put.return_value = '<bib><mms_id>991416299674702204</mms_id><record></record></bib>'

@@ -12,6 +12,8 @@ except ImportError:
     # ... but also support standard ElementTree, since installation of lxml can be cumbersome
     import xml.etree.ElementTree as etree
 
+ANY_VALUE = '___any_value___'
+
 
 def parse_xml(txt):
     if isinstance(txt, text_type):
@@ -31,7 +33,7 @@ def normalize_term(term):
 
 
 def term_match(term1, term2):
-    return normalize_term(term1) == normalize_term(term2)
+    return term1 == ANY_VALUE or term2 == ANY_VALUE or normalize_term(term1) == normalize_term(term2)
 
 
 def color_diff(diff):

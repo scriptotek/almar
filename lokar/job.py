@@ -49,12 +49,17 @@ class Job(object):
         if dry_run:
             log.info('Dry run: No catalog records will be touched!')
 
+        concept_id = None
         if self.dest_tag is not None or self.new_term != '':
-            self.skosmos.check(self.tag, self.old_term, self.new_term, self.dest_tag)
+            if self.skosmos.vocabulary_code is not None:
+                concept_id = self.skosmos.check(self.tag, self.old_term, self.new_term, self.dest_tag)
 
-        # if not skosmos.check(self.vocabulary.skosmos_code, self.tag, self.old_term, self.new_term):
-        #     if non_interative or yesno('Vil du fortsette allikevel?', default='no'):
-        #         return
+                if concept_id is None and not non_interactive:
+                    if yesno('Continue anyways?', default='no'):
+                        return
+
+        if concept_id is not None:
+            concept_id = self.vocabulary.marc_prefix + concept_id
 
         tags = [self.tag]
         if self.tag == '648' and self.vocabulary.marc_code == 'noubomn':
@@ -105,6 +110,8 @@ class Job(object):
         else:
             log.error('Strings with more than two components are not yet supported! Got %d:%d' % (len(oc), len(nc)))
             return
+
+        log.info('Will set $0 to %s', concept_id)
 
         # ------------------------------------------------------------------------------------
         # Del 1: Søk mot SRU for å finne over alle bibliografiske poster med emneordet.
@@ -159,9 +166,11 @@ class Job(object):
             if self.dest_tag is not None:
                 subjects.move(self.vocabulary.marc_code, self.old_term, self.tag, self.dest_tag)
                 if self.new_term != '':
-                    subjects.rename(self.vocabulary.marc_code, self.old_term, self.new_term, self.dest_tag)
+                    subjects.rename(self.vocabulary.marc_code, self.old_term, self.new_term,
+                                    self.dest_tag, identifier=concept_id)
             elif self.new_term != '':
-                subjects.rename(self.vocabulary.marc_code, self.old_term, self.new_term, tags)
+                subjects.rename(self.vocabulary.marc_code, self.old_term, self.new_term, tags,
+                                identifier=concept_id)
             else:
                 subjects.remove(self.vocabulary.marc_code, self.old_term, tags)
 

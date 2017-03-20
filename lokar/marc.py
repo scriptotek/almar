@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 import logging
 from copy import deepcopy
-from .util import normalize_term, term_match, parse_xml
+from .util import normalize_term, term_match, parse_xml, ANY_VALUE
 from colorama import Fore, Back, Style
 
 log = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ class Subjects(object):
         self.marc_record = marc_record
 
     @staticmethod
-    def make_query(vocabulary, term=None, replacement_term=None):
+    def make_query(vocabulary, term=None, replacement_term=None, identifier=None):
         if term is None:
             term = []
         else:
@@ -28,53 +28,62 @@ class Subjects(object):
             raise RuntimeError('Strings with more than two components are not yet supported' +
                                'Got string with %d components.' % (len(term)))
 
+        base_query = {
+            '2': {'search': vocabulary},
+        }
+        if identifier is not None:
+            base_query['0'] = {'search': ANY_VALUE, 'replace': identifier}
+
         if len(term) == 2:
             if replacement_term is None:
-                yield {
-                    '2': {'search': vocabulary},
+                query = base_query.copy()
+                query.update({
                     'a': {'search': term[0]},
                     'x': {'search': term[1]},
-                }
+                })
+                yield query
             elif len(replacement_term) == 2:
                 # Replace `$a : $x` by `$a : $x`
-                yield {
-                    '2': {'search': vocabulary},
+                query = base_query.copy()
+                query.update({
                     'a': {'search': term[0], 'replace': replacement_term[0]},
                     'x': {'search': term[1], 'replace': replacement_term[1]},
-                }
+                })
+                yield query
             elif len(replacement_term) == 1:
                 # Replace `$a : $x` by `$a`
-                yield {
-                    '2': {'search': vocabulary},
+                query = base_query.copy()
+                query.update({
                     'a': {'search': term[0], 'replace': replacement_term[0]},
                     'x': {'search': term[1], 'replace': None},
-                }
-
+                })
+                yield query
         elif len(term) == 1:
             if replacement_term is None:
                 for code in ['a', 'x']:
-                    yield {
-                        '2': {'search': vocabulary},
+                    query = base_query.copy()
+                    query.update({
                         code: {'search': term[0]},
-                    }
+                    })
+                    yield query
             elif len(replacement_term) == 1:
                 # Replace `$a` by `$a` or `$x` by `$x`
                 for code in ['a', 'x']:
-                    yield {
-                        '2': {'search': vocabulary},
+                    query = base_query.copy()
+                    query.update({
                         code: {'search': term[0], 'replace': replacement_term[0]},
-                    }
+                    })
+                    yield query
             elif len(replacement_term) == 2:
                 # Replace `$a` by `$a : $x`
-                yield {
-                    '2': {'search': vocabulary},
+                query = base_query.copy()
+                query.update({
                     'a': {'search': term[0], 'replace': replacement_term[0]},
                     'x': {'search': None, 'replace': replacement_term[1]}
-                }
+                })
+                yield query
         elif len(term) == 0:
-            yield {
-                '2': {'search': vocabulary},
-            }
+            yield base_query
 
     def query(self, vocabulary, search_term, replacement_term=None, tags=None):
         tags = tags or '650'
@@ -86,9 +95,9 @@ class Subjects(object):
         for field in self.query(vocabulary, term, tags=tags):
             yield field
 
-    def rename(self, vocabulary, old_term, new_term=None, tags=None):
+    def rename(self, vocabulary, old_term, new_term=None, tags=None, identifier=None):
         tags = tags or '650'
-        for query in self.make_query(vocabulary, old_term, new_term):
+        for query in self.make_query(vocabulary, old_term, new_term, identifier):
             for field in self.marc_record.fields(tags, query):
                 field.update(query)
 
@@ -173,7 +182,8 @@ class Field(object):
         the values in the current field.
         """
         for code, value in subfield_query.items():
-            if not term_match(self.node.findtext('subfield[@code="{}"]'.format(code)), value['search']):
+            node_text = self.node.findtext('subfield[@code="{}"]'.format(code))
+            if not term_match(node_text, value['search']):
                 return False
         return True
 
@@ -204,6 +214,7 @@ class Field(object):
                         # Subfield value should be updated
                         log.debug('Changing $%s from "%s" tot "%s"', code, ch.text, x['replace'])
                         ch.text = x['replace']
+            # Add new subfields
             for code, value in subfield_query.items():
                 if value.get('replace') is not None:
                     self.node.append(parse_xml('<subfield code="%s">%s</subfield>' % (code, value['replace'])))

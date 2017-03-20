@@ -36,9 +36,14 @@ logger.addHandler(console_handler)
 
 class Vocabulary(object):
 
-    def __init__(self, marc_code, skosmos_code=None):
+    marc_code = ''
+    skosmos_code = ''
+    marc_prefix = ''
+
+    def __init__(self, marc_code, skosmos_code=None, marc_prefix=None):
         self.marc_code = marc_code
         self.skosmos_code = skosmos_code
+        self.marc_prefix = marc_prefix
 
 
 class Mailer(object):
@@ -169,7 +174,9 @@ def main(config=None, args=None):
         sru = SruClient(env['sru_url'], args.env)
         alma = Alma(env['api_region'], env['api_key'], args.env)
 
-        vocabulary = Vocabulary(config['vocabulary']['marc_code'], config['vocabulary'].get('skosmos_code'))
+        vocabulary = Vocabulary(config['vocabulary']['marc_code'],
+                                config['vocabulary'].get('skosmos_code'),
+                                config['vocabulary'].get('marc_prefix'))
         mailer = Mailer(config['mail'])
 
         # if args.action == 'rename':

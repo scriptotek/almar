@@ -34,23 +34,19 @@ class Skosmos(object):
         return results[0]
 
     def check(self, tag, old_term, new_term, new_tag=None):
-
-        if self.vocabulary_code is None:
-            return True
-
+        concept_id = None
         old_concept = self.authorize_term(old_term, concept_types[tag])
         new_concept = self.authorize_term(new_term, concept_types[new_tag or tag])
         if old_concept is not None:
-            local_id = old_concept['localname'].strip('c')
-            log.info('Source term "%s" (%s) authorized as %s in Skosmos', old_term, tag, local_id)
+            concept_id = old_concept['localname'].strip('c')
+            log.info('Source term "%s" (%s) authorized as %s in Skosmos', old_term, tag, concept_id)
         if new_concept is not None:
-            local_id = new_concept['localname'].strip('c')
-            log.info('Target term "%s" (%s) authorized as %s in Skosmos', new_term, tag, local_id)
+            concept_id = new_concept['localname'].strip('c')
+            log.info('Target term "%s" (%s) authorized as %s in Skosmos', new_term, tag, concept_id)
         if old_concept is None and new_concept is None:
             terms = ['"%s" (as %s)' % (old_term, tag)]
             if len(new_term) != 0:
                 terms.append('"%s" (as %s)' % (new_term, new_tag or tag))
             log.warning('Failed to authorize both %s in Skosmos.',
                         ' and '.join(terms))
-            return False
-        return True
+        return concept_id
