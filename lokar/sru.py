@@ -1,4 +1,5 @@
 # coding=utf-8
+from __future__ import unicode_literals
 import requests
 import logging
 
@@ -28,7 +29,7 @@ class SruClient(object):
         self.num_records = 0  # from last response
 
     def search(self, query):
-        log.info('SRU search: {}'.format(query))
+        log.info('SRU search: %s', query)
         # A searchRetrieve generator that yields MarcRecord objects
         start_record = 1
         while True:
