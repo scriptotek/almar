@@ -79,12 +79,12 @@ class Mailer(object):
         request.raise_for_status()
 
 
-def parse_args(args):
+def parse_args(args, config):
     parser = argparse.ArgumentParser(prog='lokar',
                                      description='Edit or remove subject fields in Alma catalog records.')
     parser.add_argument('-e', '--env', dest='env', nargs='?',
-                        help='Environment from config file. Default: nz_sandbox',
-                        default='nz_sandbox')
+                        help='Environment from config file. Default: {}'.format(config.get('default_env') or '(none)'),
+                        default=config.get('default_env'))
 
     parser.add_argument('-d', '--dry_run', dest='dry_run', action='store_true',
                         help='Dry run without doing any edits.')
@@ -120,6 +120,10 @@ def parse_args(args):
 
     # Parse
     args = parser.parse_args(args)
+
+    if args.env is None:
+        parser.error('no environment specified')
+
     args.env = args.env.strip()
     args.term = args.term[0]
 
@@ -147,14 +151,14 @@ def main(config=None, args=None):
 
     username = getpass.getuser()
 
-    args = parse_args(args or sys.argv[1:])
-
     try:
         with config or open('lokar.yml') as f:
             config = yaml.load(f)
     except IOError:
         logger.error('Fant ikke lokar.yml. Se README.md for mer info.')
         return
+
+    args = parse_args(args or sys.argv[1:], config=config)
 
     if config.get('sentry') is not None:
         raven = Client(config['sentry']['dsn'])

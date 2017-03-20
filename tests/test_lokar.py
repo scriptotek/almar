@@ -718,6 +718,8 @@ class TestLokar(unittest.TestCase):
           sender: sender@example.com
           recipient: recipient@example.com
 
+        default_env: test_env
+
         env:
           test_env:
             api_key: secret1
@@ -789,11 +791,12 @@ class TestParseArgs(unittest.TestCase):
 
     def test_missing_arguments(self):
         with pytest.raises(SystemExit):
-            parse_args([])
+            parse_args([], {})
 
     def test_defaults(self):
-        parser = parse_args(['rename', 'Sekvensering', 'Sekvenseringsmetoder'])
+        parser = parse_args(['rename', 'Sekvensering', 'Sekvenseringsmetoder'], {'default_env': 'test_env'})
 
+        assert parser.env == 'test_env'
         assert parser.dry_run is False
         assert parser.action == 'rename'
         assert parser.tag == '650'
@@ -801,7 +804,7 @@ class TestParseArgs(unittest.TestCase):
         assert parser.new_term == 'Sekvenseringsmetoder'
 
     def test_unicode_input(self):
-        parser = parse_args(['rename', 'Byer : Økologi', 'Byøkologi'])
+        parser = parse_args(['rename', 'Byer : Økologi', 'Byøkologi'], {'default_env': 'test_env'})
 
         assert parser.action == 'rename'
         assert parser.term == 'Byer : Økologi'

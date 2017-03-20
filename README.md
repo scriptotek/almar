@@ -19,6 +19,8 @@ Here's a minimal `lokar.yml` file to start with:
 vocabulary:
   marc_code: INSERT MARC VOCABULARY CODE HERE
 
+default_env: prod
+
 env:
   prod:
     api_key: INSERT API KEY HERE
@@ -45,6 +47,8 @@ production environment) and switch between them using the `-e` command line opti
 vocabulary:
   marc_code: noubomn
   skosmos_code: realfagstermer
+
+default_env: nz_prod
 
 env:
   nz_sandbox:
