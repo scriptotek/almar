@@ -19,6 +19,7 @@ import requests
 import yaml
 from six import text_type, binary_type
 
+from . import __version__
 from .job import Job
 from .alma import Alma
 from .sru import SruClient
@@ -82,6 +83,8 @@ class Mailer(object):
 def parse_args(args, config):
     parser = argparse.ArgumentParser(prog='lokar',
                                      description='Edit or remove subject fields in Alma catalog records.')
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+
     parser.add_argument('-e', '--env', dest='env', nargs='?',
                         help='Environment from config file. Default: {}'.format(config.get('default_env') or '(none)'),
                         default=config.get('default_env'))
