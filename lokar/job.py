@@ -201,7 +201,13 @@ class Job(object):
 
         if not dry_run:
             n_posts = '{:d} {}'.format(len(valid_records), 'record' if len(valid_records) == 1 else 'records')
-            if self.new_term == '':
+            if self.dest_tag is not None:
+                if self.new_term == '':
+                    subject = '{}: Moved "{}" to {} in {}'.format(self.tag, self.old_term, self.dest_tag, n_posts)
+                else:
+                    subject = '{}: Changed "{}" to {} "{}" in {}'.format(self.tag, self.old_term, self.dest_tag,
+                                                                         self.new_term, n_posts)
+            elif self.new_term == '':
                 subject = '{}: Removed "{}" in {}'.format(self.tag, self.old_term, n_posts)
             else:
                 subject = '{}: Changed "{}" to "{}" in {}'.format(self.tag, self.old_term, self.new_term, n_posts)
