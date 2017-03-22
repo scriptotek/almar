@@ -68,16 +68,18 @@ Note: The tool will only work with subject fields where the `$2` value matches t
 subject fields that do not have `$2 noubomn`.
 
 * `lokar -h` to show help
-* `lokar rename -h` to show help for the move subcommand
+* `lokar rename -h` to show help for the "rename" subcommand
 
 #### Renaming/moving
 
 * `lokar rename 'Term' 'New term'` to replace "Term" with "New term" in 650 fields (default).
-* `lokar rename -t 655 'Term' 'New term'` to replace "Term" with "New term" in 655 fields.
+* `lokar -t 655 rename 'Term' 'New term'` to replace "Term" with "New term" in 655 fields.
 
-Dry run:
+To see the changes made to each catalog record, add the `--diffs` flag. Combined with
+the `--dry_run` flag (or `-d`), you will see the changes that would be made without
+actually doing them:
 
-* `lokar rename -d 'Term' 'New term'` to do a dry run to see what records would be modified without actually modifying them.
+* `lokar rename --diffs --dry_run 'Term' 'New term'`
 
 Moving a subject to another MARC tag:
 
@@ -88,19 +90,29 @@ Moving a subject to another MARC tag:
 * `lokar delete 'Term'` to remove 650 fields having "$a Term" or "$x Term".
 * `lokar -t 651 delete 'Term'` to remove 651 fields having "$a Term" or "$x Term".
 
-For emneord som består av mer enn ett ord må du bruke enkle eller doble anførselstegn rundt emneordet.
-For emneord som kun består av ett ord er dette valgfritt.
+#### Notes
 
-Første bokstav er ikke signifikant; Både `gammelt emneord` og
-`Gammelt emneord` vil bli erstattet. Og uansett om du skriver
-`Nytt emneord` eller `nytt emneord`, vil `Nytt emneord` bli lagt på posten.
+* For terms consisting of more than one word, you must add quotation marks (single or double)
+  around the term, as in the examples above. For single word terms, this is optional.
+* In search, the first letter is case insensitive. If you search for "old term", both
+  "old term" and "Old term" will be replaced (but not "old Term").
 
-Tre streng-operasjoner støttes:
-* `lokar 'aaa : bbb'` vil slette forekomster av `$a Aaa $x Bbb`
-* `lokar 'aaa : bbb' 'ccc : ddd'` vil erstatte `$a Aaa $x Bbb` med `$a Ccc $x Ddd`
-* `lokar 'aaa : bbb' 'ccc'` vil erstatte `$a Aaa $x Bbb` med `$a Ccc` (delfelt `$x` fjernes)
 
-Merk: Det må være mellomrom før og etter kolon for at termen skal gjenkjennes som en streng.
+#### Identifiers
+
+Identifiers (`$0`) are added/updated if you configure a Skosmos instance in `config.yml`.
+
+#### Strings
+
+Four kinds of string operations are currently supported:
+
+* `lokar delete 'Aaa : Bbb'` deletes occurances of `$a Aaa $x Bbb`
+* `lokar rename 'Aaa : Bbb' 'Ccc : Ddd'` replaces `$a Aaa $x Bbb` with `$a Ccc $x Ddd`
+* `lokar rename 'Aaa : Bbb' 'Ccc'` replaces `$a Aaa $x Bbb` with `$a Ccc` (replacing subfield `$a` and removing subfield `$x`)
+* `lokar rename 'Aaa' 'Bbb : Ccc'` replaces `$a Aaa` with `$a Bbb $x $Ccc` (replacing subfield `$a` and adding subfield `$x`)
+
+Note: A term is only recognized as a string if there is space before and after colon (` : `).
+
 
 [![asciicast](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f.png)](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f)
 
