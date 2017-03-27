@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<bib>
+	<mms_id>990705558424702201</mms_id>
+	<record_format>marc21</record_format>
+	<linked_record_id/>
+	<title>Analysis of variance and covariance : how to choose and construct models for the life sciences</title>
+	<author>Doncaster, C. Patrick</author>
+	<isbn>9780521684477</isbn>
+	<network_numbers>
+		<network_number>(NO-TrBIB)070555842</network_number>
+		<network_number>070555842-47bibsys_network</network_number>
+	</network_numbers>
+	<place_of_publication>Cambridge</place_of_publication>
+	<publisher_const>Cambridge University Press</publisher_const>
+	<holdings link="https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/990705558424702201/holdings"/>
+	<created_by>import</created_by>
+	<created_date>2015-11-02Z</created_date>
+	<last_modified_by>System</last_modified_by>
+	<last_modified_date>2016-06-17Z</last_modified_date>
+	<suppress_from_publishing>false</suppress_from_publishing>
+	<originating_system>ILS</originating_system>
+	<originating_system_id>070555842-47bibsys_network</originating_system_id>
+	<record>
+		<leader>01360cam a2200361 c 4500</leader>
+		<controlfield tag="001">990705558424702201</controlfield>
+		<controlfield tag="005">20160114211655.0</controlfield>
+		<controlfield tag="007">ta</controlfield>
+		<controlfield tag="008">120416s2007    xx#|||||||||||000|u|eng|d</controlfield>
+		<datafield ind1=" " ind2=" " tag="020">
+			<subfield code="a">9780521865623</subfield>
+			<subfield code="q">ib.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="020">
+			<subfield code="a">9780521684477</subfield>
+			<subfield code="q">h.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="035">
+			<subfield code="a">070555842-47bibsys_network</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="035">
+			<subfield code="a">(NO-TrBIB)070555842</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="040">
+			<subfield code="a">NO-TrBIB</subfield>
+			<subfield code="b">nob</subfield>
+			<subfield code="e">katreg</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="080">
+			<subfield code="a">57.087</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="084">
+			<subfield code="a">Fh:48</subfield>
+			<subfield code="2">utk</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="084">
+			<subfield code="a">02.0</subfield>
+			<subfield code="q">NoOU</subfield>
+			<subfield code="2">no-ureal-cb</subfield>
+		</datafield>
+		<datafield ind1="1" ind2=" " tag="100">
+			<subfield code="a">Doncaster, C. Patrick</subfield>
+			<subfield code="0">(NO-TrBIB)7069076</subfield>
+		</datafield>
+		<datafield ind1="1" ind2="0" tag="245">
+			<subfield code="a">Analysis of variance and covariance :</subfield>
+			<subfield code="b">how to choose and construct models for the life sciences</subfield>
+			<subfield code="c">C. Patrick Doncaster and Andrew J.H. Davey</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="260">
+			<subfield code="a">Cambridge</subfield>
+			<subfield code="b">Cambridge University Press</subfield>
+			<subfield code="c">2007</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="300">
+			<subfield code="a">XIII, 287 s.</subfield>
+			<subfield code="b">ill.</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Statistiske modeller</subfield>
+			<subfield code="2">noubomn</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Anova</subfield>
+			<subfield code="2">noubomn</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Variansanalyse</subfield>
+			<subfield code="2">noubomn</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Eksperimenter</subfield>
+			<subfield code="2">noubomn</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Analyser</subfield>
+			<subfield code="2">noubomn</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Design</subfield>
+			<subfield code="2">noubomn</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Modeller</subfield>
+			<subfield code="2">noubomn</subfield>
+		</datafield>
+		<datafield ind1=" " ind2="7" tag="650">
+			<subfield code="a">Matematisk biologi</subfield>
+			<subfield code="2">tekord</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="653">
+			<subfield code="a">variansanalyse</subfield>
+			<subfield code="a">anova</subfield>
+			<subfield code="a">eksperimentelt</subfield>
+			<subfield code="a">design</subfield>
+			<subfield code="a">statistiske</subfield>
+			<subfield code="a">modeller</subfield>
+			<subfield code="a">eksperimenter</subfield>
+			<subfield code="a">analyser</subfield>
+			<subfield code="a">biologi</subfield>
+		</datafield>
+		<datafield ind1="1" ind2=" " tag="700">
+			<subfield code="a">Davey, Andrew J.H.</subfield>
+			<subfield code="0">(NO-TrBIB)7069075</subfield>
+		</datafield>
+		<datafield ind1="0" ind2=" " tag="776">
+			<subfield code="t">Analysis of variance and covariance : how to choose and construct models for the life sciences</subfield>
+			<subfield code="w">991408037004702201</subfield>
+		</datafield>
+		<datafield ind1=" " ind2=" " tag="901">
+			<subfield code="a">80</subfield>
+		</datafield>
+	</record>
+</bib>

@@ -20,7 +20,7 @@ class Bib(object):
         self.doc = parse_xml(xml)
         self.mms_id = self.doc.findtext('mms_id')
         self.marc_record = Record(self.doc.find('record'))
-        self.linked_to_cz = self.doc.findtext('linked_record_id[@type="CZ"]') or None
+        self.cz_link = self.doc.findtext('linked_record_id[@type="CZ"]') or None
 
     def save(self, diff=False, dry_run=False):
         # Save record back to Alma

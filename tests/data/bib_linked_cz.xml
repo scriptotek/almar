@@ -133,6 +133,10 @@
 		<datafield ind1=" " ind2="4" tag="650">
 			<subfield code="a">Meteorology.</subfield>
 		</datafield>
+        <datafield ind1=" " ind2="7" tag="650">
+          <subfield code="a">Dynamisk meteorologi</subfield>
+          <subfield code="2">noubomn</subfield>
+        </datafield>
 		<datafield ind1=" " ind2="0" tag="655">
 			<subfield code="a">Electronic books.</subfield>
 		</datafield>

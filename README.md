@@ -29,7 +29,8 @@ env:
 ```
 
 1. Replace `INSERT MARC VOCABULARY CODE HERE` with the vocabulary code of
-   your vocabulary (the one that goes in `6XX $2`).
+   your vocabulary (the `$2` value). The script uses this value as a filter,
+   to ensure it only edits subject fields from the specified vocabulary.
 2. Replace `INSERT API KEY HERE` with the API key of your Alma instance. If
    you'r connected to a network zone, you should probably use a network zone key.
    Otherwise the edits will be stored as local edits in the institution zone.
@@ -63,7 +64,10 @@ env:
 
 ### Usage
 
-Note: The tool will only work with subject fields where the `$2` value matches the `vocabulary.marc_code` code in
+Before using the tool, you must set the vocabulary code (`vocabulary.marc_code`)
+for the vocabulary you want to work with in `lokar.yml`.
+
+Note: The tool always filters `$2` value matches the `vocabulary.marc_code` code in
 `lokar.yml`. If you've set `vocabulary.marc_code` to e.g. `noubomn`, the tool will never make any changes to
 subject fields that do not have `$2 noubomn`.
 
@@ -73,7 +77,7 @@ subject fields that do not have `$2 noubomn`.
 #### Renaming/moving
 
 * `lokar rename 'Term' 'New term'` to replace "Term" with "New term" in 650 fields (default).
-* `lokar -t 655 rename 'Term' 'New term'` to replace "Term" with "New term" in 655 fields.
+* `lokar rename '655 Term' 'New term'` to replace "Term" with "New term" in 655 fields.
 
 To see the changes made to each catalog record, add the `--diffs` flag. Combined with
 the `--dry_run` flag (or `-d`), you will see the changes that would be made without
@@ -83,12 +87,16 @@ actually doing them:
 
 Moving a subject to another MARC tag:
 
-* `lokar rename -t 650 'Term' --to_tag 651` to move "Term" from 650 to 651 (replacing `650 $a Term` with `651 Term`).
+* `lokar rename '650 Term' '651'` to move "Term" from 650 to 651 (replacing `650 $a Term` with `651 Term`).
+
+Renaming and moving can be combined:
+
+* `lokar rename '650 Term' '651 New term'`
 
 #### Deleting
 
-* `lokar delete 'Term'` to remove 650 fields having "$a Term" or "$x Term".
-* `lokar -t 651 delete 'Term'` to remove 651 fields having "$a Term" or "$x Term".
+* `lokar delete 'Term'` to delete 650 fields having "$a Term" or "$x Term".
+* `lokar delete '651 Term'` to delete 651 fields having "$a Term" or "$x Term".
 
 #### Notes
 

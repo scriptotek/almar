@@ -6,6 +6,7 @@ from io import open
 import io
 import sys
 import os
+import re
 import getpass
 
 from raven import Client
@@ -20,9 +21,10 @@ import yaml
 from six import text_type, binary_type
 
 from . import __version__
-from .job import Job
+from .job import Job, Concept
 from .alma import Alma
 from .sru import SruClient
+from .util import normalize_term
 
 
 logger = logging.getLogger()
@@ -33,6 +35,8 @@ formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
+supported_tags = ['084', '648', '650', '651', '655']
 
 
 class Vocabulary(object):
@@ -80,14 +84,16 @@ class Mailer(object):
         request.raise_for_status()
 
 
-def parse_args(args, config):
-    parser = argparse.ArgumentParser(prog='lokar',
-                                     description='Edit or remove subject fields in Alma catalog records.')
+def parse_args(args, default_env=None):
+    parser = argparse.ArgumentParser(prog='lokar', description='''
+            Edit or remove subject fields in Alma catalog records.
+            Supported fields: {}
+            '''.format(', '.join(supported_tags)))
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     parser.add_argument('-e', '--env', dest='env', nargs='?',
-                        help='Environment from config file. Default: {}'.format(config.get('default_env') or '(none)'),
-                        default=config.get('default_env'))
+                        help='Environment from config file. Default: {}'.format(default_env or '(none)'),
+                        default=default_env)
 
     parser.add_argument('-d', '--dry_run', dest='dry_run', action='store_true',
                         help='Dry run without doing any edits.')
@@ -101,19 +107,13 @@ def parse_args(args, config):
     parser.add_argument('--diffs', dest='show_diffs', action='store_true',
                         help='Show diffs before saving.')
 
-    parser.add_argument('-t', '--tag', dest='tag', nargs='?',
-                        help='MARC tag (648/650/651/655). Default: 650',
-                        default='650', choices=['648', '650', '651', '655'])
-
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Create parser for the "move" command
     parser_move = subparsers.add_parser('rename', help='Rename/move term')
     parser_move.add_argument('term', nargs=1, help='Term to search for')
-    parser_move.add_argument('new_term', nargs='?', default='', help='Replacement term')
-    parser_move.add_argument('-T', '--to_tag', dest='dest_tag', nargs='?',
-                             help='Destination MARC tag if you want to move to another tag (648/650/651/655).',
-                             choices=['648', '650', '651', '655'])
+    parser_move.add_argument('new_term', nargs=1, default='', help='Replacement term')
+    parser_move.add_argument('new_term2', nargs='?', default='', help='Second replacement term')
     parser_move.set_defaults(action='rename')
 
     # Create parser for the "delete" command
@@ -124,35 +124,66 @@ def parse_args(args, config):
     # Parse
     args = parser.parse_args(args)
 
-    if args.env is None:
-        parser.error('no environment specified')
+    if args.env is not None:
+        args.env = args.env.strip()
 
-    args.env = args.env.strip()
     args.term = args.term[0]
 
     if args.action == 'delete':
         args.new_term = ''
-        args.dest_tag = None
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
+        args.new_term2 = ''
+    else:
+        args.new_term = args.new_term[0]
 
     if type(args.term) == binary_type:
         args.term = args.term.decode('utf-8')
     if type(args.new_term) == binary_type:
         args.new_term = args.new_term.decode('utf-8')
+    if type(args.new_term2) == binary_type:
+        args.new_term2 = args.new_term2.decode('utf-8')
     if type(args.env) == binary_type:
         args.env = args.env.decode('utf-8')
-
-    if args.action == 'rename' and args.new_term == '' and args.dest_tag is None:
-        parser.error('too few arguments (at least one of "new_term" and "--to_tag" must be specified)')
 
     return args
 
 
-def main(config=None, args=None):
+def get_concept(term, vocabulary, default_tag='650', default_term=None):
+    m = re.match('^({})$'.format('|'.join(supported_tags)), term)
+    if m:
+        if default_term is None:
+            raise RuntimeError('No source term specified')
+        return Concept(default_term, vocabulary, m.group(1))
 
-    username = getpass.getuser()
+    m = re.match('^({}) (.+)$'.format('|'.join(supported_tags)), term)
+    if m:
+        return Concept(m.group(2), vocabulary, m.group(1))
+
+    return Concept(term, vocabulary, default_tag)
+
+
+def job_args(config=None, args=None):
+    vocabulary = Vocabulary(config['vocabulary']['marc_code'],
+                            config['vocabulary'].get('skosmos_code'),
+                            config['vocabulary'].get('marc_prefix', ''))
+
+    source_concept = get_concept(args.term, vocabulary)
+    target_concept = None
+    target_concept2 = None
+
+    if args.action == 'rename':
+        target_concept = get_concept(args.new_term, vocabulary, default_term=args.term)
+
+        if args.new_term2 != '':
+            target_concept2 = get_concept(args.new_term2, vocabulary)
+
+    return {
+        'source_concept': source_concept,
+        'target_concept': target_concept,
+        'target_concept2': target_concept2,
+    }
+
+
+def main(config=None, args=None):
 
     try:
         with config or open('lokar.yml') as f:
@@ -161,16 +192,20 @@ def main(config=None, args=None):
         logger.error('Fant ikke lokar.yml. Se README.md for mer info.')
         return
 
-    args = parse_args(args or sys.argv[1:], config=config)
-
-    if config.get('sentry') is not None:
-        raven = Client(config['sentry']['dsn'])
-        raven.context.merge({'user': {
-            'username': username
-        }})
-
+    username = getpass.getuser()
+    logger.info('Running as {}'.format(username))
     try:
-        env = config['env'][args.env]
+        if config.get('sentry') is not None:
+            raven = Client(config['sentry']['dsn'])
+            raven.context.merge({'user': {
+                'username': username
+            }})
+
+        args = parse_args(args or sys.argv[1:], config.get('default_env'))
+        jargs = job_args(config, args)
+
+        if args.verbose:
+            logger.setLevel(logging.DEBUG)
 
         if not args.dry_run:
             file_handler = logging.FileHandler('lokar.log')
@@ -178,18 +213,23 @@ def main(config=None, args=None):
             file_handler.setLevel(logging.INFO)
             logger.addHandler(file_handler)
 
+        if args.env is None:
+            raise RuntimeError('No environment specified in config file')
+
+        env = config['env'][args.env]
+
         sru = SruClient(env['sru_url'], args.env)
         alma = Alma(env['api_region'], env['api_key'], args.env)
-
-        vocabulary = Vocabulary(config['vocabulary']['marc_code'],
-                                config['vocabulary'].get('skosmos_code'),
-                                config['vocabulary'].get('marc_prefix'))
         mailer = Mailer(config['mail'])
 
-        # if args.action == 'rename':
+        job = Job(sru=sru, alma=alma, mailer=mailer, **jargs)
+        job.dry_run = args.dry_run
+        job.interactive = not args.non_interactive
+        job.verbose = args.verbose
+        job.show_diffs = args.show_diffs
 
-        job = Job(sru, alma, vocabulary, mailer, args.tag, args.term, args.new_term, dest_tag=args.dest_tag)
-        job.start(args.dry_run, args.non_interactive, not args.verbose, args.show_diffs)
+        job.start()
+        logger.info('{:=^70}'.format(' Job complete '))
 
     except Exception as e:
         if config.get('sentry') is not None:

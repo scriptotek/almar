@@ -3,161 +3,10 @@
 from __future__ import unicode_literals
 import logging
 from copy import deepcopy
-from .util import normalize_term, term_match, parse_xml, ANY_VALUE
+from .util import term_match, parse_xml
 from colorama import Fore, Back, Style
 
 log = logging.getLogger(__name__)
-
-
-class Subjects(object):
-
-    def __init__(self, marc_record):
-        self.marc_record = marc_record
-
-    @staticmethod
-    def make_query(vocabulary, term=None, replacement_term=None, identifier=None):
-        if term is None:
-            term = []
-        else:
-            term = term.split(' : ')
-
-        if replacement_term is not None:
-            replacement_term = replacement_term.split(' : ')
-
-        if len(term) > 2:
-            raise RuntimeError('Strings with more than two components are not yet supported' +
-                               'Got string with %d components.' % (len(term)))
-
-        base_query = {
-            '2': {'search': vocabulary},
-        }
-        if identifier is not None:
-            base_query['0'] = {'search': ANY_VALUE, 'replace': identifier}
-
-        if len(term) == 2:
-            if replacement_term is None:
-                query = base_query.copy()
-                query.update({
-                    'a': {'search': term[0]},
-                    'x': {'search': term[1]},
-                })
-                yield query
-            elif len(replacement_term) == 2:
-                # Replace `$a : $x` by `$a : $x`
-                query = base_query.copy()
-                query.update({
-                    'a': {'search': term[0], 'replace': replacement_term[0]},
-                    'x': {'search': term[1], 'replace': replacement_term[1]},
-                })
-                yield query
-            elif len(replacement_term) == 1:
-                # Replace `$a : $x` by `$a`
-                query = base_query.copy()
-                query.update({
-                    'a': {'search': term[0], 'replace': replacement_term[0]},
-                    'x': {'search': term[1], 'replace': None},
-                })
-                yield query
-        elif len(term) == 1:
-            if replacement_term is None:
-                for code in ['a', 'x']:
-                    query = base_query.copy()
-                    query.update({
-                        code: {'search': term[0]},
-                    })
-                    yield query
-            elif len(replacement_term) == 1:
-                # Replace `$a` by `$a` or `$x` by `$x`
-                for code in ['a', 'x']:
-                    query = base_query.copy()
-                    query.update({
-                        code: {'search': term[0], 'replace': replacement_term[0]},
-                    })
-                    yield query
-            elif len(replacement_term) == 2:
-                # Replace `$a` by `$a : $x`
-                query = base_query.copy()
-                query.update({
-                    'a': {'search': term[0], 'replace': replacement_term[0]},
-                    'x': {'search': None, 'replace': replacement_term[1]}
-                })
-                yield query
-        elif len(term) == 0:
-            yield base_query
-
-    def query(self, vocabulary, search_term, replacement_term=None, tags=None):
-        tags = tags or '650'
-        for query in self.make_query(vocabulary, search_term, replacement_term):
-            for field in self.marc_record.fields(tags, query):
-                yield field
-
-    def find(self, vocabulary, term=None, tags=None):
-        for field in self.query(vocabulary, term, tags=tags):
-            yield field
-
-    def rename(self, vocabulary, old_term, new_term=None, tags=None, identifier=None):
-        tags = tags or '650'
-        for query in self.make_query(vocabulary, old_term, new_term, identifier):
-            for field in self.marc_record.fields(tags, query):
-                field.update(query)
-
-        self.remove_duplicates(vocabulary, new_term, tags)
-
-    def remove(self, vocabulary, term, tags=None):
-        tags = tags or '650'
-        term = term.split(' : ')
-
-        query = {
-            '2': {'search': vocabulary},
-            'a': {'search': term[0]},
-            'b': {'search': None},
-            'x': {'search': None},
-            'y': {'search': None},
-            'z': {'search': None},
-        }
-        if len(term) == 2:
-            query['x']['search'] = term[1]
-
-        for field in self.marc_record.fields(tags, query):
-            self.marc_record.remove_field(field)
-
-    def move(self, vocabulary, term, source_tag, dest_tag):
-        if len(term.split(' : ')) > 1:
-            raise RuntimeError('Moving of strings is not yet supported')
-
-        query = {
-            '2': {'search': vocabulary},
-            'a': {'search': term},
-            'b': {'search': None},
-            'x': {'search': None},
-            'y': {'search': None},
-            'z': {'search': None},
-        }
-
-        for field in self.marc_record.fields(source_tag, query):
-            field.set_tag(dest_tag)
-
-        self.remove_duplicates(vocabulary, term, dest_tag)
-
-    @staticmethod
-    def get_simple_subject_repr(field, subfields='abxyz'):
-        subfields = list(subfields)
-        key = [field.node.get('tag')]
-        for subfield in field.node.findall('subfield'):
-            if subfield.get('code') in subfields:
-                key.append('$%s %s' % (subfield.get('code'), subfield.text))
-        return ' '.join(key)
-
-    def remove_duplicates(self, vocabulary, term, tags=None):
-        keys = []
-
-        for field in self.find(vocabulary, term, tags):
-            key = self.get_simple_subject_repr(field)
-            if key in keys:
-                log.info('The new term was already present on the record: %s', key)
-                self.marc_record.remove_field(field)
-                continue
-            keys.append(key)
 
 
 class Field(object):
@@ -183,8 +32,12 @@ class Field(object):
         """
         for code, value in subfield_query.items():
             node_text = self.node.findtext('subfield[@code="{}"]'.format(code))
-            if not term_match(node_text, value['search']):
-                return False
+            if isinstance(value, dict):
+                if not term_match(node_text, value['search']):
+                    return False
+            else:
+                if not term_match(node_text, value):
+                    return False
         return True
 
     def update(self, subfield_query):
@@ -196,6 +49,7 @@ class Field(object):
         >>> update({'a': {'search': 'Hello', 'World'}})
         """
         subfield_query = deepcopy(subfield_query)
+        modified = 0
 
         if self.match(subfield_query):
             for ch in self.node.findall('subfield'):
@@ -210,14 +64,19 @@ class Field(object):
                         # Subfield should be removed
                         log.debug('Removing component $%s %s', code, ch.text)
                         self.node.remove(ch)
+                        modified += 1
                     else:
                         # Subfield value should be updated
                         log.debug('Changing $%s from "%s" tot "%s"', code, ch.text, x['replace'])
                         ch.text = x['replace']
+                        modified += 1
             # Add new subfields
             for code, value in subfield_query.items():
                 if value.get('replace') is not None:
                     self.node.append(parse_xml('<subfield code="%s">%s</subfield>' % (code, value['replace'])))
+                    modified += 1
+
+        return modified
 
     def set_tag(self, new_tag):
         self.node.set('tag', new_tag)
@@ -233,7 +92,6 @@ class Record(object):
     def id(self):
         return self.el.findtext('./controlfield[@tag="001"]')
 
-    # TODO: Rename find
     def fields(self, tags, subfield_query):
         if type(tags) != list:
             tags = [tags]

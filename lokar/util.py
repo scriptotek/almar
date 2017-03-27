@@ -13,14 +13,13 @@ ANY_VALUE = '___any_value___'
 def parse_xml(txt):
     if isinstance(txt, text_type):
         return etree.fromstring(txt.encode('utf-8'))
-    elif isinstance(txt, binary_type):
-        return etree.fromstring(txt)
-    return txt
+    return etree.fromstring(txt)
 
 
 def normalize_term(term):
     # Normalize term so it starts with a capital letter. If the term is a subject string
     # fused by " : ", normalize all components.
+
     if term is None or len(term) == 0:
         return term
 
