@@ -20,6 +20,10 @@ class SruErrorResponse(RuntimeError):
     pass
 
 
+class TooManyResults(RuntimeError):
+    pass
+
+
 class SruClient(object):
 
     def __init__(self, endpoint_url, name=None):
@@ -46,6 +50,9 @@ class SruClient(object):
                 raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=nsmap))
 
             self.num_records = int(root.findtext('srw:numberOfRecords', namespaces=nsmap))
+            if self.num_records > 10000:
+                raise TooManyResults()
+
             for record in root.iterfind('srw:records/srw:record', namespaces=nsmap):
                 self.record_no = int(record.findtext('srw:recordPosition', namespaces=nsmap))
 

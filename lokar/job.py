@@ -8,6 +8,7 @@ from prompter import yesno
 from tqdm import tqdm
 from requests.exceptions import HTTPError
 
+from .sru import TooManyResults
 from .skosmos import Skosmos
 from .task import *
 
@@ -208,21 +209,28 @@ class Job(object):
         cql_query = 'alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (self.source_concept.term,
                                                                                   self.vocabulary.marc_code)
 
-        for marc_record in self.sru.search(cql_query):
-            if pbar is None and self.show_progress and self.sru.num_records > 50:
-                pbar = tqdm(total=self.sru.num_records, desc='Filtering SRU results')
+        try:
+            for marc_record in self.sru.search(cql_query):
+                if pbar is None and self.show_progress and self.sru.num_records > 50:
+                    pbar = tqdm(total=self.sru.num_records, desc='Filtering SRU results')
 
-            log.debug('Checking record %s', marc_record.id())
+                log.debug('Checking record %s', marc_record.id())
 
-            for step in self.steps:
-                if step.match(marc_record):
-                    valid_records.append(marc_record.id())
-                    break
+                for step in self.steps:
+                    if step.match(marc_record):
+                        valid_records.append(marc_record.id())
+                        break
 
+                if pbar is not None:
+                    pbar.update()
             if pbar is not None:
-                pbar.update()
-        if pbar is not None:
-            pbar.close()
+                pbar.close()
+        except TooManyResults:
+            log.error('More than 10,000 results would have to be checked, but the Alma SRU service does ' +
+                      'not allow us to retrieve more than 10,000 results. Annoying? Go vote for this:\n' +
+                      'http://ideas.exlibrisgroup.com/forums/308173-alma/suggestions/' +
+                      '18737083-sru-srw-increase-the-10-000-record-retrieval-limi')
+            return []
 
         if len(valid_records) == 0:
             log.info('No matching catalog records found')

@@ -16,7 +16,7 @@ from textwrap import dedent
 
 from lokar.bib import Bib
 from lokar.lokar import main, job_args, parse_args, Vocabulary, Mailer
-from lokar.sru import SruClient, SruErrorResponse, nsmap
+from lokar.sru import SruClient, SruErrorResponse, TooManyResults, nsmap
 from lokar.alma import Alma
 from lokar.job import Job, Concept
 from lokar.util import normalize_term, parse_xml
@@ -434,6 +434,18 @@ class TestSruSearch(unittest.TestCase):
 
         with pytest.raises(SruErrorResponse):
             records = list(SruClient(url).search('alma.subjects=="test"'))
+
+        assert len(responses.calls) == 1
+
+    @responses.activate
+    def testTooManyRecordsResponse(self):
+        url = 'http://test/'
+
+        body = get_sample('sru_toomanyrecords.xml')
+        responses.add(responses.GET, url, body=body, content_type='application/xml')
+
+        with pytest.raises(TooManyResults):
+            records = list(SruClient(url).search('alma.subjects=="Tyskland" AND alma.authority_vocabulary = "humord"'))
 
         assert len(responses.calls) == 1
 

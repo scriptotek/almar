@@ -1,0 +1,1127 @@
+<?xml version="1.0" encoding="UTF-8"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
+  <version>1.2</version>
+  <numberOfRecords>12978</numberOfRecords>
+  <records>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>00918cam a2200265 c 4500</leader>
+          <controlfield tag="001">991202990974702201</controlfield>
+          <controlfield tag="005">20120823140732.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">120823s2009    xx#||||||c   |000|u|eng|d</controlfield>
+          <datafield tag="020" ind1=" " ind2=" ">
+            <subfield code="a">9783875362725</subfield>
+            <subfield code="q">ib.</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">120299097-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)120299097</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="082" ind1="0" ind2="4">
+            <subfield code="a">759.3</subfield>
+            <subfield code="q">NoOU</subfield>
+            <subfield code="2">23</subfield>
+          </datafield>
+          <datafield tag="245" ind1="0" ind2="0">
+            <subfield code="a">100 Jahre - 100 Bilder :</subfield>
+            <subfield code="b">Deutsche Malerei im 20. Jahrhundert</subfield>
+            <subfield code="c">herausgeber Bernd Küster</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Gifkendorf</subfield>
+            <subfield code="b">Merlin</subfield>
+            <subfield code="c">2009</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">190 s.</subfield>
+            <subfield code="b">ill.</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Utgitt i forbindelse med utstilling vist i Landesmuseum für Kunst und Kulturgeschichte Oldenburg, 5. Juli- 4.okt. 2009</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Malerkunst</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">1900-tallet</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="655" ind1=" " ind2="7">
+            <subfield code="a">Utstillinger</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Küster, Bernd</subfield>
+            <subfield code="0">(NO-TrBIB)11017954</subfield>
+          </datafield>
+          <datafield tag="710" ind1="2" ind2=" ">
+            <subfield code="a">Landesmuseum für Kunst- und Kulturgeschichte Oldenburg</subfield>
+            <subfield code="0">(NO-TrBIB)12134</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">991202990974702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>1</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>00917cam a2200277 c 4500</leader>
+          <controlfield tag="001">990411889854702201</controlfield>
+          <controlfield tag="005">20050131114312.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">050131s2003    xx#|||||||||||000|u|und|d</controlfield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">041188985-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)041188985</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="100" ind1="1" ind2=" ">
+            <subfield code="a">Abele-Brehm, Andrea</subfield>
+            <subfield code="0">(NO-TrBIB)5009374</subfield>
+          </datafield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">100 Jahre akademische Frauenbildung in Bayern und Erlangen :</subfield>
+            <subfield code="b">Rückblick und Perspektiven</subfield>
+            <subfield code="c">Andrea Abele-Brehm</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Erlangen</subfield>
+            <subfield code="b">Friedrich-Alexander-Universität</subfield>
+            <subfield code="c">2003</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">31 s.</subfield>
+            <subfield code="b">ill.</subfield>
+          </datafield>
+          <datafield tag="490" ind1="1" ind2=" ">
+            <subfield code="a">Erlanger Universitätsreden. 3. Folge</subfield>
+            <subfield code="v">Nr. 64/2004</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Bayern</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">utdannig</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Universiteter</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Historisk framstilling</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">1900-tallet</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Kvinner</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="830" ind1=" " ind2="0">
+            <subfield code="a">Erlanger Universitätsreden. 3. Folge</subfield>
+            <subfield code="v">Nr. 64/2004</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">990411889854702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>2</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>00830cam a2200277 c 4500</leader>
+          <controlfield tag="001">999609721964702201</controlfield>
+          <controlfield tag="005">19960912000000.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">960912s1995    xx#|||||||||||000|u|ger|d</controlfield>
+          <datafield tag="020" ind1=" " ind2=" ">
+            <subfield code="a">3770136071</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">960972196-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)960972196</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="100" ind1="1" ind2=" ">
+            <subfield code="a">Kriegeskorte, Michael</subfield>
+            <subfield code="0">(NO-TrBIB)90926400</subfield>
+          </datafield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">100 Jahre Werbung im Wandel :</subfield>
+            <subfield code="b">eine Reise durch die deutsche Vergangenheit</subfield>
+            <subfield code="c">Michael Kriegeskorte</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Köln</subfield>
+            <subfield code="b">DuMont</subfield>
+            <subfield code="c">c1995</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">240 s.</subfield>
+            <subfield code="b">ill</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Reklamekunst</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Reklame</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Markedsføring</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Historisk framstilling</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">1800-tallet</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">1900-tallet</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="740" ind1="0" ind2=" ">
+            <subfield code="a">Hundert Jahre Werbung im Wandel</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">999609721964702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>3</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>01023cam a2200289 c 4500</leader>
+          <controlfield tag="001">990218447714702201</controlfield>
+          <controlfield tag="005">20041001132727.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">041001s2001    xx#|||||||||||000|u|ger|d</controlfield>
+          <datafield tag="020" ind1=" " ind2=" ">
+            <subfield code="a">3922708099</subfield>
+            <subfield code="q">h.</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">021844771-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)021844771</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="245" ind1="0" ind2="0">
+            <subfield code="a">1000 Jahre Musik &amp; Zensur in den diversen Deutschlands</subfield>
+            <subfield code="c">Werner Pieper (Hrsg.)</subfield>
+          </datafield>
+          <datafield tag="246" ind1="1" ind2="4">
+            <subfield code="a">Musik &amp; Zensur in den diversen Deutschlands der letzten 500 Jahre</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Löhrbach</subfield>
+            <subfield code="b">Der Grüne Kraft</subfield>
+            <subfield code="c">c2001</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">254 s.</subfield>
+            <subfield code="b">ill.</subfield>
+          </datafield>
+          <datafield tag="490" ind1="1" ind2=" ">
+            <subfield code="a">Der grüne Zweig</subfield>
+            <subfield code="v">209</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Musikk</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Sensur</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="653" ind1=" " ind2=" ">
+            <subfield code="a">musikk</subfield>
+            <subfield code="a">sensur</subfield>
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="a">musikksensur</subfield>
+            <subfield code="a">sosiale</subfield>
+            <subfield code="a">aspekter</subfield>
+            <subfield code="a">historisk</subfield>
+            <subfield code="a">framstilling</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Pieper, Werner</subfield>
+            <subfield code="0">(NO-TrBIB)90204871</subfield>
+          </datafield>
+          <datafield tag="740" ind1="0" ind2=" ">
+            <subfield code="a">Tausend Jahre Musik &amp; Zensur in den diversen Deutschlands</subfield>
+          </datafield>
+          <datafield tag="740" ind1="0" ind2=" ">
+            <subfield code="a">Musik &amp; Zensur in den diversen Deutschlands der letzten 500 Jahre</subfield>
+          </datafield>
+          <datafield tag="830" ind1=" " ind2="0">
+            <subfield code="a">Der grüne Zweig</subfield>
+            <subfield code="v">209</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">990218447714702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_NTNU_UB</subfield>
+            <subfield code="6">990218447714702203</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>4</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>01456cgm a2200349 c 4500</leader>
+          <controlfield tag="001">990205525054702201</controlfield>
+          <controlfield tag="005">20160407164323.0</controlfield>
+          <controlfield tag="007">vd |v||||</controlfield>
+          <controlfield tag="008">150319s2001    xx ||||||||||||   v|mul|d</controlfield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)020552505</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)020552505</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="041" ind1=" " ind2=" ">
+            <subfield code="a">ice</subfield>
+            <subfield code="a">nob</subfield>
+          </datafield>
+          <datafield tag="245" ind1="0" ind2="0">
+            <subfield code="a">101 Reykjavik</subfield>
+            <subfield code="c">en film av Baltasar Kormakur</subfield>
+            <subfield code="h">[videoopptak]</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">[Oslo]</subfield>
+            <subfield code="b">SF Norge</subfield>
+            <subfield code="c">[ca 2001]</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">1 videoplate (DVD-video) (92 min)</subfield>
+            <subfield code="b">lyd, kol.</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Rolleliste: Victoria Abril, Hilmir Snær Guðnason.</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Produksjon: Island : Filmhuset/Zentropa Productions, 2000.</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Filmen bygger på en roman av Hallgrímur Helgason.</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Komedie.</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Islandsk tale, norsk tekst. Kodet for region 2</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Ekstramateriale: biografier, trailer, trailershow.</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">Statens filmtilsyn : 18020</subfield>
+          </datafield>
+          <datafield tag="653" ind1=" " ind2=" ">
+            <subfield code="a">islandske</subfield>
+            <subfield code="a">spelefilmar</subfield>
+            <subfield code="a">spillefilmer</subfield>
+            <subfield code="a">komedie</subfield>
+            <subfield code="a">romantikk</subfield>
+            <subfield code="a">romance</subfield>
+            <subfield code="a">island</subfield>
+            <subfield code="a">iceland</subfield>
+            <subfield code="a">danmark</subfield>
+            <subfield code="a">denmark</subfield>
+            <subfield code="a">frankrike</subfield>
+            <subfield code="a">france</subfield>
+            <subfield code="a">norge</subfield>
+            <subfield code="a">norway</subfield>
+            <subfield code="a">tyskland</subfield>
+            <subfield code="a">germany</subfield>
+            <subfield code="a">comedy</subfield>
+          </datafield>
+          <datafield tag="655" ind1=" " ind2="7">
+            <subfield code="a">DVD</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="655" ind1=" " ind2="7">
+            <subfield code="a">Spillefilmer</subfield>
+            <subfield code="2">khib</subfield>
+          </datafield>
+          <datafield tag="700" ind1="0" ind2=" ">
+            <subfield code="a">Baltasar Kormákur</subfield>
+            <subfield code="0">(NO-TrBIB)4071680</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Abril, Victoria</subfield>
+            <subfield code="4">act</subfield>
+            <subfield code="0">(NO-TrBIB)99002287</subfield>
+          </datafield>
+          <datafield tag="700" ind1="0" ind2=" ">
+            <subfield code="a">Hilmir Snær Guðnason</subfield>
+            <subfield code="4">act</subfield>
+            <subfield code="0">(NO-TrBIB)2038899</subfield>
+          </datafield>
+          <datafield tag="700" ind1="0" ind2="2">
+            <subfield code="a">Hallgrímur Helgason,</subfield>
+            <subfield code="d">1959-</subfield>
+            <subfield code="0">(NO-TrBIB)4060585</subfield>
+          </datafield>
+          <datafield tag="700" ind1="0" ind2=" ">
+            <subfield code="a">Baltasar Kormákur</subfield>
+            <subfield code="4">drt</subfield>
+            <subfield code="0">(NO-TrBIB)4071680</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_KHIB</subfield>
+            <subfield code="6">990205525054702310</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBB</subfield>
+            <subfield code="6">990205525054702207</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_HIT</subfield>
+            <subfield code="6">999919768582902210</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBIN</subfield>
+            <subfield code="6">999919780882602211</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_HSH</subfield>
+            <subfield code="6">990205525054702231</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_HIL</subfield>
+            <subfield code="6">990205525054702225</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_HVO</subfield>
+            <subfield code="6">990205525054702220</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_HIB</subfield>
+            <subfield code="6">990205525054702221</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_NTNU_UB</subfield>
+            <subfield code="6">999919906565702203</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>5</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>01992cam a2200529 c 4500</leader>
+          <controlfield tag="001">991148415514702201</controlfield>
+          <controlfield tag="005">20170124091919.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="007">cr||||||||||||</controlfield>
+          <controlfield tag="008">150311s2011    no#||||| |||||000|0bnob|</controlfield>
+          <datafield tag="015" ind1=" " ind2=" ">
+            <subfield code="a">1137059</subfield>
+            <subfield code="2">nbf</subfield>
+          </datafield>
+          <datafield tag="020" ind1=" " ind2=" ">
+            <subfield code="a">9788248911654</subfield>
+            <subfield code="q">h.</subfield>
+            <subfield code="c">Nkr 129.00</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">114841551-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)114841551</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-OsBA)0277002</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)133327728</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-OsNB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="042" ind1=" " ind2=" ">
+            <subfield code="a">norbibl</subfield>
+          </datafield>
+          <datafield tag="044" ind1=" " ind2=" ">
+            <subfield code="c">no</subfield>
+          </datafield>
+          <datafield tag="082" ind1="0" ind2="4">
+            <subfield code="a">940.54217</subfield>
+            <subfield code="q">NoOU</subfield>
+            <subfield code="2">23</subfield>
+          </datafield>
+          <datafield tag="082" ind1="7" ind2="4">
+            <subfield code="a">940.54217092</subfield>
+            <subfield code="q">NO-OsNB</subfield>
+            <subfield code="2">5/nor</subfield>
+          </datafield>
+          <datafield tag="100" ind1="1" ind2=" ">
+            <subfield code="a">Brugrand, Odd Helge</subfield>
+            <subfield code="d">1972-</subfield>
+            <subfield code="0">(NO-TrBIB)10044848</subfield>
+          </datafield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">16 år og Hitlers soldat :</subfield>
+            <subfield code="b">historien om Ivar Skarlo, en norsk soldat på Østfronten</subfield>
+            <subfield code="c">Odd Helge Brugrand</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Oslo</subfield>
+            <subfield code="b">Kagge</subfield>
+            <subfield code="c">2011</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">290 s.</subfield>
+            <subfield code="b">ill.</subfield>
+          </datafield>
+          <datafield tag="490" ind1="1" ind2=" ">
+            <subfield code="a">Kagge pocket</subfield>
+          </datafield>
+          <datafield tag="500" ind1=" " ind2=" ">
+            <subfield code="a">1. utg. 2010</subfield>
+          </datafield>
+          <datafield tag="600" ind1="1" ind2="7">
+            <subfield code="a">Skarlo, Ivar</subfield>
+            <subfield code="d">1925-2010</subfield>
+            <subfield code="0">(NO-TrBIB)10044846</subfield>
+            <subfield code="2">bare</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Sovjetunionen</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Historie</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Andre verdenskrig (1939-1945)</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Felttog</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Østfronten (Andre verdenskrig)</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Soldater</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Nordmenn</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Frontkjempere</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Frivillige soldater</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="651" ind1=" " ind2="7">
+            <subfield code="a">Øst-Europa</subfield>
+            <subfield code="2">norbok</subfield>
+          </datafield>
+          <datafield tag="740" ind1="0" ind2=" ">
+            <subfield code="a">Seksten år og Hitlers soldat</subfield>
+          </datafield>
+          <datafield tag="776" ind1="0" ind2=" ">
+            <subfield code="t">16 år og Hitlers soldat : historien om Ivar Skarlo, en norsk soldat på Østfronten</subfield>
+            <subfield code="w">991505564624702201</subfield>
+          </datafield>
+          <datafield tag="830" ind1=" " ind2="0">
+            <subfield code="a">Kagge pocket</subfield>
+          </datafield>
+          <datafield tag="856" ind1="4" ind2="2">
+            <subfield code="3">Beskrivelse fra Forlagssentralen</subfield>
+            <subfield code="u">http://content.bibsys.no/content/?type=descr_forlagssentr&amp;isbn=8248911659</subfield>
+          </datafield>
+          <datafield tag="856" ind1="4" ind2="2">
+            <subfield code="3">Beskrivelse fra forlaget (kort)</subfield>
+            <subfield code="u">http://content.bibsys.no/content/?type=descr_publ_brief&amp;isbn=8248911659</subfield>
+          </datafield>
+          <datafield tag="856" ind1="4" ind2="2">
+            <subfield code="3">Omslagsbilde</subfield>
+            <subfield code="u">http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150132646.jpg</subfield>
+            <subfield code="q">image/jpeg</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">991148415514702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_NB</subfield>
+            <subfield code="6">991148415514702202</subfield>
+            <subfield code="9">D</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">90</subfield>
+          </datafield>
+          <datafield tag="913" ind1=" " ind2=" ">
+            <subfield code="a">Norbok</subfield>
+            <subfield code="b">NB</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>6</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>01042cam a22003017c 4500</leader>
+          <controlfield tag="001">991325656094702201</controlfield>
+          <controlfield tag="005">20170126162218.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">130819s1883    xx#|||||||||||000|u|ger|d</controlfield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">132565609-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)132565609</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="084" ind1=" " ind2=" ">
+            <subfield code="a">I 31</subfield>
+            <subfield code="2">utk</subfield>
+          </datafield>
+          <datafield tag="100" ind1="1" ind2=" ">
+            <subfield code="a">Dove, Alfred</subfield>
+            <subfield code="0">(NO-TrBIB)1021289</subfield>
+          </datafield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">1740-1745</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Gotha</subfield>
+            <subfield code="b">Perthes</subfield>
+            <subfield code="c">1883</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">X, 366 s.</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Historie</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">1700-tallet</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Dahn, Felix</subfield>
+            <subfield code="0">(NO-TrBIB)90179096</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Dove, Alfred</subfield>
+            <subfield code="0">(NO-TrBIB)1021289</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Heeren, A.H.L.</subfield>
+            <subfield code="0">(NO-TrBIB)1102326</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Ukert, F.A.</subfield>
+            <subfield code="0">(NO-TrBIB)1101547</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Giesebrecht, Wilhelm von</subfield>
+            <subfield code="0">(NO-TrBIB)5086863</subfield>
+          </datafield>
+          <datafield tag="700" ind1="1" ind2=" ">
+            <subfield code="a">Lamprecht, Karl</subfield>
+            <subfield code="0">(NO-TrBIB)90295836</subfield>
+          </datafield>
+          <datafield tag="773" ind1="0" ind2="8">
+            <subfield code="i">Inkludert i</subfield>
+            <subfield code="t">Allgemeine Staatengeschichte. Abt. 1, Geschichte der europäischen Staaten. 24, Deutsche Geschichte</subfield>
+            <subfield code="d">Gotha : Perthes, 1883-1888</subfield>
+            <subfield code="g">6:1</subfield>
+            <subfield code="w">990121750994702201</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">991325656094702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">60</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>7</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>00865cam a2200301 c 4500</leader>
+          <controlfield tag="001">991400753134702201</controlfield>
+          <controlfield tag="005">20140325142921.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">140325s2013    xx#|||||||||||000|u|ger|d</controlfield>
+          <datafield tag="020" ind1=" " ind2=" ">
+            <subfield code="a">9783871347498</subfield>
+            <subfield code="q">ib.</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">140075313-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)140075313</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="082" ind1="0" ind2="4">
+            <subfield code="a">940.274</subfield>
+            <subfield code="q">NoOU</subfield>
+            <subfield code="2">23</subfield>
+          </datafield>
+          <datafield tag="083" ind1="0" ind2=" ">
+            <subfield code="a">943.2122</subfield>
+            <subfield code="q">NoOU</subfield>
+            <subfield code="2">23</subfield>
+          </datafield>
+          <datafield tag="100" ind1="1" ind2=" ">
+            <subfield code="a">Platthaus, Andreas.</subfield>
+            <subfield code="4">aut</subfield>
+            <subfield code="0">(NO-TrBIB)10025435</subfield>
+          </datafield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">1813 :</subfield>
+            <subfield code="b">die Völkerschlacht und das Ende der alten Welt</subfield>
+            <subfield code="c">Andreas Platthaus</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Berlin</subfield>
+            <subfield code="b">Rowohlt</subfield>
+            <subfield code="c">2013</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">475 s.</subfield>
+            <subfield code="c">ill.</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Leipzig</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Historie</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">1800-tallet</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Napoleonstiden</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Napoleonskrigene (1799-1815)</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Slag</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Krig</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBB</subfield>
+            <subfield code="6">991400753134702207</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">991400753134702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>8</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>01315cam a2200385 c 4500</leader>
+          <controlfield tag="001">999900497604702201</controlfield>
+          <controlfield tag="005">20170120143838.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">080707s1998    dk a   | |||||000|0|dan|</controlfield>
+          <datafield tag="020" ind1=" " ind2=" ">
+            <subfield code="a">8700290343</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">990049760-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)990049760</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-OsNB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="082" ind1="7" ind2="4">
+            <subfield code="a">948.9041</subfield>
+            <subfield code="q">NO-OsNB</subfield>
+            <subfield code="2">4/nor</subfield>
+          </datafield>
+          <datafield tag="084" ind1=" " ind2=" ">
+            <subfield code="a">Id 65</subfield>
+            <subfield code="2">ubtkl/2</subfield>
+          </datafield>
+          <datafield tag="100" ind1="1" ind2=" ">
+            <subfield code="a">Bjørn, Claus</subfield>
+            <subfield code="0">(NO-TrBIB)90160533</subfield>
+          </datafield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">1848 :</subfield>
+            <subfield code="b">borgerkrig og revolution</subfield>
+            <subfield code="c">Claus Bjørn</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">[København]</subfield>
+            <subfield code="b">Gyldendal</subfield>
+            <subfield code="c">1998</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">266 s.</subfield>
+            <subfield code="b">ill.</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="0">
+            <subfield code="a">Schleswig-Holstein question</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="0">
+            <subfield code="a">Schleswig-Holstein (Germany)</subfield>
+            <subfield code="x">History</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="0">
+            <subfield code="a">Denmark</subfield>
+            <subfield code="x">Foreign relations</subfield>
+            <subfield code="z">Germany</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="0">
+            <subfield code="a">Germany</subfield>
+            <subfield code="x">Foreign relations</subfield>
+            <subfield code="z">Denmark</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="0">
+            <subfield code="a">Denmark</subfield>
+            <subfield code="x">History</subfield>
+            <subfield code="y">1814-1849</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="0">
+            <subfield code="a">Germany</subfield>
+            <subfield code="x">History</subfield>
+            <subfield code="y">Revolution, 1848</subfield>
+          </datafield>
+          <datafield tag="651" ind1=" " ind2="7">
+            <subfield code="a">Schleswig-Holstein</subfield>
+            <subfield code="0">HUME03583</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="651" ind1=" " ind2="7">
+            <subfield code="a">Danmark</subfield>
+            <subfield code="0">HUME02174</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="651" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="0">HUME03491</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Utenrikspolitikk</subfield>
+            <subfield code="0">HUME09606</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Revolusjon</subfield>
+            <subfield code="0">HUME09751</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="648" ind1=" " ind2="7">
+            <subfield code="a">1800-tallet</subfield>
+            <subfield code="0">HUME10978</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Historie</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="653" ind1=" " ind2=" ">
+            <subfield code="a">slesvig-holstein</subfield>
+            <subfield code="a">danmark</subfield>
+            <subfield code="a">historie</subfield>
+            <subfield code="a">1800-tallet</subfield>
+            <subfield code="a">revolusjon</subfield>
+          </datafield>
+          <datafield tag="740" ind1="0" ind2=" ">
+            <subfield code="a">Atten hundrede og otteogfyrre</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBB</subfield>
+            <subfield code="6">999900497604702207</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBO</subfield>
+            <subfield code="6">999900497604702204</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_NB</subfield>
+            <subfield code="6">999900497604702202</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_NTNU_UB</subfield>
+            <subfield code="6">999900497604702203</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>9</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="">
+          <leader>00710cam a2200253 c 4500</leader>
+          <controlfield tag="001">990106318954702201</controlfield>
+          <controlfield tag="005">20010511085445.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">010511s1998    xx#|||||||||||000|u|ger|d</controlfield>
+          <datafield tag="020" ind1=" " ind2=" ">
+            <subfield code="a">3458339140</subfield>
+            <subfield code="q">h.</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">010631895-47bibsys_network</subfield>
+          </datafield>
+          <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">(NO-TrBIB)010631895</subfield>
+          </datafield>
+          <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">NO-TrBIB</subfield>
+            <subfield code="b">nob</subfield>
+            <subfield code="e">katreg</subfield>
+          </datafield>
+          <datafield tag="100" ind1="1" ind2=" ">
+            <subfield code="a">Speck, Ulrich</subfield>
+            <subfield code="0">(NO-TrBIB)90584692</subfield>
+          </datafield>
+          <datafield tag="245" ind1="1" ind2="0">
+            <subfield code="a">1848 :</subfield>
+            <subfield code="b">Chronik einer deutschen Revolution</subfield>
+            <subfield code="c">von Ulrich Speck</subfield>
+          </datafield>
+          <datafield tag="260" ind1=" " ind2=" ">
+            <subfield code="a">Frankfurt am Main</subfield>
+            <subfield code="b">Insel</subfield>
+            <subfield code="c">1998</subfield>
+          </datafield>
+          <datafield tag="300" ind1=" " ind2=" ">
+            <subfield code="a">158 s.</subfield>
+            <subfield code="b">ill.</subfield>
+          </datafield>
+          <datafield tag="490" ind1="1" ind2=" ">
+            <subfield code="a">Insel Taschenbuch</subfield>
+            <subfield code="v">2214</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Tyskland</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Historie</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">Revolusjon</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="650" ind1=" " ind2="7">
+            <subfield code="a">1800-tallet</subfield>
+            <subfield code="2">humord</subfield>
+          </datafield>
+          <datafield tag="830" ind1=" " ind2="0">
+            <subfield code="a">Insel Taschenbuch</subfield>
+            <subfield code="v">2214</subfield>
+          </datafield>
+          <datafield tag="852" ind1="0" ind2="1">
+            <subfield code="a">47BIBSYS_UBB</subfield>
+            <subfield code="6">990106318954702207</subfield>
+            <subfield code="9">P</subfield>
+          </datafield>
+          <datafield tag="901" ind1=" " ind2=" ">
+            <subfield code="a">80</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordPosition>10</recordPosition>
+    </record>
+  </records>
+  <nextRecordPosition>11</nextRecordPosition>
+  <diagnostics/>
+  <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
+    <xb:exact>true</xb:exact>
+    <xb:responseDate>2017-03-27T11:55:25+0200</xb:responseDate>
+  </extraResponseData>
+</searchRetrieveResponse>
