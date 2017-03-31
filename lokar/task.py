@@ -1,6 +1,7 @@
 # coding=utf-8
 from __future__ import unicode_literals
 from future.utils import python_2_unicode_compatible
+from collections import OrderedDict
 import logging
 import six
 from lxml import etree
@@ -59,9 +60,9 @@ class ReplaceTask(Task):
         self.identifier = identifier
 
     def make_query(self, exact):
-        query = {
-            '2': {'search': self.sf_2}
-        }
+        query = OrderedDict([
+            ('2', {'search': self.sf_2})
+        ])
         if exact:
             query.update({
                 'a': {'search': None},
@@ -111,14 +112,14 @@ class DeleteTask(Task):
 
     def __init__(self, concept):
         self.concept = concept
-        self.query = query = {
-            '2': {'search': self.concept.sf['2']},
-            'a': {'search': self.concept.sf['a']},
-            'b': {'search': None},
-            'x': {'search': self.concept.sf['x']},
-            'y': {'search': None},
-            'z': {'search': None},
-        }
+        self.query = query = OrderedDict([
+            ('2', {'search': self.concept.sf['2']}),
+            ('a', {'search': self.concept.sf['a']}),
+            ('b', {'search': None}),
+            ('x', {'search': self.concept.sf['x']}),
+            ('y', {'search': None}),
+            ('z', {'search': None}),
+        ])
 
     def __str__(self):
         return 'Delete {} {} $2 {}'.format(self.concept.tag, self.concept, self.concept.sf['2'])
@@ -192,14 +193,14 @@ class MoveTask(Task):
         self.sf_2 = sf_2
         self.sfs = sfs
         self.dest_tag = dest_tag
-        self.query = {
-            '2': {'search': self.sf_2},
-            'a': {'search': self.sfs.get('a')},
-            'b': {'search': None},
-            'x': {'search': self.sfs.get('x')},
-            'y': {'search': None},
-            'z': {'search': None},
-        }
+        self.query = OrderedDict([
+            ('2', {'search': self.sf_2}),
+            ('a', {'search': self.sfs.get('a')}),
+            ('b', {'search': None}),
+            ('x', {'search': self.sfs.get('x')}),
+            ('y', {'search': None}),
+            ('z', {'search': None}),
+        ])
 
     def __str__(self):
         term = '$a {}'.format(self.sfs.get('a'))

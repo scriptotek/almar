@@ -88,35 +88,35 @@ class Job(object):
     def generate_replace_tasks(src, dst):
         if len(src.components) == 2 and len(dst.components) == 2:
             return [
-                ReplaceTask(src.tag, src.vocabulary.marc_code, {
-                    'a': {'search': src.sf['a'], 'replace': dst.sf['a']},
-                    'x': {'search': src.sf['x'], 'replace': dst.sf['x']},
-                }, dst.sf['0'])
+                ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
+                    ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
+                    ('x', {'search': src.sf['x'], 'replace': dst.sf['x']}),
+                ]), dst.sf['0'])
             ]
 
         if len(src.components) == 2 and len(dst.components) == 1:
             return [
-                ReplaceTask(src.tag, src.vocabulary.marc_code, {
-                    'a': {'search': src.sf['a'], 'replace': dst.sf['a']},
-                    'x': {'search': src.sf['x'], 'replace': None},
-                }, dst.sf['0'])
+                ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
+                    ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
+                    ('x', {'search': src.sf['x'], 'replace': None}),
+                ]), dst.sf['0'])
             ]
 
         if len(src.components) == 1 and len(dst.components) == 2:
             return [
-                ReplaceTask(src.tag, src.vocabulary.marc_code, {
-                    'a': {'search': src.sf['a'], 'replace': dst.sf['a']},
-                    'x': {'search': None, 'replace': dst.sf['x']},
-                }, dst.sf['0'])
+                ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
+                    ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
+                    ('x', {'search': None, 'replace': dst.sf['x']}),
+                ]), dst.sf['0'])
             ]
 
         return [
-            ReplaceTask(src.tag, src.vocabulary.marc_code, {
-                'a': {'search': src.sf['a'], 'replace': dst.sf['a']},
-            }, dst.sf['0']),
-            ReplaceTask(src.tag, src.vocabulary.marc_code, {
-                'x': {'search': src.sf['a'], 'replace': dst.sf['a']},
-            })
+            ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
+                ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
+            ]), dst.sf['0']),
+            ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
+                ('x', {'search': src.sf['a'], 'replace': dst.sf['a']}),
+            ]))
         ]
 
     def generate_steps(self):
@@ -139,7 +139,10 @@ class Job(object):
             if src.tag != dst.tag:
                 # Note: we are using the *destination* $a and $x here since we might
                 # already have performed a rename in the previous step!
-                self.steps.append(MoveTask(src.tag, src.sf['2'], {'a': dst.sf['a'], 'x': dst.sf['x']}, dst.tag))
+                self.steps.append(MoveTask(src.tag, src.sf['2'], OrderedDict([
+                    ('a', dst.sf['a']),
+                    ('x', dst.sf['x'])
+                ]), dst.tag))
 
             # Add
             if dst2 is not None:
