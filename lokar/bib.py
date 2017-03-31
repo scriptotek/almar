@@ -13,7 +13,7 @@ class Bib(object):
 
     def __init__(self, alma, xml):
         self.alma = alma
-        self.orig_xml = xml.encode('utf-8')
+        self.orig_xml = xml
         self.init(xml)
 
     def init(self, xml):
@@ -25,15 +25,15 @@ class Bib(object):
     def save(self, diff=False, dry_run=False):
         # Save record back to Alma
 
-        post_data = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.encode('utf-8') +
-                     etree.tostring(self.doc, encoding='UTF-8'))
+        post_data = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                     etree.tounicode(self.doc))
 
         if diff:
             show_diff(self.orig_xml, post_data)
 
         if not dry_run:
             response = self.alma.put('/bibs/{}'.format(self.mms_id),
-                                     data=BytesIO(post_data),
+                                     data=BytesIO(post_data.encode('utf-8')),
                                      headers={'Content-Type': 'application/xml'})
             self.init(response)
 
