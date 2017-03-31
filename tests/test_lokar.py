@@ -40,11 +40,11 @@ class TestRecord(unittest.TestCase):
         return Record(parse_xml('''
               <record>
                 <datafield tag="650" ind1=" " ind2="7">
-                  <subfield code="a">Monstre</subfield>
+                  <subfield code="a">Mønstre</subfield>
                   <subfield code="2">humord</subfield>
                 </datafield>
                 <datafield tag="650" ind1=" " ind2="7">
-                  <subfield code="a">Monstre</subfield>
+                  <subfield code="a">Mønstre</subfield>
                   <subfield code="2">noubomn</subfield>
                 </datafield>
                 <datafield tag="650" ind1=" " ind2="7">
@@ -52,7 +52,7 @@ class TestRecord(unittest.TestCase):
                   <subfield code="2">noubomn</subfield>
                 </datafield>
                 <datafield tag="650" ind1=" " ind2="7">
-                  <subfield code="a">Monstre</subfield>
+                  <subfield code="a">Mønstre</subfield>
                   <subfield code="x">Atferd</subfield>
                   <subfield code="2">noubomn</subfield>
                 </datafield>
@@ -62,20 +62,20 @@ class TestRecord(unittest.TestCase):
                   <subfield code="2">noubomn</subfield>
                 </datafield>
                 <datafield tag="650" ind1=" " ind2="7">
-                  <subfield code="a">Monstre</subfield>
+                  <subfield code="a">Mønstre</subfield>
                   <subfield code="x">Dagbøker</subfield>
                   <subfield code="2">noubomn</subfield>
                 </datafield>
                 <datafield tag="648" ind1=" " ind2="7">
-                  <subfield code="a">Monstre</subfield>
+                  <subfield code="a">Mønstre</subfield>
                   <subfield code="2">noubomn</subfield>
                 </datafield>
                 <datafield tag="655" ind1=" " ind2="7">
-                  <subfield code="a">Monstre</subfield>
+                  <subfield code="a">Mønstre</subfield>
                   <subfield code="2">noubomn</subfield>
                 </datafield>
                 <datafield tag="653" ind1=" " ind2=" ">
-                  <subfield code="a">Monstre</subfield>
+                  <subfield code="a">Mønstre</subfield>
                   <subfield code="a">Algoritmer</subfield>
                 </datafield>
               </record>
@@ -89,10 +89,10 @@ class TestRecord(unittest.TestCase):
         The rest should not match because of $a or tag != 650
         """
         record = self.getRecord()
-        fields = list(record.fields('650', {'2': 'noubomn', 'a': 'Monstre'}))
+        fields = list(record.fields('650', {'2': 'noubomn', 'a': 'Mønstre'}))
 
         assert len(fields) == 3
-        assert fields[0].node.findtext('subfield[@code="a"]') == 'Monstre'
+        assert fields[0].node.findtext('subfield[@code="a"]') == 'Mønstre'
 
     def testFind650x(self):
         """
@@ -104,7 +104,7 @@ class TestRecord(unittest.TestCase):
         fields = list(record.fields('650', {'2': 'noubomn', 'x': 'Atferd'}))
 
         assert len(fields) == 1
-        assert fields[0].node.findtext('subfield[@code="a"]') == 'Monstre'
+        assert fields[0].node.findtext('subfield[@code="a"]') == 'Mønstre'
         assert fields[0].node.findtext('subfield[@code="x"]') == 'Atferd'
 
     def testMove(self):
@@ -126,7 +126,7 @@ class TestRecord(unittest.TestCase):
         """Replace $a : $x with $a : $x"""
         record = self.getRecord()
         voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Monstre : Dagbøker', voc),
+        tasks = Job.generate_replace_tasks(Concept('Mønstre : Dagbøker', voc),
                                            Concept('Test to : Atlas', voc))
 
         assert len(tasks) == 1
@@ -134,32 +134,32 @@ class TestRecord(unittest.TestCase):
             self.assertTrue(task.match(record))
             task.run(record)
             self.assertFalse(task.match(record))
-            assert text_type(task) == 'Replace $a Monstre $x Dagbøker with $a Test to $x Atlas in 650 $2 noubomn'
+            assert text_type(task) == 'Replace $a Mønstre $x Dagbøker with $a Test to $x Atlas in 650 $2 noubomn'
 
-        assert len(record.fields('650', {'a': 'Monstre', 'x': 'Dagbøker', '2': 'noubomn'})) == 0
+        assert len(record.fields('650', {'a': 'Mønstre', 'x': 'Dagbøker', '2': 'noubomn'})) == 0
         assert len(record.fields('650', {'a': 'Test to', 'x': 'Atlas', '2': 'noubomn'})) == 1
 
     def testReplace1to2(self):
         """Replace $a with $a : $x"""
         record = self.getRecord()
         voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Monstre', voc),
-                                           Concept('Monstre : Test', voc))
+        tasks = Job.generate_replace_tasks(Concept('Mønstre', voc),
+                                           Concept('Mønstre : Test', voc))
 
         assert len(tasks) == 1
         for task in tasks:
             self.assertTrue(task.match(record))
             task.run(record)
             self.assertFalse(task.match(record))
-            assert text_type(task) == 'Replace $a Monstre with $a Monstre $x Test in 650 $2 noubomn'
+            assert text_type(task) == 'Replace $a Mønstre with $a Mønstre $x Test in 650 $2 noubomn'
 
-        assert len(record.fields('650', {'a': 'Monstre', 'x': 'Test', '2': 'noubomn'})) == 1
+        assert len(record.fields('650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'})) == 1
 
     def testReplace2to1(self):
         """Replace $a : $x with $a"""
         record = self.getRecord()
         voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Monstre : Atferd', voc),
+        tasks = Job.generate_replace_tasks(Concept('Mønstre : Atferd', voc),
                                            Concept('Ost', voc))
 
         assert len(tasks) == 1
@@ -167,7 +167,7 @@ class TestRecord(unittest.TestCase):
             self.assertTrue(task.match(record))
             task.run(record)
             self.assertFalse(task.match(record))
-            assert text_type(task) == 'Replace $a Monstre $x Atferd with $a Ost in 650 $2 noubomn'
+            assert text_type(task) == 'Replace $a Mønstre $x Atferd with $a Ost in 650 $2 noubomn'
 
         assert len(record.fields('650', {'a': 'Ost', '2': 'noubomn'})) == 1
 
@@ -189,13 +189,13 @@ class TestRecord(unittest.TestCase):
         assert len(record.fields('650', {'a': 'Testerstatning', '2': 'noubomn'})) == 2
         assert len(record.fields('650', {'a': 'Testerstatning', 'x': 'Mennesker', '2': 'noubomn'})) == 1
         assert len(record.fields('650', {'x': 'Testerstatning', '2': 'noubomn'})) == 1
-        assert len(record.fields('650', {'a': 'Monstre', 'x': 'Testerstatning', '2': 'noubomn'})) == 1
+        assert len(record.fields('650', {'a': 'Mønstre', 'x': 'Testerstatning', '2': 'noubomn'})) == 1
 
     def testReplace651(self):
         """Replace 651 field"""
         record = self.getRecord()
         voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Monstre', voc, '648'),
+        tasks = Job.generate_replace_tasks(Concept('Mønstre', voc, '648'),
                                            Concept('Testerstatning', voc, '648'))
 
         assert len(tasks) == 2  # one for $a, one for $x
@@ -263,11 +263,11 @@ class TestRecord(unittest.TestCase):
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
-                    <subfield code="a">Monstre</subfield>
+                    <subfield code="a">Mønstre</subfield>
                     <subfield code="2">noubomn</subfield>
                   </datafield>
                   <datafield ind1=" " ind2="7" tag="650">
-                    <subfield code="a">Mønstre</subfield>
+                    <subfield code="a">Monstre</subfield>
                     <subfield code="2">noubomn</subfield>
                   </datafield>
                 </record>
@@ -276,8 +276,8 @@ class TestRecord(unittest.TestCase):
         bib = Bib(Mock(), rec)
 
         voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Monstre', voc),
-                                           Concept('Mønstre', voc))
+        tasks = Job.generate_replace_tasks(Concept('Mønstre', voc),
+                                           Concept('Monstre', voc))
 
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
 
