@@ -786,7 +786,7 @@ class TestParseArgs(unittest.TestCase):
 
     def test_missing_arguments(self):
         with pytest.raises(SystemExit):
-            parse_args([], {})
+            parse_args([], None)
 
     def test_defaults(self):
         args = parse_args(['rename', 'Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')

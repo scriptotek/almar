@@ -124,6 +124,9 @@ def parse_args(args, default_env=None):
     # Parse
     args = parser.parse_args(args)
 
+    if 'action' not in args:
+        parser.error('No action specified')
+
     if args.env is not None:
         args.env = args.env.strip()
 
