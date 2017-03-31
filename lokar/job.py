@@ -1,5 +1,7 @@
 # coding=utf-8
 from __future__ import unicode_literals
+from future.utils import python_2_unicode_compatible
+
 import logging
 import io
 from textwrap import dedent
@@ -13,7 +15,6 @@ from .skosmos import Skosmos
 from .task import *
 
 log = logging.getLogger(__name__)
-
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
 
 log_capture_string = io.StringIO()
@@ -23,6 +24,7 @@ capture_handler.setFormatter(formatter)
 log.addHandler(capture_handler)
 
 
+@python_2_unicode_compatible
 class Concept(object):
 
     def __init__(self, term, vocabulary, tag='650'):
@@ -41,12 +43,9 @@ class Concept(object):
         if len(self.components) > 2:
             raise RuntimeError('Strings with more than two components are not supported')
 
-    def __unicode__(self):
+    def __str__(self):
         c = ['${} {}'.format(x, self.sf[x]) for x in ['a', 'x', '0'] if self.sf[x] is not None]
         return ' '.join(c)
-
-    def __str__(self):
-        return unicode(self).encode('utf-8')
 
     def authorize(self, skosmos):
         c = skosmos.authorize_term(self.term, self.tag)

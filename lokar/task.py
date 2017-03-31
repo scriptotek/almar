@@ -1,5 +1,6 @@
 # coding=utf-8
 from __future__ import unicode_literals
+from future.utils import python_2_unicode_compatible
 import logging
 import six
 from lxml import etree
@@ -48,6 +49,7 @@ class Task(object):
         return dups
 
 
+@python_2_unicode_compatible
 class ReplaceTask(Task):
 
     def __init__(self, tag, sf_2, sfs, identifier=None):
@@ -75,7 +77,7 @@ class ReplaceTask(Task):
             query['0'] = {'search': ANY_VALUE, 'replace': self.identifier}
         return query
 
-    def __unicode__(self):
+    def __str__(self):
         s = []
         t = []
         for k, v in self.base_query.items():
@@ -88,9 +90,6 @@ class ReplaceTask(Task):
                                                        ' '.join(t),
                                                        self.tag,
                                                        self.sf_2)
-
-    def __str__(self):
-        return unicode(self).encode('utf-8')
 
     def match(self, marc_record):
         # If the inexact query matches, we don't need to check the exact one
@@ -107,6 +106,7 @@ class ReplaceTask(Task):
         return modified
 
 
+@python_2_unicode_compatible
 class DeleteTask(Task):
 
     def __init__(self, concept):
@@ -120,11 +120,8 @@ class DeleteTask(Task):
             'z': {'search': None},
         }
 
-    def __unicode__(self):
-        return 'Delete {} {} $2 {}'.format(self.concept.tag, self.concept, self.concept.sf['2'])
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return 'Delete {} {} $2 {}'.format(self.concept.tag, self.concept, self.concept.sf['2'])
 
     def match(self, marc_record):
         return len(marc_record.fields(self.concept.tag, self.query)) != 0
@@ -139,16 +136,14 @@ class DeleteTask(Task):
         # Open question: should we also remove strings where sf['a'] is a component???
 
 
+@python_2_unicode_compatible
 class AddTask(Task):
 
     def __init__(self, concept):
         self.concept = concept
 
-    def __unicode__(self):
-        return 'Add {} {} $2 {}'.format(self.concept.tag, self.concept, self.concept.sf['2'])
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return 'Add {} {} $2 {}'.format(self.concept.tag, self.concept, self.concept.sf['2'])
 
     def match(self, marc_record):
         return False  # This task will only be run if some other task matches the record.
@@ -189,6 +184,7 @@ class AddTask(Task):
         return 1
 
 
+@python_2_unicode_compatible
 class MoveTask(Task):
 
     def __init__(self, tag, sf_2, sfs, dest_tag):
@@ -205,14 +201,11 @@ class MoveTask(Task):
             'z': {'search': None},
         }
 
-    def __unicode__(self):
+    def __str__(self):
         term = '$a {}'.format(self.sfs.get('a'))
         if self.sfs.get('x') is not None:
             term += ' $x {}'.format(self.sfs.get('x'))
         return 'Move {} {} $2 {} to {}'.format(self.tag, term, self.sf_2, self.dest_tag)
-
-    def __str__(self):
-        return unicode(self).encode('utf-8')
 
     def match(self, marc_record):
         return len(marc_record.fields(self.tag, self.query)) != 0

@@ -1,6 +1,7 @@
-
 # coding=utf-8
 from __future__ import unicode_literals
+from future.utils import python_2_unicode_compatible
+
 import logging
 from copy import deepcopy
 from .util import term_match, parse_xml
@@ -9,6 +10,7 @@ from colorama import Fore, Back, Style
 log = logging.getLogger(__name__)
 
 
+@python_2_unicode_compatible
 class Field(object):
     """ A Marc21 field """
 
@@ -16,9 +18,6 @@ class Field(object):
         self.node = node
 
     def __str__(self):
-        return self.__unicode__().encode('utf-8')
-
-    def __unicode__(self):
         txt = [tag, self.node.attrib['ind1'].replace(' ', '#') + self.node.attrib['ind2'].replace(' ', '#')]
         for sf in self.node:
             txt.append('$%s %s' % (sf.attrib['code'], sf.text))
