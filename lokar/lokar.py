@@ -174,10 +174,13 @@ def job_args(config=None, args=None):
     target_concept2 = None
 
     if args.action == 'rename':
-        target_concept = get_concept(args.new_term, vocabulary, default_term=args.term)
+        target_concept = get_concept(args.new_term, vocabulary,
+                                     default_term=args.term,
+                                     default_tag=source_concept.tag)
 
         if args.new_term2 != '':
-            target_concept2 = get_concept(args.new_term2, vocabulary)
+            target_concept2 = get_concept(args.new_term2, vocabulary,
+                                          default_tag=source_concept.tag)
 
     return {
         'source_concept': source_concept,

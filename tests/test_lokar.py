@@ -820,6 +820,29 @@ class TestParseArgs(unittest.TestCase):
         assert jargs['target_concept'].tag == '655'
         assert jargs['target_concept'].term == 'Sekvenseringsmetoder'
 
+    def test_destination_tag_should_default_to_source_tag(self):
+        args = parse_args(['rename', '651 Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
+        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+
+        assert jargs['source_concept'].tag == '651'
+        assert jargs['source_concept'].term == 'Sekvensering'
+
+        assert jargs['target_concept'].tag == '651'
+        assert jargs['target_concept'].term == 'Sekvenseringsmetoder'
+
+    def test_multiple_target_args(self):
+        args = parse_args(['rename', '651 Sekvenseringsmetoder', 'Sekvensering', 'Metoder'], default_env='test_env')
+        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+
+        assert jargs['source_concept'].tag == '651'
+        assert jargs['source_concept'].term == 'Sekvenseringsmetoder'
+
+        assert jargs['target_concept'].tag == '651'
+        assert jargs['target_concept'].term == 'Sekvensering'
+
+        assert jargs['target_concept2'].tag == '651'
+        assert jargs['target_concept2'].term == 'Metoder'
+
 
 if __name__ == '__main__':
     unittest.main()
