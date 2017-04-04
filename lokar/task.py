@@ -112,7 +112,7 @@ class DeleteTask(Task):
 
     def __init__(self, concept):
         self.concept = concept
-        self.query = query = OrderedDict([
+        self.query = OrderedDict([
             ('2', {'search': self.concept.sf['2']}),
             ('a', {'search': self.concept.sf['a']}),
             ('b', {'search': None}),

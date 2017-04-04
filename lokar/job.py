@@ -1,7 +1,8 @@
 # coding=utf-8
 from __future__ import unicode_literals
-from future.utils import python_2_unicode_compatible
 
+from future.utils import python_2_unicode_compatible
+from collections import OrderedDict
 import logging
 import io
 from textwrap import dedent
@@ -12,7 +13,7 @@ from requests.exceptions import HTTPError
 
 from .sru import TooManyResults
 from .skosmos import Skosmos
-from .task import *
+from .task import AddTask, ReplaceTask, MoveTask, DeleteTask
 
 log = logging.getLogger(__name__)
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
@@ -26,7 +27,6 @@ log.addHandler(capture_handler)
 
 @python_2_unicode_compatible
 class Concept(object):
-
     def __init__(self, term, vocabulary, tag='650'):
         self.term = term
         self.vocabulary = vocabulary
@@ -56,7 +56,6 @@ class Concept(object):
 
 
 class Job(object):
-
     def __init__(self, source_concept, target_concept=None, target_concept2=None, sru=None, alma=None, mailer=None):
         self.dry_run = False
         self.interactive = True
@@ -169,9 +168,9 @@ class Job(object):
 
         try:
             bib.save(self.show_diffs, self.dry_run)
-        except HTTPError as error:
-            msg = '*** Failed to save record {} --- Please try to edit the record manually in Alma ***'
-            log.error(msg.format(bib.mms_id))
+        except HTTPError:
+            msg = '*** Failed to save record %s --- Please try to edit the record manually in Alma ***'
+            log.error(msg, bib.mms_id)
 
     def authorize(self):
         self.source_concept.authorize(self.skosmos)
@@ -189,7 +188,7 @@ class Job(object):
     def start(self):
 
         if self.alma.name is not None:
-            log.info('Alma environment: {} '.format(self.alma.name))
+            log.info('Alma environment: %s', self.alma.name)
 
         for n, step in enumerate(self.steps):
             log.info('Step %d of %d: %s', n + 1, len(self.steps), step)
@@ -238,7 +237,7 @@ class Job(object):
             log.info('No matching catalog records found')
             return []
         else:
-            log.info('%d catalog records will be updated' % len(valid_records))
+            log.info('%d catalog records will be updated', len(valid_records))
 
         if self.interactive and not yesno('Continue?', default='yes'):
             log.info('Bye')
@@ -249,7 +248,7 @@ class Job(object):
         # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
         for n, mms_id in enumerate(valid_records):
-            log.info(' {:3d}/{:d}: {}'.format(n + 1, len(valid_records), mms_id))
+            log.info(' %3d/%d: %s', n + 1, len(valid_records), mms_id)
             bib = self.alma.bibs(mms_id)
             self.update_record(bib)
 

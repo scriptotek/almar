@@ -3,9 +3,7 @@ from __future__ import unicode_literals
 import argparse
 import logging.handlers
 from io import open
-import io
 import sys
-import os
 import re
 import getpass
 
@@ -13,18 +11,16 @@ from raven import Client
 
 from email.mime.text import MIMEText
 from email.header import Header
-from email.mime.multipart import MIMEMultipart
 from subprocess import Popen, PIPE
 
 import requests
 import yaml
-from six import text_type, binary_type
+from six import binary_type
 
 from . import __version__
 from .job import Job, Concept
 from .alma import Alma
 from .sru import SruClient
-from .util import normalize_term
 
 
 logger = logging.getLogger()
@@ -199,7 +195,7 @@ def main(config=None, args=None):
         return
 
     username = getpass.getuser()
-    logger.info('Running as {}'.format(username))
+    logger.info('Running as %s', username)
     try:
         if config.get('sentry') is not None:
             raven = Client(config['sentry']['dsn'])
@@ -237,7 +233,7 @@ def main(config=None, args=None):
         job.start()
         logger.info('{:=^70}'.format(' Job complete '))
 
-    except Exception as e:
+    except Exception:
         if config.get('sentry') is not None:
             raven.captureException()
         logger.exception('Uncaught exception:')

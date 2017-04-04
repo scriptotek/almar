@@ -18,7 +18,8 @@ class Field(object):
         self.node = node
 
     def __str__(self):
-        txt = [tag, self.node.attrib['ind1'].replace(' ', '#') + self.node.attrib['ind2'].replace(' ', '#')]
+        txt = [self.node.get('tag'),
+               self.node.attrib['ind1'].replace(' ', '#') + self.node.attrib['ind2'].replace(' ', '#')]
         for sf in self.node:
             txt.append('$%s %s' % (sf.attrib['code'], sf.text))
         txt = '  %s' % ' '.join(txt)
