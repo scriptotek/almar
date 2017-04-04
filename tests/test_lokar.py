@@ -820,6 +820,16 @@ class TestParseArgs(unittest.TestCase):
         assert jargs['target_concept'].tag == '655'
         assert jargs['target_concept'].term == 'Sekvenseringsmetoder'
 
+    def test_move_to_other_tag(self):
+        args = parse_args(['rename', '650 100 tallet f.Kr.', '648'], default_env='test_env')
+        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+
+        assert jargs['source_concept'].tag == '650'
+        assert jargs['source_concept'].term == '100 tallet f.Kr.'
+
+        assert jargs['target_concept'].tag == '648'
+        assert jargs['target_concept'].term == '100 tallet f.Kr.'
+
     def test_destination_tag_should_default_to_source_tag(self):
         args = parse_args(['rename', '651 Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
         jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
