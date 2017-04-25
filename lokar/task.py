@@ -12,6 +12,9 @@ log = logging.getLogger(__name__)
 
 
 class Task(object):
+    """
+    Task class from which the other task classes inherit.
+    """
 
     @staticmethod
     def get_simple_subject_repr(field, subfields='abxyz'):
@@ -52,6 +55,10 @@ class Task(object):
 
 @python_2_unicode_compatible
 class ReplaceTask(Task):
+    """
+    Replace a subject access or classification number field with another one in
+    any given MARC record.
+    """
 
     def __init__(self, tag, sf_2, sfs, identifier=None):
         self.tag = tag
@@ -109,6 +116,9 @@ class ReplaceTask(Task):
 
 @python_2_unicode_compatible
 class DeleteTask(Task):
+    """
+    Delete a subject access or classification number field from any given MARC record.
+    """
 
     def __init__(self, concept):
         self.concept = concept
@@ -139,6 +149,9 @@ class DeleteTask(Task):
 
 @python_2_unicode_compatible
 class AddTask(Task):
+    """
+    Add a new subject access or classification number field to any given MARC record.
+    """
 
     def __init__(self, concept):
         self.concept = concept
@@ -187,6 +200,10 @@ class AddTask(Task):
 
 @python_2_unicode_compatible
 class MoveTask(Task):
+    """
+    Move a subject access or classification number field to another MARC tag
+    (e.g. from 650 to 648) in any given MARC record.
+    """
 
     def __init__(self, tag, sf_2, sfs, dest_tag):
         self.tag = tag
