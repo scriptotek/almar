@@ -796,7 +796,7 @@ class TestParseArgs(unittest.TestCase):
         assert args.dry_run is False
         assert args.action == 'rename'
         assert args.term == 'Sekvensering'
-        assert args.new_term == 'Sekvenseringsmetoder'
+        assert args.new_terms == ['Sekvenseringsmetoder']
 
         assert jargs['source_concept'].tag == '650'
         assert jargs['source_concept'].term == 'Sekvensering'
@@ -806,9 +806,9 @@ class TestParseArgs(unittest.TestCase):
 
         assert args.action == 'rename'
         assert args.term == 'Byer : Økologi'
-        assert args.new_term == 'Byøkologi'
+        assert args.new_terms == ['Byøkologi']
         assert type(args.term) == text_type
-        assert type(args.new_term) == text_type
+        assert type(args.new_terms[0]) == text_type
 
     def test_concept_parsing(self):
         args = parse_args(['rename', '651 Sekvensering', '655 Sekvenseringsmetoder'], default_env='test_env')
@@ -817,8 +817,9 @@ class TestParseArgs(unittest.TestCase):
         assert jargs['source_concept'].tag == '651'
         assert jargs['source_concept'].term == 'Sekvensering'
 
-        assert jargs['target_concept'].tag == '655'
-        assert jargs['target_concept'].term == 'Sekvenseringsmetoder'
+        assert len(jargs['target_concepts']) == 1
+        assert jargs['target_concepts'][0].tag == '655'
+        assert jargs['target_concepts'][0].term == 'Sekvenseringsmetoder'
 
     def test_move_to_other_tag(self):
         args = parse_args(['rename', '650 100 tallet f.Kr.', '648'], default_env='test_env')
@@ -827,8 +828,9 @@ class TestParseArgs(unittest.TestCase):
         assert jargs['source_concept'].tag == '650'
         assert jargs['source_concept'].term == '100 tallet f.Kr.'
 
-        assert jargs['target_concept'].tag == '648'
-        assert jargs['target_concept'].term == '100 tallet f.Kr.'
+        assert len(jargs['target_concepts']) == 1
+        assert jargs['target_concepts'][0].tag == '648'
+        assert jargs['target_concepts'][0].term == '100 tallet f.Kr.'
 
     def test_destination_tag_should_default_to_source_tag(self):
         args = parse_args(['rename', '651 Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
@@ -837,8 +839,9 @@ class TestParseArgs(unittest.TestCase):
         assert jargs['source_concept'].tag == '651'
         assert jargs['source_concept'].term == 'Sekvensering'
 
-        assert jargs['target_concept'].tag == '651'
-        assert jargs['target_concept'].term == 'Sekvenseringsmetoder'
+        assert len(jargs['target_concepts']) == 1
+        assert jargs['target_concepts'][0].tag == '651'
+        assert jargs['target_concepts'][0].term == 'Sekvenseringsmetoder'
 
     def test_multiple_target_args(self):
         args = parse_args(['rename', '651 Sekvenseringsmetoder', 'Sekvensering', 'Metoder'], default_env='test_env')
@@ -847,11 +850,13 @@ class TestParseArgs(unittest.TestCase):
         assert jargs['source_concept'].tag == '651'
         assert jargs['source_concept'].term == 'Sekvenseringsmetoder'
 
-        assert jargs['target_concept'].tag == '651'
-        assert jargs['target_concept'].term == 'Sekvensering'
+        assert len(jargs['target_concepts']) == 2
 
-        assert jargs['target_concept2'].tag == '651'
-        assert jargs['target_concept2'].term == 'Metoder'
+        assert jargs['target_concepts'][0].tag == '651'
+        assert jargs['target_concepts'][0].term == 'Sekvensering'
+
+        assert jargs['target_concepts'][1].tag == '651'
+        assert jargs['target_concepts'][1].term == 'Metoder'
 
 
 if __name__ == '__main__':

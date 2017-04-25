@@ -56,7 +56,7 @@ class Concept(object):
 
 
 class Job(object):
-    def __init__(self, source_concept, target_concept=None, target_concept2=None, sru=None, alma=None, mailer=None):
+    def __init__(self, action, source_concept, target_concepts=None, sru=None, alma=None, mailer=None):
         self.dry_run = False
         self.interactive = True
         self.show_progress = True
@@ -66,9 +66,9 @@ class Job(object):
         self.alma = alma
         self.mailer = mailer
 
+        self.action = action
         self.source_concept = source_concept
-        self.target_concept = target_concept
-        self.target_concept2 = target_concept2
+        self.target_concepts = target_concepts or []
         self.vocabulary = self.source_concept.vocabulary
 
         self.job_name = datetime.now().isoformat()
@@ -78,7 +78,7 @@ class Job(object):
             raise RuntimeError('Editing 648 for noubomn is disabled until we get rid of the 650 duplicates')
             # log.info('Note: For the 648 field, we will also fix the 650 duplicate')
 
-        if self.target_concept is not None:
+        if self.action != 'delete':
             self.authorize()
         self.steps = []
         self.generate_steps()
@@ -120,14 +120,13 @@ class Job(object):
 
     def generate_steps(self):
 
-        if self.target_concept is None:
+        if self.action == 'delete':
             # Delete
             self.steps.append(DeleteTask(self.source_concept))
 
-        else:
+        elif self.action == 'rename':
             src = self.source_concept
-            dst = self.target_concept
-            dst2 = self.target_concept2
+            dst = self.target_concepts[0]
 
             # Rename
             if src.term != dst.term:
@@ -144,8 +143,8 @@ class Job(object):
                 ]), dst.tag))
 
             # Add
-            if dst2 is not None:
-                self.steps.append(AddTask(dst2))
+            if len(self.target_concepts) > 1:
+                self.steps.append(AddTask(self.target_concepts[1]))
 
     def update_record(self, bib):
 
@@ -173,17 +172,19 @@ class Job(object):
             log.error(msg, bib.mms_id)
 
     def authorize(self):
+        if self.action == 'delete':
+            return
         self.source_concept.authorize(self.skosmos)
-        if self.target_concept is not None:
-            self.target_concept.authorize(self.skosmos)
-            if self.target_concept.sf['0'] is None:
-                self.target_concept.sf['0'] = self.source_concept.sf['0']
-            if self.target_concept.sf['0'] is None:
-                log.warning('Neither of the terms could be authorized in Skosmos.')
-        if self.target_concept2 is not None:
-            self.target_concept2.authorize(self.skosmos)
-            if self.target_concept2.sf['0'] is None:
-                log.warning('The second target term could not be authorized in Skosmos.')
+        self.target_concepts[0].authorize(self.skosmos)
+        if self.target_concepts[0].sf['0'] is None:
+            # Use the source term identifier (if we just moved a concept)
+            self.target_concepts[0].sf['0'] = self.source_concept.sf['0']
+        if self.target_concepts[0].sf['0'] is None:
+            log.warning('Neither the source term nor the (first) target term could be authorized in Skosmos.')
+        for target_concept in self.target_concepts[1:]:
+            target_concept.authorize(self.skosmos)
+            if target_concept.sf['0'] is None:
+                log.warning('The target term "%s" could not be authorized in Skosmos.', target_concept)
 
     def start(self):
 
@@ -254,25 +255,28 @@ class Job(object):
 
         n_posts = '{:d} {}'.format(len(valid_records), 'record' if len(valid_records) == 1 else 'records')
 
-        if self.target_concept is None:
+        if self.action == 'delete':
             args = (self.source_concept.tag, self.source_concept.term, n_posts)
             subject = 'Deleted {} "{}" in {}'.format(*args)
-        elif self.target_concept2 is not None:
-            args = (self.source_concept.tag, self.source_concept.term,
-                    self.target_concept.tag, self.target_concept.term,
-                    self.target_concept2.tag, self.target_concept2.term,
-                    n_posts)
-            subject = 'Changed {} "{}" to {} "{}" + {} "{}" in {}'.format(*args)
-        else:
-            if self.source_concept.term == self.target_concept.term:
+
+        elif self.action == 'rename':
+            if len(self.target_concepts) == 2:
                 args = (self.source_concept.tag, self.source_concept.term,
-                        self.target_concept.tag, n_posts)
-                subject = 'Moved {} "{}" to {} in {}'.format(*args)
-            else:
-                args = (self.source_concept.tag, self.source_concept.term,
-                        self.target_concept.tag, self.target_concept.term,
+                        self.target_concepts[0].tag, self.target_concepts[0].term,
+                        self.target_concepts[1].tag, self.target_concepts[1].term,
                         n_posts)
-                subject = 'Changed {} "{}" to {} "{}" in {}'.format(*args)
+                subject = 'Changed {} "{}" to {} "{}" + {} "{}" in {}'.format(*args)
+
+            elif len(self.target_concepts) == 1:
+                if self.source_concept.term == self.target_concepts[0].term:
+                    args = (self.source_concept.tag, self.source_concept.term,
+                            self.target_concepts[0].tag, n_posts)
+                    subject = 'Moved {} "{}" to {} in {}'.format(*args)
+                else:
+                    args = (self.source_concept.tag, self.source_concept.term,
+                            self.target_concepts[0].tag, self.target_concepts[0].term,
+                            n_posts)
+                    subject = 'Changed {} "{}" to {} "{}" in {}'.format(*args)
 
         body = log_capture_string.getvalue()
 

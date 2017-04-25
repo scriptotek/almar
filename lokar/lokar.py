@@ -129,19 +129,20 @@ def parse_args(args, default_env=None):
     args.term = args.term[0]
 
     if args.action == 'delete':
-        args.new_term = ''
-        args.new_term2 = ''
-    else:
-        args.new_term = args.new_term[0]
+        args.new_terms = []
+    elif args.action == 'rename':
+        args.new_terms = [args.new_term[0]]
+        if args.new_term2 != '':
+            args.new_terms.append(args.new_term2)
 
-    if type(args.term) == binary_type:
-        args.term = args.term.decode('utf-8')
-    if type(args.new_term) == binary_type:
-        args.new_term = args.new_term.decode('utf-8')
-    if type(args.new_term2) == binary_type:
-        args.new_term2 = args.new_term2.decode('utf-8')
-    if type(args.env) == binary_type:
-        args.env = args.env.decode('utf-8')
+    def normalize_arg(x):
+        if type(x) == binary_type:
+            return x.decode('utf-8')
+        return x
+
+    args.term = normalize_arg(args.term)
+    args.env = normalize_arg(args.env)
+    args.new_terms = [normalize_arg(x) for x in args.new_terms]
 
     return args
 
@@ -166,22 +167,21 @@ def job_args(config=None, args=None):
                             config['vocabulary'].get('marc_prefix', ''))
 
     source_concept = get_concept(args.term, vocabulary)
-    target_concept = None
-    target_concept2 = None
+    target_concepts = []
 
     if args.action == 'rename':
-        target_concept = get_concept(args.new_term, vocabulary,
-                                     default_term=source_concept.term,
-                                     default_tag=source_concept.tag)
+        target_concepts.append(get_concept(args.new_terms[0], vocabulary,
+                                           default_term=source_concept.term,
+                                           default_tag=source_concept.tag))
 
-        if args.new_term2 != '':
-            target_concept2 = get_concept(args.new_term2, vocabulary,
-                                          default_tag=source_concept.tag)
+        if len(args.new_terms) > 1:
+            target_concepts.append(get_concept(args.new_terms[1], vocabulary,
+                                               default_tag=source_concept.tag))
 
     return {
+        'action': args.action,
         'source_concept': source_concept,
-        'target_concept': target_concept,
-        'target_concept2': target_concept2,
+        'target_concepts': target_concepts,
     }
 
 
