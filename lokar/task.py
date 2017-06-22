@@ -6,6 +6,7 @@ import logging
 import six
 from lxml import etree
 
+from .concept import Concept
 from .util import parse_xml, ANY_VALUE, normalize_term
 
 log = logging.getLogger(__name__)
@@ -15,6 +16,34 @@ class Task(object):
     """
     Task class from which the other task classes inherit.
     """
+
+    def __init__(self, source, targets=None):
+        targets = targets or []
+        assert isinstance(source, Concept)
+        assert type(targets) == list
+        for target in targets:
+            assert isinstance(target, Concept)
+        self.source = source
+        self.targets = targets
+
+    def make_query(self, target=None):
+        query = OrderedDict([
+            ('2', {'search': self.source.sf['2']})
+        ])
+        for n in ['a', 'b', 'x', 'y', 'z']:
+            query[n] = {'search': self.source.sf.get(n)}
+            if target is not None:
+                query[n]['replace'] = target.sf.get(n)
+
+        if target is not None and target.sf.get('0') is not None:
+            query['0'] = {'search': ANY_VALUE, 'replace': target.sf.get('0')}
+
+        return query
+
+    def match(self, marc_record):
+        query = self.make_query()
+
+        return len(marc_record.fields(self.source.tag, query)) != 0
 
     @staticmethod
     def get_simple_subject_repr(field, subfields='abxyz'):
@@ -60,86 +89,78 @@ class ReplaceTask(Task):
     any given MARC record.
     """
 
-    def __init__(self, tag, sf_2, sfs, identifier=None):
-        self.tag = tag
-        self.sf_2 = sf_2
-        self.base_query = sfs
-        self.identifier = identifier
+    def __init__(self, source, target, ignore_extra_components=False):
+        super(ReplaceTask, self).__init__(source, [target])
+        self.ignore_extra_components = ignore_extra_components
 
-    def make_query(self, exact):
+    def make_component_query(self, target=None):
+        """
+        Match the defined subfields of the source concept (like $a), while
+        ignoring any additional subfields (like $x).
+        """
         query = OrderedDict([
-            ('2', {'search': self.sf_2})
+            ('2', {'search': self.source.sf.get('2')})
         ])
-        if exact:
-            query.update({
-                'a': {'search': None},
-                'b': {'search': None},
-                'x': {'search': None},
-                'y': {'search': None},
-                'z': {'search': None},
-            })
+        for n in ['a', 'b', 'x', 'y', 'z']:
+            if self.source.sf.get(n) is not None:
+                query[n] = {'search': self.source.sf.get(n)}
+                if target is not None:
+                    query[n]['replace'] = target.sf.get(n)
 
-        query.update(self.base_query)
-
-        if exact and self.identifier is not None:
-            query['0'] = {'search': ANY_VALUE, 'replace': self.identifier}
         return query
 
     def __str__(self):
         s = []
         t = []
-        for k, v in self.base_query.items():
-            if v['search'] is not None:
-                s.append('${} {}'.format(k, v['search']))
-            if v['replace'] is not None:
-                t.append('${} {}'.format(k, v['replace']))
+        for k, v in self.make_query(self.targets[0]).items():
+            if k != '2':
+                if v.get('search') is not None:
+                    s.append('${} {}'.format(k, v['search']))
+                if v.get('replace') is not None:
+                    t.append('${} {}'.format(k, v['replace']))
 
         return 'Replace {} with {} in {} $2 {}'.format(' '.join(s),
                                                        ' '.join(t),
-                                                       self.tag,
-                                                       self.sf_2)
+                                                       self.source.tag,
+                                                       self.source.sf.get('2'))
 
     def match(self, marc_record):
         # If the inexact query matches, we don't need to check the exact one
-        return len(marc_record.fields(self.tag, self.make_query(False))) != 0
+        if self.ignore_extra_components:
+            query = self.make_component_query()
+        else:
+            query = self.make_query()
+
+        return len(marc_record.fields(self.source.tag, query)) != 0
 
     def run(self, marc_record):
         modified = 0
-        for query in [self.make_query(True), self.make_query(False)]:
-            for field in marc_record.fields(self.tag, query):
+        queries = [self.make_query(self.targets[0])]
+        if self.ignore_extra_components:
+            queries.append(self.make_component_query(self.targets[0]))
+        for query in queries:
+            for field in marc_record.fields(self.source.tag, query):
                 modified += field.update(query)
 
-        self.remove_duplicates(marc_record, self.tag, self.make_query(False))
+        self.remove_duplicates(marc_record, self.source.tag, self.make_query(self.targets[0]))
 
         return modified
 
 
+@python_2_unicode_compatible
 @python_2_unicode_compatible
 class DeleteTask(Task):
     """
     Delete a subject access or classification number field from any given MARC record.
     """
 
-    def __init__(self, concept):
-        self.concept = concept
-        self.query = OrderedDict([
-            ('2', {'search': self.concept.sf['2']}),
-            ('a', {'search': self.concept.sf['a']}),
-            ('b', {'search': None}),
-            ('x', {'search': self.concept.sf['x']}),
-            ('y', {'search': None}),
-            ('z', {'search': None}),
-        ])
-
     def __str__(self):
-        return 'Delete {} {} $2 {}'.format(self.concept.tag, self.concept, self.concept.sf['2'])
-
-    def match(self, marc_record):
-        return len(marc_record.fields(self.concept.tag, self.query)) != 0
+        return 'Delete {} {} $2 {}'.format(self.source.tag, self.source, self.source.sf['2'])
 
     def run(self, marc_record):
+        query = self.make_query()
         removed = 0
-        for field in marc_record.fields(self.concept.tag, self.query):
+        for field in marc_record.fields(self.source.tag, query):
             marc_record.remove_field(field)
             removed += 1
 
@@ -153,11 +174,8 @@ class AddTask(Task):
     Add a new subject access or classification number field to any given MARC record.
     """
 
-    def __init__(self, concept):
-        self.concept = concept
-
     def __str__(self):
-        return 'Add {} {} $2 {}'.format(self.concept.tag, self.concept, self.concept.sf['2'])
+        return 'Add {} {} $2 {}'.format(self.source.tag, self.source, self.source.sf['2'])
 
     def match(self, marc_record):
         return False  # This task will only be run if some other task matches the record.
@@ -168,20 +186,20 @@ class AddTask(Task):
                 <subfield code="a">{term}</subfield>
                 <subfield code="2">{vocabulary}</subfield>
             </datafield>
-        """.format(term=self.concept.sf['a'], tag=self.concept.tag, vocabulary=self.concept.sf['2']))
+        """.format(term=self.source.sf['a'], tag=self.source.tag, vocabulary=self.source.sf['2']))
 
-        if self.concept.sf.get('0') is not None:
+        if self.source.sf.get('0') is not None:
             el = etree.Element('subfield', code="0")
-            el.text = self.concept.sf['0']
+            el.text = self.source.sf['0']
             new_field.append(el)
 
-        if self.concept.sf.get('x') is not None:
+        if self.source.sf.get('x') is not None:
             el = etree.Element('subfield', code="x")
-            el.text = self.concept.sf['x']
+            el.text = self.source.sf['x']
             new_field.append(el)
 
-        existing_subjects = marc_record.fields(self.concept.tag, {
-            '2': {'search': self.concept.sf['2']},
+        existing_subjects = marc_record.fields(self.source.tag, {
+            '2': {'search': self.source.sf['2']},
         })
         if len(existing_subjects) > 0:
             idx = marc_record.el.index(existing_subjects[-1].node)
@@ -189,10 +207,10 @@ class AddTask(Task):
         else:
             marc_record.el.append(new_field)
 
-        self.remove_duplicates(marc_record, self.concept.tag, {
-            '2': self.concept.sf.get('2'),
-            'a': self.concept.sf.get('a'),
-            'x': self.concept.sf.get('x'),
+        self.remove_duplicates(marc_record, self.source.tag, {
+            '2': self.source.sf.get('2'),
+            'a': self.source.sf.get('a'),
+            'x': self.source.sf.get('x'),
         })
 
         return 1
@@ -205,35 +223,24 @@ class MoveTask(Task):
     (e.g. from 650 to 648) in any given MARC record.
     """
 
-    def __init__(self, tag, sf_2, sfs, dest_tag):
-        self.tag = tag
-        self.sf_2 = sf_2
-        self.sfs = sfs
+    def __init__(self, source, dest_tag):
+        super(MoveTask, self).__init__(source)
         self.dest_tag = dest_tag
-        self.query = OrderedDict([
-            ('2', {'search': self.sf_2}),
-            ('a', {'search': self.sfs.get('a')}),
-            ('b', {'search': None}),
-            ('x', {'search': self.sfs.get('x')}),
-            ('y', {'search': None}),
-            ('z', {'search': None}),
-        ])
 
     def __str__(self):
-        term = '$a {}'.format(self.sfs.get('a'))
-        if self.sfs.get('x') is not None:
-            term += ' $x {}'.format(self.sfs.get('x'))
-        return 'Move {} {} $2 {} to {}'.format(self.tag, term, self.sf_2, self.dest_tag)
-
-    def match(self, marc_record):
-        return len(marc_record.fields(self.tag, self.query)) != 0
+        term = '$a {}'.format(self.source.sf.get('a'))
+        if self.source.sf.get('x') is not None:
+            term += ' $x {}'.format(self.source.sf.get('x'))
+        return 'Move {} {} $2 {} to {}'.format(self.tag, term, self.source.sf.get('2'), self.dest_tag)
 
     def run(self, marc_record):
+        query = self.make_query()
+
         moved = 0
-        for field in marc_record.fields(self.tag, self.query):
+        for field in marc_record.fields(self.source.tag, query):
             field.set_tag(self.dest_tag)
             moved += 1
 
-        self.remove_duplicates(marc_record, self.dest_tag, self.query)
+        self.remove_duplicates(marc_record, self.dest_tag, query)
 
         return moved

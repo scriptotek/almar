@@ -25,13 +25,16 @@ class Field(object):
         txt = '  %s' % ' '.join(txt)
         return txt
 
+    def subfield_text(self, code):
+        return self.node.findtext('subfield[@code="{}"]'.format(code))
+
     def match(self, subfield_query):
         """
         Return True if all the subfields in the subfield_query match
         the values in the current field.
         """
         for code, value in subfield_query.items():
-            node_text = self.node.findtext('subfield[@code="{}"]'.format(code))
+            node_text = self.subfield_text(code)
             if isinstance(value, dict):
                 if not term_match(node_text, value['search']):
                     return False

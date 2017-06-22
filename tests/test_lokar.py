@@ -18,7 +18,8 @@ from lokar.bib import Bib
 from lokar.lokar import main, job_args, parse_args, Vocabulary, Mailer
 from lokar.sru import SruClient, SruErrorResponse, TooManyResults, nsmap
 from lokar.alma import Alma
-from lokar.job import Job, Concept
+from lokar.job import Job
+from lokar.concept import Concept
 from lokar.util import normalize_term, parse_xml
 from lokar.skosmos import Skosmos
 from lokar.marc import Record
@@ -115,7 +116,8 @@ class TestRecord(unittest.TestCase):
         record = self.getRecord()
         assert len(record.fields('655', {'2': 'noubomn'})) == 1
 
-        task = MoveTask('650', 'noubomn', {'a': 'Atferd'}, '655')
+        src = Concept('Atferd', Vocabulary('noubomn'), '650')
+        task = MoveTask(src, '655')
         self.assertTrue(task.match(record))
 
         task.run(record)
@@ -312,7 +314,8 @@ class TestRecord(unittest.TestCase):
         assert len(bib.doc.findall('record/datafield[@tag="648"]')) == 1
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
 
-        task = MoveTask('648', 'noubomn', {'a': 'Monstre'}, '650')
+        src = Concept('Monstre', Vocabulary('noubomn'), '648')
+        task = MoveTask(src, '650')
         task.run(bib.marc_record)
 
         assert len(bib.doc.findall('record/datafield[@tag="648"]')) == 0
@@ -344,6 +347,35 @@ class TestRecord(unittest.TestCase):
         assert len(f650) == 1
         assert 'Middelalderen' == f650[0].findtext('subfield[@code="a"]')
         assert 'REAL12345' == f650[0].findtext('subfield[@code="0"]')
+
+    def testIdentifierShouldNotBeAddedForComponentMatches(self):
+        rec = """
+            <bib>
+                <record>
+                  <datafield tag="650" ind1=" " ind2="7">
+                    <subfield code="a">Middelalder</subfield>
+                    <subfield code="x">Kjemi</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """
+        bib = Bib(Mock(), rec)
+
+        voc = Vocabulary('noubomn')
+        src = Concept('Middelalder', voc)
+        dst = Concept('Middelalderen', voc)
+        dst.sf['0'] = 'REAL12345'
+        tasks = Job.generate_replace_tasks(src, dst)
+
+        for task in tasks:
+            task.run(bib.marc_record)
+
+        f650 = bib.doc.findall('record/datafield[@tag="650"]')
+        assert len(f650) == 1
+        assert 'Middelalderen' == f650[0].findtext('subfield[@code="a"]')
+        assert 'Kjemi' == f650[0].findtext('subfield[@code="x"]')
+        assert f650[0].find('subfield[@code="0"]') is None
 
     def testModifyIdentifier(self):
         rec = """
@@ -385,7 +417,8 @@ class TestBib(unittest.TestCase):
         alma.put.return_value = '<bib><mms_id>991416299674702204</mms_id><record></record></bib>'
         doc = get_sample('bib_response.xml')
         bib = Bib(alma, doc)
-        task = MoveTask('650', 'noubomn', {'a': 'Kryptozoologi'}, '651')
+        src = Concept('Kryptozoologi', Vocabulary('noubomn'), '650')
+        task = MoveTask(src, '651')
         task.run(bib.marc_record)
         bib.save()
 

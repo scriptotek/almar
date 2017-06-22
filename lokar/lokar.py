@@ -1,5 +1,6 @@
 # coding=utf-8
 from __future__ import unicode_literals
+
 import argparse
 import logging.handlers
 from io import open
@@ -18,7 +19,8 @@ import yaml
 from six import binary_type
 
 from . import __version__
-from .job import Job, Concept
+from .job import Job
+from .concept import Concept
 from .alma import Alma
 from .sru import SruClient
 

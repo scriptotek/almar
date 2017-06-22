@@ -1,18 +1,18 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
-from future.utils import python_2_unicode_compatible
-from collections import OrderedDict
-import logging
 import io
-from textwrap import dedent
+import logging
+from copy import copy
 from datetime import datetime
-from prompter import yesno
-from tqdm import tqdm
-from requests.exceptions import HTTPError
+from textwrap import dedent
 
-from .sru import TooManyResults
+from prompter import yesno
+from requests.exceptions import HTTPError
+from tqdm import tqdm
+
 from .skosmos import Skosmos
+from .sru import TooManyResults
 from .task import AddTask, ReplaceTask, MoveTask, DeleteTask
 
 log = logging.getLogger(__name__)
@@ -23,36 +23,6 @@ capture_handler = logging.StreamHandler(log_capture_string)
 capture_handler.setLevel(logging.INFO)
 capture_handler.setFormatter(formatter)
 log.addHandler(capture_handler)
-
-
-@python_2_unicode_compatible
-class Concept(object):
-    def __init__(self, term, vocabulary, tag='650'):
-        self.term = term
-        self.vocabulary = vocabulary
-        self.tag = tag
-        self.components = self.term.split(' : ')
-        self.sf = {
-            'a': self.components[0],
-            'x': None,
-            '0': None,
-            '2': vocabulary.marc_code,
-        }
-        if len(self.components) > 1:
-            self.sf['x'] = self.components[1]
-        if len(self.components) > 2:
-            raise RuntimeError('Strings with more than two components are not supported')
-
-    def __str__(self):
-        c = ['${} {}'.format(x, self.sf[x]) for x in ['a', 'x', '0'] if self.sf[x] is not None]
-        return ' '.join(c)
-
-    def authorize(self, skosmos):
-        c = skosmos.authorize_term(self.term, self.tag)
-        if c is not None:
-            cid = c['localname'].strip('c')
-            self.sf['0'] = self.vocabulary.marc_prefix + cid
-            log.info('Authorized %s %s', self.tag, self)
 
 
 class Job(object):
@@ -85,38 +55,22 @@ class Job(object):
 
     @staticmethod
     def generate_replace_tasks(src, dst):
-        if len(src.components) == 2 and len(dst.components) == 2:
-            return [
-                ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
-                    ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
-                    ('x', {'search': src.sf['x'], 'replace': dst.sf['x']}),
-                ]), dst.sf['0'])
-            ]
 
-        if len(src.components) == 2 and len(dst.components) == 1:
-            return [
-                ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
-                    ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
-                    ('x', {'search': src.sf['x'], 'replace': None}),
-                ]), dst.sf['0'])
-            ]
+        if len(src.components) == 1 and len(dst.components) == 1:
+            tasks = [ReplaceTask(src, dst, True)]
 
-        if len(src.components) == 1 and len(dst.components) == 2:
-            return [
-                ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
-                    ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
-                    ('x', {'search': None, 'replace': dst.sf['x']}),
-                ]), dst.sf['0'])
-            ]
+            src_copy = copy(src)
+            dst_copy = copy(dst)
+            src_copy.sf['x'] = src_copy.sf['a']
+            del src_copy.sf['a']
+            dst_copy.sf['x'] = dst_copy.sf['a']
+            del dst_copy.sf['a']
 
-        return [
-            ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
-                ('a', {'search': src.sf['a'], 'replace': dst.sf['a']}),
-            ]), dst.sf['0']),
-            ReplaceTask(src.tag, src.vocabulary.marc_code, OrderedDict([
-                ('x', {'search': src.sf['a'], 'replace': dst.sf['a']}),
-            ]))
-        ]
+            tasks.append(ReplaceTask(src_copy, dst_copy, True))
+        else:
+            tasks = [ReplaceTask(src, dst)]
+
+        return tasks
 
     def generate_steps(self):
 
@@ -133,14 +87,14 @@ class Job(object):
                 for step in self.generate_replace_tasks(src, dst):
                     self.steps.append(step)
 
+                # Note: Update source concept before next step (move)
+                dst_copy = copy(dst)
+                dst_copy.tag = src.tag
+                src = dst_copy
+
             # Move
             if src.tag != dst.tag:
-                # Note: we are using the *destination* $a and $x here since we might
-                # already have performed a rename in the previous step!
-                self.steps.append(MoveTask(src.tag, src.sf['2'], OrderedDict([
-                    ('a', dst.sf['a']),
-                    ('x', dst.sf['x'])
-                ]), dst.tag))
+                self.steps.append(MoveTask(src, dst.tag))
 
             # Add
             if len(self.target_concepts) > 1:
