@@ -21,7 +21,7 @@ class Alma(object):
         bib = Bib(self, response.text)
         if bib.mms_id != mms_id:
             raise RuntimeError('Response does not contain the requested MMS ID. %s != %s'
-                               % (doc.mms_id, mms_id))
+                               % (bib.mms_id, mms_id))
         return bib
 
     def get(self, url, *args, **kwargs):

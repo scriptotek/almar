@@ -2,42 +2,39 @@
 from __future__ import unicode_literals
 
 import argparse
-import logging.handlers
-from io import open
-import sys
-import re
 import getpass
-
-from raven import Client
-
-from email.mime.text import MIMEText
+import logging.handlers
+import re
+import sys
 from email.header import Header
+from email.mime.text import MIMEText
+from io import open  # pylint: disable=redefined-builtin
 from subprocess import Popen, PIPE
 
 import requests
 import yaml
+from raven import Client
 from six import binary_type
 
 from . import __version__
-from .job import Job
-from .concept import Concept
 from .alma import Alma
+from .concept import Concept
+from .job import Job
 from .sru import SruClient
 
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+log = logging.getLogger()
+log.setLevel(logging.INFO)
 logging.getLogger('requests').setLevel(logging.WARNING)
-formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
-
+formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s',
+                              datefmt='%Y-%m-%d %H:%I:%S')
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+log.addHandler(console_handler)
 
-supported_tags = ['084', '648', '650', '651', '655']
+SUPPORTED_TAGS = ['084', '648', '650', '651', '655']
 
 
-class Vocabulary(object):
+class Vocabulary(object):  # pylint: disable=too-few-public-methods
 
     marc_code = ''
     skosmos_code = ''
@@ -68,8 +65,8 @@ class Mailer(object):
             msg['From'] = self.config.get('sender')
         msg['To'] = self.config.get('recipient')
         msg['Subject'] = Header(subject, 'utf-8')
-        p = Popen(['sendmail', '-t'], stdin=PIPE)
-        p.communicate(msg.as_string())
+        process = Popen(['sendmail', '-t'], stdin=PIPE)
+        process.communicate(msg.as_string())
 
     def send_using_mailgun(self, subject, body):
         request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(self.config['domain'])
@@ -86,7 +83,7 @@ def parse_args(args, default_env=None):
     parser = argparse.ArgumentParser(prog='lokar', description='''
             Edit or remove subject fields in Alma catalog records.
             Supported fields: {}
-            '''.format(', '.join(supported_tags)))
+            '''.format(', '.join(SUPPORTED_TAGS)))
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     parser.add_argument('-e', '--env', dest='env', nargs='?',
@@ -150,10 +147,10 @@ def parse_args(args, default_env=None):
         if args.new_term2 != '':
             args.new_terms.append(args.new_term2)
 
-    def normalize_arg(x):
-        if type(x) == binary_type:
-            return x.decode('utf-8')
-        return x
+    def normalize_arg(arg):
+        if isinstance(arg, binary_type):
+            return arg.decode('utf-8')
+        return arg
 
     args.term = normalize_arg(args.term)
     args.env = normalize_arg(args.env)
@@ -163,15 +160,15 @@ def parse_args(args, default_env=None):
 
 
 def get_concept(term, vocabulary, default_tag='650', default_term=None):
-    m = re.match('^({})$'.format('|'.join(supported_tags)), term)
-    if m:
+    match = re.match('^({})$'.format('|'.join(SUPPORTED_TAGS)), term)
+    if match:
         if default_term is None:
             raise RuntimeError('No source term specified')
-        return Concept(default_term, vocabulary, m.group(1))
+        return Concept(default_term, vocabulary, match.group(1))
 
-    m = re.match('^({}) (.+)$'.format('|'.join(supported_tags)), term)
-    if m:
-        return Concept(m.group(2), vocabulary, m.group(1))
+    match = re.match('^({}) (.+)$'.format('|'.join(SUPPORTED_TAGS)), term)
+    if match:
+        return Concept(match.group(2), vocabulary, match.group(1))
 
     return Concept(term, vocabulary, default_tag)
 
@@ -214,14 +211,14 @@ def job_args(config=None, args=None):
 def main(config=None, args=None):
 
     try:
-        with config or open('lokar.yml') as f:
-            config = yaml.load(f)
+        with config or open('lokar.yml') as file:
+            config = yaml.load(file)
     except IOError:
-        logger.error('Fant ikke lokar.yml. Se README.md for mer info.')
+        log.error('Fant ikke lokar.yml. Se README.md for mer info.')
         return
 
     username = getpass.getuser()
-    logger.info('Running as %s', username)
+    log.info('Running as %s', username)
     try:
         if config.get('sentry') is not None:
             raven = Client(config['sentry']['dsn'])
@@ -233,13 +230,13 @@ def main(config=None, args=None):
         jargs = job_args(config, args)
 
         if args.verbose:
-            logger.setLevel(logging.DEBUG)
+            log.setLevel(logging.DEBUG)
 
         if not args.dry_run:
             file_handler = logging.FileHandler('lokar.log')
             file_handler.setFormatter(formatter)
             file_handler.setLevel(logging.INFO)
-            logger.addHandler(file_handler)
+            log.addHandler(file_handler)
 
         if args.env is None:
             raise RuntimeError('No environment specified in config file')
@@ -257,12 +254,12 @@ def main(config=None, args=None):
         job.show_diffs = args.show_diffs
 
         job.start()
-        logger.info('{:=^70}'.format(' Job complete '))
+        log.info('Job complete')
 
-    except Exception:
+    except Exception:  # # pylint: disable=broad-except
         if config.get('sentry') is not None:
             raven.captureException()
-        logger.exception('Uncaught exception:')
+        log.exception('Uncaught exception:')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,5 @@
+[BASIC]
+good-names=log,console_handler,formatter,el,id,log_capture_string,capture_handler,i
+
+[FORMAT]
+max-line-length=120

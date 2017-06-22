@@ -39,5 +39,5 @@ class Bib(object):
 
     def dump(self, filename):
         # Dump record to file
-        with open(filename, 'wb') as f:
-            f.write(etree.tostring(self.doc, pretty_print=True))
+        with open(filename, 'wb') as file:
+            file.write(etree.tostring(self.doc, pretty_print=True))

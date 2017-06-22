@@ -16,7 +16,7 @@ from textwrap import dedent
 
 from lokar.bib import Bib
 from lokar.lokar import main, job_args, parse_args, Vocabulary, Mailer
-from lokar.sru import SruClient, SruErrorResponse, TooManyResults, nsmap
+from lokar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from lokar.alma import Alma
 from lokar.job import Job
 from lokar.concept import Concept
@@ -558,7 +558,7 @@ class SruMock(Mock):
 
 def setup_sru_mock(xml_response_file, mock=None):
     mock = mock or Mock(spec=SruClient)
-    recs = get_sample(xml_response_file, True).findall('srw:records/srw:record/srw:recordData/record', nsmap)
+    recs = get_sample(xml_response_file, True).findall('srw:records/srw:record/srw:recordData/record', NSMAP)
     recs = [Record(rec) for rec in recs]
 
     def search(arg):
@@ -697,7 +697,7 @@ class TestLokar(unittest.TestCase):
 
     @staticmethod
     def sru_search_mock(*args, **kwargs):
-        recs = get_sample('sru_sample_response_1.xml', True).findall('srw:records/srw:record/srw:recordData/record', nsmap)
+        recs = get_sample('sru_sample_response_1.xml', True).findall('srw:records/srw:record/srw:recordData/record', NSMAP)
         for n, rec in enumerate(recs):
             yield rec
 

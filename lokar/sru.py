@@ -1,14 +1,16 @@
 # coding=utf-8
 from __future__ import unicode_literals
-import requests
+
 import logging
+
+import requests
 
 from .marc import Record
 from .util import parse_xml
 
 log = logging.getLogger(__name__)
 
-nsmap = {
+NSMAP = {
     'e20': 'http://explain.z3950.org/dtd/2.0/',
     'e21': 'http://explain.z3950.org/dtd/2.1/',
     'srw': 'http://www.loc.gov/zing/srw/',
@@ -46,19 +48,19 @@ class SruClient(object):
             })
             root = parse_xml(response.text)  # Takes ~ 4 seconds for 50 records!
 
-            for diagnostic in root.findall('srw:diagnostics/diag:diagnostic', namespaces=nsmap):
-                raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=nsmap))
+            for diagnostic in root.findall('srw:diagnostics/diag:diagnostic', namespaces=NSMAP):
+                raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=NSMAP))
 
-            self.num_records = int(root.findtext('srw:numberOfRecords', namespaces=nsmap))
+            self.num_records = int(root.findtext('srw:numberOfRecords', namespaces=NSMAP))
             if self.num_records > 10000:
                 raise TooManyResults()
 
-            for record in root.iterfind('srw:records/srw:record', namespaces=nsmap):
-                self.record_no = int(record.findtext('srw:recordPosition', namespaces=nsmap))
+            for record in root.iterfind('srw:records/srw:record', namespaces=NSMAP):
+                self.record_no = int(record.findtext('srw:recordPosition', namespaces=NSMAP))
 
-                yield Record(record.find('srw:recordData/record', namespaces=nsmap))
+                yield Record(record.find('srw:recordData/record', namespaces=NSMAP))
 
-            nrp = root.find('srw:nextRecordPosition', namespaces=nsmap)
+            nrp = root.find('srw:nextRecordPosition', namespaces=NSMAP)
             if nrp is not None:
                 start_record = nrp.text
             else:

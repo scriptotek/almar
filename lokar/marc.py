@@ -1,11 +1,13 @@
 # coding=utf-8
 from __future__ import unicode_literals
-from future.utils import python_2_unicode_compatible
 
 import logging
 from copy import deepcopy
+
+from colorama import Fore, Style
+from future.utils import python_2_unicode_compatible
+
 from .util import term_match, parse_xml
-from colorama import Fore, Back, Style
 
 log = logging.getLogger(__name__)
 
@@ -18,12 +20,11 @@ class Field(object):
         self.node = node
 
     def __str__(self):
-        txt = [self.node.get('tag'),
-               self.node.attrib['ind1'].replace(' ', '#') + self.node.attrib['ind2'].replace(' ', '#')]
-        for sf in self.node:
-            txt.append('$%s %s' % (sf.attrib['code'], sf.text))
-        txt = '  %s' % ' '.join(txt)
-        return txt
+        items = [self.node.get('tag'),
+                 self.node.attrib['ind1'].replace(' ', '#') + self.node.attrib['ind2'].replace(' ', '#')]
+        for subfield in self.node:
+            items.append('$%s %s' % (subfield.attrib['code'], subfield.text))
+        return '  %s' % ' '.join(items)
 
     def subfield_text(self, code):
         return self.node.findtext('subfield[@code="{}"]'.format(code))
@@ -55,23 +56,23 @@ class Field(object):
         modified = 0
 
         if self.match(subfield_query):
-            for ch in self.node.findall('subfield'):
-                code = ch.attrib.get('code')
-                if code in subfield_query.keys() and term_match(subfield_query[code]['search'], ch.text):
-                    x = subfield_query[code]
+            for node in self.node.findall('subfield'):
+                code = node.attrib.get('code')
+                if code in subfield_query.keys() and term_match(subfield_query[code]['search'], node.text):
+                    query_sf = subfield_query[code]
                     del subfield_query[code]
-                    if 'replace' not in x:
+                    if 'replace' not in query_sf:
                         # Just used for search, value should not be updated
                         continue
-                    elif x['replace'] is None:
+                    elif query_sf['replace'] is None:
                         # Subfield should be removed
-                        log.debug('Removing component $%s %s', code, ch.text)
-                        self.node.remove(ch)
+                        log.debug('Removing component $%s %s', code, node.text)
+                        self.node.remove(node)
                         modified += 1
                     else:
                         # Subfield value should be updated
-                        log.debug('Changing $%s from "%s" tot "%s"', code, ch.text, x['replace'])
-                        ch.text = x['replace']
+                        log.debug('Changing $%s from "%s" tot "%s"', code, node.text, query_sf['replace'])
+                        node.text = query_sf['replace']
                         modified += 1
             # Add new subfields
             for code, value in subfield_query.items():
@@ -97,7 +98,7 @@ class Record(object):
         return self.el.findtext('./controlfield[@tag="001"]')
 
     def fields(self, tags, subfield_query):
-        if type(tags) != list:
+        if isinstance(tags, list) is False:
             tags = [tags]
         fields = []
         for tag in tags:
@@ -117,30 +118,30 @@ class Record(object):
 
     def title(self):
 
-        x = self.el.find('./datafield[@tag="245"]/subfield[@code="a"]').text
+        out = self.el.find('./datafield[@tag="245"]/subfield[@code="a"]').text
 
-        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="b"]')
-        if sf is not None:
-            x = x.rstrip(' :') + ' : ' + sf.text
+        node = self.el.find('./datafield[@tag="245"]/subfield[@code="b"]')
+        if node is not None:
+            out = out.rstrip(' :') + ' : ' + node.text
 
-        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="p"]')
-        if sf is not None:
-            x = x.rstrip(' /:.') + '. ' + sf.text
+        node = self.el.find('./datafield[@tag="245"]/subfield[@code="p"]')
+        if node is not None:
+            out = out.rstrip(' /:.') + '. ' + node.text
 
-        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="n"]')
-        if sf is not None:
-            x = x.rstrip(' /:.') + '. ' + sf.text
+        node = self.el.find('./datafield[@tag="245"]/subfield[@code="n"]')
+        if node is not None:
+            out = out.rstrip(' /:.') + '. ' + node.text
 
-        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="c"]')
-        if sf is not None:
-            x = x.rstrip(' /') + ' / ' + sf.text
+        node = self.el.find('./datafield[@tag="245"]/subfield[@code="c"]')
+        if node is not None:
+            out = out.rstrip(' /') + ' / ' + node.text
 
-        x = x.rstrip('.') + '.'
+        out = out.rstrip('.') + '.'
 
-        sf = self.el.find('./datafield[@tag="264"]/subfield[@code="c"]')
-        if sf is None:
-            sf = self.el.find('./datafield[@tag="260"]/subfield[@code="c"]')
-            if sf is not None:
-                x += ' ' + sf.text
+        node = self.el.find('./datafield[@tag="264"]/subfield[@code="c"]')
+        if node is None:
+            node = self.el.find('./datafield[@tag="260"]/subfield[@code="c"]')
+            if node is not None:
+                out += ' ' + node.text
 
-        return x
+        return out

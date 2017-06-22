@@ -1,6 +1,7 @@
-from copy import copy, deepcopy
-from future.utils import python_2_unicode_compatible
 import logging
+from copy import copy, deepcopy
+
+from future.utils import python_2_unicode_compatible
 
 log = logging.getLogger(__name__)
 
@@ -27,31 +28,30 @@ class Concept(object):
             raise RuntimeError('Strings with more than two components are not supported')
 
     def __copy__(self):
-        c = Concept(self.term, self.vocabulary, self.tag)
-        c.sf = copy(self.sf)  # to include $0 and any other subfields not part of the term
-        return c
+        concept = Concept(self.term, self.vocabulary, self.tag)
+        concept.sf = copy(self.sf)  # to include $0 and any other subfields not part of the term
+        return concept
 
     def __deepcopy__(self, memodict):
-        c = Concept(self.term, deepcopy(self.vocabulary), self.tag)
-        c.sf = copy(self.sf)  # to include $0 and any other subfields not part of the term
-        return c
+        concept = Concept(self.term, deepcopy(self.vocabulary), self.tag)
+        concept.sf = copy(self.sf)  # to include $0 and any other subfields not part of the term
+        return concept
 
     @property
     def components(self):
-        return [v for k, v in self.sf.items() if k in ['a', 'b', 'x', 'y', 'z'] and v is not None]
+        return [value for key, value in self.sf.items() if key in ['a', 'b', 'x', 'y', 'z'] and value is not None]
 
     @property
     def term(self):
         return ' : '.join(self.components)
 
     def __str__(self):
-        c = ['${} {}'.format(x, self.sf[x]) for x in ['a', 'x', '0'] if self.sf[x] is not None]
-        return ' '.join(c)
+        return ' '.join(['${} {}'.format(key, self.sf[key]) for key in ['a', 'x', '0'] if self.sf[key] is not None])
 
     def authorize(self, skosmos):
-        c = skosmos.authorize_term(self.term, self.tag)
-        if c is not None:
-            cid = c['localname'].strip('c')
+        concept = skosmos.authorize_term(self.term, self.tag)
+        if concept is not None:
+            cid = concept['localname'].strip('c')
             self.sf['0'] = self.vocabulary.marc_prefix + cid
             log.info('Authorized %s %s', self.tag, self)
 

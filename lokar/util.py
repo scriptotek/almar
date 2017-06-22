@@ -1,11 +1,11 @@
-from six import text_type, binary_type
-import difflib
-import vkbeautify
-import sys
-from colorama import Fore, Back, Style, init
-
 # coding=utf-8
+import difflib
+import sys
+
+import vkbeautify
+from colorama import Fore
 from lxml import etree
+from six import text_type
 
 ANY_VALUE = '___any_value___'
 

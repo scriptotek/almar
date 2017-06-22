@@ -1,11 +1,13 @@
 # coding=utf-8
 from __future__ import unicode_literals, print_function
-from future.utils import python_2_unicode_compatible
-from collections import OrderedDict
+
 import logging
+from collections import OrderedDict
+
 import six
+from colorama import Fore, Style
+from future.utils import python_2_unicode_compatible
 from lxml import etree
-from colorama import Fore, Back, Style
 
 from .concept import Concept
 from .util import parse_xml, ANY_VALUE, normalize_term
@@ -18,19 +20,19 @@ def pick(options):
 
     print()
     print('Options:')
-    for n, op in enumerate(options):
-        print('  [{}] {}'.format(n + 1, op))
-        valid.append(str(n + 1))
+    for i, option in enumerate(options):
+        print('  [{}] {}'.format(i + 1, option))
+        valid.append(str(i + 1))
 
     while True:
         print()
-        q = six.moves.input('Choice: ')
-        if q in valid:
+        answer = six.moves.input('Choice: ')
+        if answer in valid:
             break
         print('Please choose from the following: {}'.format(', '.join(valid)))
         print('To exit, press Ctrl-C')
 
-    return options[int(q) - 1]
+    return options[int(answer) - 1]
 
 
 class Task(object):
@@ -41,7 +43,7 @@ class Task(object):
     def __init__(self, source, targets=None):
         targets = targets or []
         assert isinstance(source, Concept)
-        assert type(targets) == list
+        assert isinstance(targets, list)
         for target in targets:
             assert isinstance(target, Concept)
         self.source = source
@@ -51,10 +53,10 @@ class Task(object):
         query = OrderedDict([
             ('2', {'search': self.source.sf['2']})
         ])
-        for n in ['a', 'b', 'x', 'y', 'z']:
-            query[n] = {'search': self.source.sf.get(n)}
+        for code in ['a', 'b', 'x', 'y', 'z']:
+            query[code] = {'search': self.source.sf.get(code)}
             if target is not None:
-                query[n]['replace'] = target.sf.get(n)
+                query[code]['replace'] = target.sf.get(code)
 
         if target is not None and target.sf.get('0') is not None:
             query['0'] = {'search': ANY_VALUE, 'replace': target.sf.get('0')}
@@ -81,15 +83,15 @@ class Task(object):
         keys = []
 
         query2 = {}
-        for k, v in query.items():
-            if v is None:
-                query2[k] = None
-            elif six.text_type(v) == v:
-                query2[k] = v
-            elif 'replace' in v:
-                query2[k] = v['replace']
+        for key, value in query.items():
+            if value is None:
+                query2[key] = None
+            elif six.text_type(value) == value:
+                query2[key] = value
+            elif 'replace' in value:
+                query2[key] = value['replace']
             else:
-                query2[k] = v['search']
+                query2[key] = value['search']
 
         for field in marc_record.fields(tag, query2):
             key = self.get_simple_subject_repr(field)
@@ -122,26 +124,26 @@ class ReplaceTask(Task):
         query = OrderedDict([
             ('2', {'search': self.source.sf.get('2')})
         ])
-        for n in ['a', 'b', 'x', 'y', 'z']:
-            if self.source.sf.get(n) is not None:
-                query[n] = {'search': self.source.sf.get(n)}
+        for code in ['a', 'b', 'x', 'y', 'z']:
+            if self.source.sf.get(code) is not None:
+                query[code] = {'search': self.source.sf.get(code)}
                 if target is not None:
-                    query[n]['replace'] = target.sf.get(n)
+                    query[code]['replace'] = target.sf.get(code)
 
         return query
 
     def __str__(self):
-        s = []
-        t = []
-        for k, v in self.make_query(self.targets[0]).items():
-            if k != '2':
-                if v.get('search') is not None:
-                    s.append('${} {}'.format(k, v['search']))
-                if v.get('replace') is not None:
-                    t.append('${} {}'.format(k, v['replace']))
+        sources = []
+        targets = []
+        for key, value in self.make_query(self.targets[0]).items():
+            if key != '2':
+                if value.get('search') is not None:
+                    sources.append('${} {}'.format(key, value['search']))
+                if value.get('replace') is not None:
+                    targets.append('${} {}'.format(key, value['replace']))
 
-        return 'Replace {} with {} in {} $2 {}'.format(' '.join(s),
-                                                       ' '.join(t),
+        return 'Replace {} with {} in {} $2 {}'.format(' '.join(sources),
+                                                       ' '.join(targets),
                                                        self.source.tag,
                                                        self.source.sf.get('2'))
 
@@ -222,16 +224,15 @@ class ListTask(Task):
           field "$a Fish $x Behaviour".
     """
 
-    def __str__(self):
-        return 'List titles having {} {} $2 {}'.format(self.source.tag, self.source, self.source.sf['2'])
-
-    def set_options(self, show_titles=False, show_subjects=False):
+    def __init__(self, source, show_titles=False, show_subjects=False):
+        super(ListTask, self).__init__(source)
         self.show_titles = show_titles
         self.show_subjects = show_subjects
 
-    def run(self, marc_record):
-        modified = 0
+    def __str__(self):
+        return 'List titles having {} {} $2 {}'.format(self.source.tag, self.source, self.source.sf['2'])
 
+    def run(self, marc_record):
         if self.show_titles:
             print('%s\t%s' % (marc_record.id, marc_record.title()))
         else:
@@ -328,7 +329,7 @@ class MoveTask(Task):
         term = '$a {}'.format(self.source.sf.get('a'))
         if self.source.sf.get('x') is not None:
             term += ' $x {}'.format(self.source.sf.get('x'))
-        return 'Move {} {} $2 {} to {}'.format(self.tag, term, self.source.sf.get('2'), self.dest_tag)
+        return 'Move {} {} $2 {} to {}'.format(self.source.tag, term, self.source.sf.get('2'), self.dest_tag)
 
     def run(self, marc_record):
         query = self.make_query()
