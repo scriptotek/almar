@@ -193,9 +193,9 @@ class Job(object):
         else:
             log.info('%d catalog records will be updated', len(valid_records))
 
-        if self.interactive and not yesno('Continue?', default='yes'):
-            log.info('Bye')
-            return []
+            if self.interactive and not yesno('Continue?', default='yes'):
+                log.info('Bye')
+                return []
 
         # ------------------------------------------------------------------------------------
         # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
