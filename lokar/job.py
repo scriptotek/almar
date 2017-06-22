@@ -48,8 +48,7 @@ class Job(object):
             raise RuntimeError('Editing 648 for noubomn is disabled until we get rid of the 650 duplicates')
             # log.info('Note: For the 648 field, we will also fix the 650 duplicate')
 
-        if self.action != 'delete':
-            self.authorize()
+        self.authorize()
         self.steps = []
         self.generate_steps()
 
