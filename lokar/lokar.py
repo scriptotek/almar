@@ -119,6 +119,11 @@ def parse_args(args, default_env=None):
     parser_del.add_argument('term', nargs=1, help='Term to delete')
     parser_del.set_defaults(action='delete')
 
+    # Create parser for the "list" command
+    parser_int = subparsers.add_parser('list', help='List documents')
+    parser_int.add_argument('term', nargs=1, help='Term to search for')
+    parser_int.set_defaults(action='list')
+
     # Parse
     args = parser.parse_args(args)
 
@@ -130,7 +135,7 @@ def parse_args(args, default_env=None):
 
     args.term = args.term[0]
 
-    if args.action == 'delete':
+    if args.action in ['delete', 'list']:
         args.new_terms = []
     elif args.action == 'rename':
         args.new_terms = [args.new_term[0]]
@@ -179,6 +184,11 @@ def job_args(config=None, args=None):
         if len(args.new_terms) > 1:
             target_concepts.append(get_concept(args.new_terms[1], vocabulary,
                                                default_tag=source_concept.tag))
+
+    elif args.action == 'list':
+        target_concepts = [
+            get_concept(term, vocabulary, default_tag=source_concept.tag) for term in args.new_terms
+        ]
 
     return {
         'action': args.action,

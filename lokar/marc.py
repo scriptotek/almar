@@ -113,3 +113,16 @@ class Record(object):
 
     def remove_field(self, field):
         self.el.remove(field.node)
+
+    def title(self):
+        sfa = self.el.find('./datafield[@tag="245"]/subfield[@code="a"]')
+        sfb = self.el.find('./datafield[@tag="245"]/subfield[@code="b"]')
+        sfc = self.el.find('./datafield[@tag="245"]/subfield[@code="c"]')
+
+        x = sfa.text
+        if sfb is not None:
+            x += ' : ' + sfb.text
+        if sfc is not None:
+            x += ' / ' + sfc.text
+
+        return x

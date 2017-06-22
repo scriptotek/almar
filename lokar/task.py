@@ -1,10 +1,11 @@
 # coding=utf-8
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 from future.utils import python_2_unicode_compatible
 from collections import OrderedDict
 import logging
 import six
 from lxml import etree
+from colorama import Fore, Back, Style
 
 from .concept import Concept
 from .util import parse_xml, ANY_VALUE, normalize_term
@@ -148,6 +149,31 @@ class ReplaceTask(Task):
 
 
 @python_2_unicode_compatible
+class ListTask(Task):
+    """
+    Do nothing except test if the MARC record contains the requested
+    subject access or classification number field.
+
+    Note: Exact matching only – will not replace fields having any additional
+          subfields $b, $x, $y or $z. A search for "Fish" will not match the
+          field "$a Fish $x Behaviour".
+    """
+
+    def __str__(self):
+        return 'List titles having {} {} $2 {}'.format(self.source.tag, self.source, self.source.sf['2'])
+
+    def run(self, marc_record):
+        modified = 0
+
+        print()
+        print(marc_record.title())
+        for field in marc_record.fields(self.source.tag, {}):
+            print(field)
+        print()
+
+        return 0
+
+
 @python_2_unicode_compatible
 class DeleteTask(Task):
     """

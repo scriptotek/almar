@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from .skosmos import Skosmos
 from .sru import TooManyResults
-from .task import AddTask, ReplaceTask, MoveTask, DeleteTask
+from .task import AddTask, ReplaceTask, ListTask, MoveTask, DeleteTask
 
 log = logging.getLogger(__name__)
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
@@ -77,6 +77,9 @@ class Job(object):
             # Delete
             self.steps.append(DeleteTask(self.source_concept))
 
+        elif self.action == 'list':
+            self.steps.append(ListTask(self.source_concept))
+
         elif self.action == 'rename':
             src = self.source_concept
             dst = self.target_concepts[0]
@@ -104,6 +107,9 @@ class Job(object):
         for step in self.steps:
             step.run(bib.marc_record)
 
+        if self.action == 'list':
+            return
+
         if bib.cz_link is not None:
             log.warning(dedent(
                 '''\
@@ -125,7 +131,7 @@ class Job(object):
             log.error(msg, bib.mms_id)
 
     def authorize(self):
-        if self.action == 'delete':
+        if self.action in ['delete', 'list']:
             return
         self.source_concept.authorize(self.skosmos)
         self.target_concepts[0].authorize(self.skosmos)
@@ -190,6 +196,8 @@ class Job(object):
         if len(valid_records) == 0:
             log.info('No matching catalog records found')
             return []
+        elif self.action in ['interactive', 'list']:
+            log.info('%d catalog records found', len(valid_records))
         else:
             log.info('%d catalog records will be updated', len(valid_records))
 

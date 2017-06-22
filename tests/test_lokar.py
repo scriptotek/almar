@@ -764,6 +764,25 @@ class TestLokar(unittest.TestCase):
     @patch('lokar.job.Skosmos.authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
+    def testListCommand(self, sru, MockAlma, mock_authorize_term, Mailer):
+        term = 'Matematisk biologi'
+        mock_authorize_term.return_value = {'localname': 'c030697'}
+        alma = MockAlma.return_value
+
+        doc = get_sample('bib_response2.xml')
+        bib = Bib(alma, doc)
+        alma.bibs.return_value = bib
+
+        main(self.conf(), ['-e test_env', '-n', 'list', term])
+        sru.search.assert_called_once_with(
+            'alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        assert alma.bibs.call_count == 1
+        assert alma.put.call_count == 0
+
+    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch_sru_search('sru_sample_response_1.xml')
     def testDryRun(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Matematisk biologi'
         new_term = 'Test æøå'
