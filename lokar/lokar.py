@@ -119,6 +119,12 @@ def parse_args(args, default_env=None):
     parser_del.add_argument('term', nargs=1, help='Term to delete')
     parser_del.set_defaults(action='delete')
 
+    # Create parser for the "interactive" command
+    parser_int = subparsers.add_parser('interactive', help='Interactive reclassification')
+    parser_int.add_argument('term', nargs=1, help='Term to search for')
+    parser_int.add_argument('new_terms', nargs='+', default='', help='Replacement terms')
+    parser_int.set_defaults(action='interactive')
+
     # Create parser for the "list" command
     parser_int = subparsers.add_parser('list', help='List documents')
     parser_int.add_argument('term', nargs=1, help='Term to search for')
@@ -185,7 +191,7 @@ def job_args(config=None, args=None):
             target_concepts.append(get_concept(args.new_terms[1], vocabulary,
                                                default_tag=source_concept.tag))
 
-    elif args.action == 'list':
+    elif args.action in ['interactive', 'list']:
         target_concepts = [
             get_concept(term, vocabulary, default_tag=source_concept.tag) for term in args.new_terms
         ]

@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from .skosmos import Skosmos
 from .sru import TooManyResults
-from .task import AddTask, ReplaceTask, ListTask, MoveTask, DeleteTask
+from .task import AddTask, ReplaceTask, InteractiveReplaceTask, ListTask, MoveTask, DeleteTask
 
 log = logging.getLogger(__name__)
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
@@ -76,6 +76,9 @@ class Job(object):
         if self.action == 'delete':
             # Delete
             self.steps.append(DeleteTask(self.source_concept))
+
+        elif self.action == 'interactive':
+            self.steps.append(InteractiveReplaceTask(self.source_concept, self.target_concepts))
 
         elif self.action == 'list':
             self.steps.append(ListTask(self.source_concept))

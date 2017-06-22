@@ -13,6 +13,26 @@ from .util import parse_xml, ANY_VALUE, normalize_term
 log = logging.getLogger(__name__)
 
 
+def pick(options):
+    valid = []
+
+    print()
+    print('Options:')
+    for n, op in enumerate(options):
+        print('  [{}] {}'.format(n + 1, op))
+        valid.append(str(n + 1))
+
+    while True:
+        print()
+        q = six.moves.input('Choice: ')
+        if q in valid:
+            break
+        print('Please choose from the following: {}'.format(', '.join(valid)))
+        print('To exit, press Ctrl-C')
+
+    return options[int(q) - 1]
+
+
 class Task(object):
     """
     Task class from which the other task classes inherit.
@@ -144,6 +164,49 @@ class ReplaceTask(Task):
                 modified += field.update(query)
 
         self.remove_duplicates(marc_record, self.source.tag, self.make_query(self.targets[0]))
+
+        return modified
+
+
+@python_2_unicode_compatible
+class InteractiveReplaceTask(Task):
+    """
+    Replace a subject access or classification number field with another one
+    (from a selection) in any given MARC record.
+
+    Note: Exact matching only – will not replace fields having any additional
+          subfields $b, $x, $y or $z. A search for "Fish" will not match the
+          field "$a Fish $x Behaviour".
+    """
+
+    def run(self, marc_record):
+        modified = 0
+
+        print()
+        print(marc_record.title())
+        for field in marc_record.fields(self.source.tag, {}):
+            if field.subfield_text('2') == self.source.sf['2']:
+                print('{}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+            else:
+                print('{}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
+
+        target = pick(self.targets + ['(NONE)'])
+
+        if target == '(NONE)':
+            log.info('Removing term from record')
+            task = DeleteTask(self.source)
+            return task.run(marc_record)
+
+        if self.source.tag != target.tag:
+            raise RuntimeError('Sorry, interactive mode does not support moving to a different tag.')
+
+        for query in [self.make_query(target)]:
+            for field in marc_record.fields(self.source.tag, query):
+                log.info('Setting new value: %s', target)
+                modified += field.update(query)
+
+        self.remove_duplicates(marc_record, self.source.tag,
+                               self.make_query(target))
 
         return modified
 
