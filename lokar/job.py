@@ -208,6 +208,8 @@ class Job(object):
 
         n_posts = '{:d} {}'.format(len(valid_records), 'record' if len(valid_records) == 1 else 'records')
 
+        subject = None
+
         if self.action == 'delete':
             args = (self.source_concept.tag, self.source_concept.term, n_posts)
             subject = 'Deleted {} "{}" in {}'.format(*args)
@@ -233,8 +235,9 @@ class Job(object):
 
         body = log_capture_string.getvalue()
 
-        log.info(subject)
-        if self.mailer is not None and not self.dry_run:
-            self.mailer.send(subject, body)
+        if subject is not None:
+            log.info(subject)
+            if self.mailer is not None and not self.dry_run:
+                self.mailer.send(subject, body)
 
         return valid_records
