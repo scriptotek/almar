@@ -225,14 +225,22 @@ class ListTask(Task):
     def __str__(self):
         return 'List titles having {} {} $2 {}'.format(self.source.tag, self.source, self.source.sf['2'])
 
+    def set_options(self, show_titles=False, show_subjects=False):
+        self.show_titles = show_titles
+        self.show_subjects = show_subjects
+
     def run(self, marc_record):
         modified = 0
 
-        print()
-        print(marc_record.title())
-        for field in marc_record.fields(self.source.tag, {}):
-            print(field)
-        print()
+        if self.show_titles:
+            print('%s\t%s' % (marc_record.id, marc_record.title()))
+        else:
+            print(marc_record.id)
+
+        if self.show_subjects:
+            for field in marc_record.fields(self.source.tag, {}):
+                print(field)
+            print()
 
         return 0
 

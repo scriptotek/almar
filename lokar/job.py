@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 
 import io
 import logging
@@ -26,11 +26,12 @@ log.addHandler(capture_handler)
 
 
 class Job(object):
-    def __init__(self, action, source_concept, target_concepts=None, sru=None, alma=None, mailer=None):
+    def __init__(self, action, source_concept, target_concepts=None, sru=None, alma=None, mailer=None, list_options=None):
         self.dry_run = False
         self.interactive = True
         self.show_progress = True
         self.show_diffs = False
+        self.list_options = list_options or {}
 
         self.sru = sru
         self.alma = alma
@@ -81,7 +82,9 @@ class Job(object):
             self.steps.append(InteractiveReplaceTask(self.source_concept, self.target_concepts))
 
         elif self.action == 'list':
-            self.steps.append(ListTask(self.source_concept))
+            task = ListTask(self.source_concept)
+            task.set_options(**self.list_options)
+            self.steps.append(task)
 
         elif self.action == 'rename':
             src = self.source_concept
@@ -178,11 +181,11 @@ class Job(object):
                 if pbar is None and self.show_progress and self.sru.num_records > 50:
                     pbar = tqdm(total=self.sru.num_records, desc='Filtering SRU results')
 
-                log.debug('Checking record %s', marc_record.id())
+                log.debug('Checking record %s', marc_record.id)
 
                 for step in self.steps:
                     if step.match(marc_record):
-                        valid_records.append(marc_record.id())
+                        valid_records.append(marc_record.id)
                         break
 
                 if pbar is not None:
@@ -213,7 +216,8 @@ class Job(object):
         # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
         for n, mms_id in enumerate(valid_records):
-            log.info(' %3d/%d: %s', n + 1, len(valid_records), mms_id)
+            if self.action != 'list':
+                print(' %3d/%d: %s' % (n + 1, len(valid_records), mms_id))
             bib = self.alma.bibs(mms_id)
             self.update_record(bib)
 

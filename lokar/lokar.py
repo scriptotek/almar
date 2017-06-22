@@ -126,9 +126,11 @@ def parse_args(args, default_env=None):
     parser_int.set_defaults(action='interactive')
 
     # Create parser for the "list" command
-    parser_int = subparsers.add_parser('list', help='List documents')
-    parser_int.add_argument('term', nargs=1, help='Term to search for')
-    parser_int.set_defaults(action='list')
+    parser_list = subparsers.add_parser('list', help='List documents')
+    parser_list.add_argument('term', nargs=1, help='Term to search for')
+    parser_list.add_argument('--titles', dest='show_titles', action='store_true', help='Show titles')
+    parser_list.add_argument('--subjects', dest='show_subjects', action='store_true', help='Show subject fields')
+    parser_list.set_defaults(action='list')
 
     # Parse
     args = parser.parse_args(args)
@@ -181,6 +183,7 @@ def job_args(config=None, args=None):
 
     source_concept = get_concept(args.term, vocabulary)
     target_concepts = []
+    list_options = {}
 
     if args.action == 'rename':
         target_concepts.append(get_concept(args.new_terms[0], vocabulary,
@@ -196,10 +199,15 @@ def job_args(config=None, args=None):
             get_concept(term, vocabulary, default_tag=source_concept.tag) for term in args.new_terms
         ]
 
+    if args.action == 'list':
+        list_options['show_titles'] = args.show_titles
+        list_options['show_subjects'] = args.show_subjects
+
     return {
         'action': args.action,
         'source_concept': source_concept,
         'target_concepts': target_concepts,
+        'list_options': list_options,
     }
 
 

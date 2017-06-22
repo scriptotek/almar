@@ -92,6 +92,7 @@ class Record(object):
         # el: xml.etree.ElementTree.Element
         self.el = el
 
+    @property
     def id(self):
         return self.el.findtext('./controlfield[@tag="001"]')
 
@@ -115,14 +116,31 @@ class Record(object):
         self.el.remove(field.node)
 
     def title(self):
-        sfa = self.el.find('./datafield[@tag="245"]/subfield[@code="a"]')
-        sfb = self.el.find('./datafield[@tag="245"]/subfield[@code="b"]')
-        sfc = self.el.find('./datafield[@tag="245"]/subfield[@code="c"]')
 
-        x = sfa.text
-        if sfb is not None:
-            x += ' : ' + sfb.text
-        if sfc is not None:
-            x += ' / ' + sfc.text
+        x = self.el.find('./datafield[@tag="245"]/subfield[@code="a"]').text
+
+        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="b"]')
+        if sf is not None:
+            x = x.rstrip(' :') + ' : ' + sf.text
+
+        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="p"]')
+        if sf is not None:
+            x = x.rstrip(' /:.') + '. ' + sf.text
+
+        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="n"]')
+        if sf is not None:
+            x = x.rstrip(' /:.') + '. ' + sf.text
+
+        sf = self.el.find('./datafield[@tag="245"]/subfield[@code="c"]')
+        if sf is not None:
+            x = x.rstrip(' /') + ' / ' + sf.text
+
+        x = x.rstrip('.') + '.'
+
+        sf = self.el.find('./datafield[@tag="264"]/subfield[@code="c"]')
+        if sf is None:
+            sf = self.el.find('./datafield[@tag="260"]/subfield[@code="c"]')
+            if sf is not None:
+                x += ' ' + sf.text
 
         return x
