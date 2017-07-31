@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import logging
 from copy import copy, deepcopy
 from six import python_2_unicode_compatible
+from colorama import Fore, Back, Style
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +54,9 @@ class Concept(object):
         concept_id = self.vocabulary.authorize_term(self.term, self.tag)
         if concept_id is not None:
             self.sf['0'] = self.vocabulary.marc_prefix + concept_id
-            log.info('Authorized %s %s', self.tag, self)
+            log.info(Fore.GREEN + '✔' + Style.RESET_ALL + ' Authorized:     %s %s', self.tag, self)
+        else:
+            log.info(Fore.RED + '✘' + Style.RESET_ALL   + ' Not authorized: %s %s', self.tag, self)
 
     def field(self):
         return {'tag': self.tag, 'sf': self.sf}

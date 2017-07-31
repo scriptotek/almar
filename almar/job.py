@@ -136,11 +136,11 @@ class Job(object):
             # Use the source term identifier (if we just moved a concept)
             self.target_concepts[0].sf['0'] = self.source_concept.sf['0']
         if self.target_concepts[0].sf['0'] is None:
-            log.warning('Neither the source term nor the (first) target term could be authorized in Skosmos.')
+            log.warning('Neither the source term nor the (first) target term could be authorized.')
         for target_concept in self.target_concepts[1:]:
             target_concept.authorize()
             if target_concept.sf['0'] is None:
-                log.warning('The target term "%s" could not be authorized in Skosmos.', target_concept)
+                log.warning('The term "%s" could not be authorized.', target_concept)
 
     def start(self):
 
