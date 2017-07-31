@@ -15,7 +15,7 @@ from functools import wraps
 from textwrap import dedent
 
 from almar.bib import Bib
-from almar.almar import main, job_args, parse_args, Mailer
+from almar.almar import main, job_args, parse_args
 from almar.vocabulary import Vocabulary
 from almar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from almar.alma import Alma
@@ -600,20 +600,18 @@ class TestJob(unittest.TestCase):
     def runJob(self, sru_response, vocabulary, args):
         self.sru = setup_sru_mock(sru_response)
         MockAlma = MagicMock(spec=Alma, spec_set=True)
-        MockMailer = MagicMock(spec=Mailer, spec_set=True)
         self.alma = MockAlma('eu', 'dummy')
-        mailer = MockMailer({})
         conf = {
             'vocabulary': {
                 'marc_code': vocabulary,
                 'skosmos_code': 'skosmos_vocab',
             }
         }
-        self.job = Job(sru=self.sru, alma=self.alma, mailer=mailer, **job_args(conf, parse_args(args)))
+        self.job = Job(sru=self.sru, alma=self.alma, **job_args(conf, parse_args(args)))
         self.job.dry_run = True
         self.job.interactive = False
 
-        # Job(self.sru, self.alma, voc, mailer, tag, term, new_term, new_tag)
+        # Job(self.sru, self.alma, voc, tag, term, new_term, new_tag)
         return self.job.start()
 
     def tearDown(self):
@@ -680,12 +678,6 @@ class TestAlmar(unittest.TestCase):
           marc_code: noubomn
           skosmos_vocab: skosmos_vocab
 
-        mail:
-          domain: example.com
-          api_key: key
-          sender: sender@example.com
-          recipient: recipient@example.com
-
         default_env: test_env
 
         env:
@@ -701,11 +693,10 @@ class TestAlmar(unittest.TestCase):
         for n, rec in enumerate(recs):
             yield rec
 
-    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
-    def testMain(self, sru, MockAlma, mock_authorize_term, Mailer):
+    def testMain(self, sru, MockAlma, mock_authorize_term):
         term = 'Statistiske modeller'
         new_term = 'Test æøå'
         alma = MockAlma.return_value
@@ -716,11 +707,10 @@ class TestAlmar(unittest.TestCase):
 
         assert alma.bibs.call_count == 14
 
-    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
-    def testMainNoHits(self, sru, MockAlma, mock_authorize_term, Mailer):
+    def testMainNoHits(self, sru, MockAlma, mock_authorize_term):
         term = 'Something else'
         new_term = 'Test æøå'
         mock_authorize_term.return_value = 'REAL030697'
@@ -729,11 +719,10 @@ class TestAlmar(unittest.TestCase):
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
-    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
-    def testRemoveTerm(self, sru, MockAlma, mock_authorize_term, mock_Mailer):
+    def testRemoveTerm(self, sru, MockAlma, mock_authorize_term):
         term = 'Statistiske modeller'
         mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
@@ -741,11 +730,10 @@ class TestAlmar(unittest.TestCase):
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 14
 
-    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
-    def testDiffs(self, sru, MockAlma, mock_authorize_term, Mailer):
+    def testDiffs(self, sru, MockAlma, mock_authorize_term):
         term = 'Matematisk biologi'
         new_term = 'Test æøå'
         mock_authorize_term.return_value = 'REAL030697'
@@ -760,11 +748,10 @@ class TestAlmar(unittest.TestCase):
         assert alma.bibs.call_count == 1
         assert alma.put.call_count == 1
 
-    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
-    def testListCommand(self, sru, MockAlma, mock_authorize_term, Mailer):
+    def testListCommand(self, sru, MockAlma, mock_authorize_term):
         term = 'Matematisk biologi'
         mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
@@ -779,11 +766,10 @@ class TestAlmar(unittest.TestCase):
         assert alma.bibs.call_count == 1
         assert alma.put.call_count == 0
 
-    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
-    def testDryRun(self, sru, MockAlma, mock_authorize_term, Mailer):
+    def testDryRun(self, sru, MockAlma, mock_authorize_term):
         term = 'Matematisk biologi'
         new_term = 'Test æøå'
         mock_authorize_term.return_value = 'REAL030697'
@@ -798,11 +784,10 @@ class TestAlmar(unittest.TestCase):
         assert alma.bibs.call_count == 1
         assert alma.put.call_count == 0
 
-    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_response_dm.xml')
-    def testCzRecord(self, sru, MockAlma, mock_authorize_term, Mailer):
+    def testCzRecord(self, sru, MockAlma, mock_authorize_term):
         term = 'Dynamisk meteorologi'
         new_term = 'Test æøå'
         mock_authorize_term.return_value = 'REAL030697'

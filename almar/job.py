@@ -17,15 +17,8 @@ from .task import AddTask, ReplaceTask, InteractiveReplaceTask, ListTask, MoveTa
 log = logging.getLogger(__name__)
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
 
-log_capture_string = io.StringIO()
-capture_handler = logging.StreamHandler(log_capture_string)
-capture_handler.setLevel(logging.INFO)
-capture_handler.setFormatter(formatter)
-log.addHandler(capture_handler)
-
-
 class Job(object):
-    def __init__(self, action, source_concept, target_concepts=None, sru=None, alma=None, mailer=None,
+    def __init__(self, action, source_concept, target_concepts=None, sru=None, alma=None,
                  list_options=None):
         self.dry_run = False
         self.interactive = True
@@ -35,7 +28,6 @@ class Job(object):
 
         self.sru = sru
         self.alma = alma
-        self.mailer = mailer
 
         self.action = action
         self.source_concept = source_concept
@@ -247,11 +239,7 @@ class Job(object):
                             n_posts)
                     subject = 'Changed {} "{}" to {} "{}" in {}'.format(*args)
 
-        body = log_capture_string.getvalue()
-
         if subject is not None:
             log.info(subject)
-            if self.mailer is not None and not self.dry_run:
-                self.mailer.send(subject, body)
 
         return valid_records

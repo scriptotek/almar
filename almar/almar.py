@@ -8,12 +8,8 @@ import logging.handlers
 import re
 import os
 import sys
-from email.header import Header
-from email.mime.text import MIMEText
 from io import open  # pylint: disable=redefined-builtin
-from subprocess import Popen, PIPE
 
-import requests
 import yaml
 from raven import Client
 from six import binary_type
@@ -43,39 +39,6 @@ console_handler.setFormatter(colorlog.ColoredFormatter(
 log.addHandler(console_handler)
 
 SUPPORTED_TAGS = ['084', '648', '650', '651', '655']
-
-
-class Mailer(object):
-
-    def __init__(self, config):
-        self.config = config
-
-    def send(self, subject, body):
-        if self.config['driver'] == 'sendmail':
-            self.send_using_sendmail(subject, body)
-        elif self.config['driver'] == 'mailgun':
-            self.send_using_mailgun(subject, body)
-        else:
-            raise RuntimeError('Unknown mail driver')
-
-    def send_using_sendmail(self, subject, body):
-        msg = MIMEText(body.encode('utf-8'), 'plain', 'utf-8')
-        if self.config.get('sender') is not None:
-            msg['From'] = self.config.get('sender')
-        msg['To'] = self.config.get('recipient')
-        msg['Subject'] = Header(subject, 'utf-8')
-        process = Popen(['sendmail', '-t'], stdin=PIPE)
-        process.communicate(msg.as_string())
-
-    def send_using_mailgun(self, subject, body):
-        request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(self.config['domain'])
-        request = requests.post(request_url, auth=('api', self.config['api_key']), data={
-            'from': self.config.get('sender'),
-            'to': self.config.get('recipient'),
-            'subject': subject,
-            'text': body
-        })
-        request.raise_for_status()
 
 
 def parse_args(args, default_env=None):
@@ -266,9 +229,8 @@ def main(config=None, args=None):
 
         sru = SruClient(env['sru_url'], args.env)
         alma = Alma(env['api_region'], env['api_key'], args.env)
-        mailer = Mailer(config['mail'])
 
-        job = Job(sru=sru, alma=alma, mailer=mailer, **jargs)
+        job = Job(sru=sru, alma=alma, **jargs)
         job.dry_run = args.dry_run
         job.interactive = not args.non_interactive
         job.verbose = args.verbose
