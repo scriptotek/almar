@@ -43,6 +43,12 @@ log.addHandler(console_handler)
 SUPPORTED_TAGS = ['084', '648', '650', '651', '655']
 
 
+def ensure_unicode(arg):
+    if isinstance(arg, binary_type):
+        return arg.decode('utf-8')
+    return arg
+
+
 def parse_args(args, default_env=None):
     parser = argparse.ArgumentParser(prog='almar', description='''
             Edit or remove subject fields in Alma catalog records.
@@ -111,14 +117,9 @@ def parse_args(args, default_env=None):
         if args.new_term2 != '':
             args.new_terms.append(args.new_term2)
 
-    def normalize_arg(arg):
-        if isinstance(arg, binary_type):
-            return arg.decode('utf-8')
-        return arg
-
-    args.term = normalize_arg(args.term)
-    args.env = normalize_arg(args.env)
-    args.new_terms = [normalize_arg(x) for x in args.new_terms]
+    args.term = ensure_unicode(args.term)
+    args.env = ensure_unicode(args.env)
+    args.new_terms = [ensure_unicode(x) for x in args.new_terms]
 
     return args
 
@@ -138,9 +139,9 @@ def get_concept(term, vocabulary, default_tag='650', default_term=None):
 
 
 def job_args(config=None, args=None):
-    vocabulary = Vocabulary(config['vocabulary']['marc_code'],
-                            config['vocabulary'].get('id_service'),
-                            config['vocabulary'].get('marc_prefix', ''))
+    vocabulary = Vocabulary(ensure_unicode(config['vocabulary']['marc_code']),
+                            ensure_unicode(config['vocabulary'].get('id_service')),
+                            ensure_unicode(config['vocabulary'].get('marc_prefix', '')))
 
     source_concept = get_concept(args.term, vocabulary)
     target_concepts = []

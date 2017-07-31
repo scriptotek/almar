@@ -1,7 +1,8 @@
+# coding=utf-8
+from __future__ import unicode_literals
 import logging
 from copy import copy, deepcopy
-
-from future.utils import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 log = logging.getLogger(__name__)
 

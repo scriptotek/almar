@@ -5,7 +5,7 @@ import logging
 from copy import deepcopy
 
 from colorama import Fore, Style
-from future.utils import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 from .util import term_match, parse_xml
 

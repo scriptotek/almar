@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import six
 from colorama import Fore, Back, Style
-from future.utils import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 from lxml import etree
 
 from .concept import Concept
@@ -220,6 +220,9 @@ class InteractiveReplaceTask(Task):
                                self.make_query(target))
 
         return modified
+
+    def __str__(self):
+        return 'Interactive replace'
 
 
 @python_2_unicode_compatible
