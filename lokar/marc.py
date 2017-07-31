@@ -24,7 +24,7 @@ class Field(object):
                  self.node.attrib['ind1'].replace(' ', '#') + self.node.attrib['ind2'].replace(' ', '#')]
         for subfield in self.node:
             items.append('$%s %s' % (subfield.attrib['code'], subfield.text))
-        return '  %s' % ' '.join(items)
+        return ' '.join(items)
 
     def subfield_text(self, code):
         return self.node.findtext('subfield[@code="{}"]'.format(code))

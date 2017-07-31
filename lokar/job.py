@@ -215,7 +215,7 @@ class Job(object):
         # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
         for i, mms_id in enumerate(valid_records):
-            if self.action != 'list':
+            if self.action not in ['list', 'interactive']:
                 print(' %3d/%d: %s' % (i + 1, len(valid_records), mms_id))
             bib = self.alma.bibs(mms_id)
             self.update_record(bib)

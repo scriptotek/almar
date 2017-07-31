@@ -1,11 +1,11 @@
 # coding=utf-8
 from __future__ import unicode_literals, print_function
-
+from collections import OrderedDict
 import logging
 from collections import OrderedDict
 
 import six
-from colorama import Fore, Style
+from colorama import Fore, Back, Style
 from future.utils import python_2_unicode_compatible
 from lxml import etree
 
@@ -15,24 +15,27 @@ from .util import parse_xml, ANY_VALUE, normalize_term
 log = logging.getLogger(__name__)
 
 
-def pick(options):
-    valid = []
+def pick(options, alpha_options=[]):
+    valid = OrderedDict()
+    for i, option in enumerate(options):
+        valid[str(i + 1)] = option
+    for option in alpha_options:
+        valid[option[0].upper()] = option
 
     print()
     print('Options:')
-    for i, option in enumerate(options):
-        print('  [{}] {}'.format(i + 1, option))
-        valid.append(str(i + 1))
+    for k, v in valid.items():
+        print('  [{}] {}'.format(k, v))
 
     while True:
         print()
-        answer = six.moves.input('Choice: ')
+        answer = six.moves.input('Choice: ').upper()
         if answer in valid:
             break
         print('Please choose from the following: {}'.format(', '.join(valid)))
         print('To exit, press Ctrl-C')
 
-    return options[int(answer) - 1]
+    return valid[answer]
 
 
 class Task(object):
@@ -185,16 +188,23 @@ class InteractiveReplaceTask(Task):
         modified = 0
 
         print()
-        print(marc_record.title())
+        print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
         for field in marc_record.fields(self.source.tag, {}):
             if field.subfield_text('2') == self.source.sf['2']:
-                print('{}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                if field.match(self.make_query()):
+                    print('  {}{}{}'.format(Back.YELLOW + Fore.BLACK, field, Style.RESET_ALL))
+                else:
+                    print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
             else:
-                print('{}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
+                print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
 
-        target = pick(self.targets + ['(NONE)'])
+        target = pick(self.targets, ['Remove subject', 'Skip (leave as-is)'])
 
-        if target == '(NONE)':
+        if target == 'Skip (leave as-is)':
+            log.info('Skipping this record')
+            return 0
+
+        if target == 'Remove subject':
             log.info('Removing term from record')
             task = DeleteTask(self.source)
             return task.run(marc_record)
