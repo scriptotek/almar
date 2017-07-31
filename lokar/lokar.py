@@ -17,6 +17,7 @@ from raven import Client
 from six import binary_type
 
 from . import __version__
+from .vocabulary import Vocabulary
 from .alma import Alma
 from .concept import Concept
 from .job import Job
@@ -32,18 +33,6 @@ console_handler.setFormatter(formatter)
 log.addHandler(console_handler)
 
 SUPPORTED_TAGS = ['084', '648', '650', '651', '655']
-
-
-class Vocabulary(object):  # pylint: disable=too-few-public-methods
-
-    marc_code = ''
-    skosmos_code = ''
-    marc_prefix = ''
-
-    def __init__(self, marc_code, skosmos_code=None, marc_prefix=None):
-        self.marc_code = marc_code
-        self.skosmos_code = skosmos_code
-        self.marc_prefix = marc_prefix
 
 
 class Mailer(object):
@@ -175,7 +164,7 @@ def get_concept(term, vocabulary, default_tag='650', default_term=None):
 
 def job_args(config=None, args=None):
     vocabulary = Vocabulary(config['vocabulary']['marc_code'],
-                            config['vocabulary'].get('skosmos_code'),
+                            config['vocabulary'].get('id_service'),
                             config['vocabulary'].get('marc_prefix', ''))
 
     source_concept = get_concept(args.term, vocabulary)

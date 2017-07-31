@@ -48,11 +48,10 @@ class Concept(object):
     def __str__(self):
         return ' '.join(['${} {}'.format(key, self.sf[key]) for key in ['a', 'x', '0'] if self.sf[key] is not None])
 
-    def authorize(self, skosmos):
-        concept = skosmos.authorize_term(self.term, self.tag)
-        if concept is not None:
-            cid = concept['localname'].strip('c')
-            self.sf['0'] = self.vocabulary.marc_prefix + cid
+    def authorize(self):
+        concept_id = self.vocabulary.authorize_term(self.term, self.tag)
+        if concept_id is not None:
+            self.sf['0'] = self.vocabulary.marc_prefix + concept_id
             log.info('Authorized %s %s', self.tag, self)
 
     def field(self):

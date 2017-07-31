@@ -1,13 +1,23 @@
-## Lokar
+# Lokar &middot; [![Travis](https://img.shields.io/travis/scriptotek/lokar.svg)](https://travis-ci.org/scriptotek/lokar) [![Codecov](https://img.shields.io/codecov/c/github/scriptotek/lokar.svg)](https://codecov.io/gh/scriptotek/lokar) [![Code Health](https://landscape.io/github/scriptotek/lokar/master/landscape.svg?style=flat)](https://landscape.io/github/scriptotek/lokar/master)
 
-[![Travis](https://img.shields.io/travis/scriptotek/lokar.svg)](https://travis-ci.org/scriptotek/lokar)
-[![Codecov](https://img.shields.io/codecov/c/github/scriptotek/lokar.svg)](https://codecov.io/gh/scriptotek/lokar)
-[![Code Health](https://landscape.io/github/scriptotek/lokar/master/landscape.svg?style=flat)](https://landscape.io/github/scriptotek/lokar/master)
+Lokar is a script for batch editing and removing controlled classification and
+subject heading fields (084/648/650/651/655) in bibliographic records in Alma
+using the Alma APIs. Tested with Python 2.7 and Python 3.4+.
 
-Lokar is a script for editing or removing subject fields (648/650/651/655) in bibliographic
-records in Alma using the Alma APIs. Tested with Python 2.7, 3.4 and 3.5.
+It will use an SRU service to search for records, fetch and modify the MARCXML
+records and use the Alma Bibs API to write the modified records back to Alma.
 
-### Setup and configuration
+The script will only work with fields having a vocabulary code defined in `$2`.
+Since the SRU service does not provide search indexes for any vocabulary, lokar
+does a search using the `alma.subjects` + the `alma.authority_vocabulary` indices
+to find all records having a subject field A with the given term and a
+subject field B with the given vocabulary code, but where A is not necessarily
+equal to B. It then filters the result list to find the records where A is
+actually the same as B.
+
+[![asciicast](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f.png)](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f)
+
+## Installation and configuration
 
 1. Run `pip install -e .` to install `lokar` and its dependencies.
 2. Create a `lokar.yml` configuration file in the directory you're planning to run `lokar` from.
@@ -47,7 +57,8 @@ production environment) and switch between them using the `-e` command line opti
 ---
 vocabulary:
   marc_code: noubomn
-  skosmos_code: realfagstermer
+  id_service: http://data.ub.uio.no/microservices/authorize.php?vocabulary=realfagstermer&term={term}&tag={tag}
+  marc_prefix: (NO-TrBIB)
 
 default_env: nz_prod
 
@@ -62,55 +73,81 @@ env:
     sru_url: https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK
 ```
 
-### Usage
+## Usage
 
-Before using the tool, you must set the vocabulary code (`vocabulary.marc_code`)
-for the vocabulary you want to work with in `lokar.yml`.
+Before using the tool, make sure you hve set the vocabulary code
+(`vocabulary.marc_code`) for the vocabulary you want to work with in `lokar.yml`.
 
-Note: The tool always filters `$2` value matches the `vocabulary.marc_code` code in
-`lokar.yml`. If you've set `vocabulary.marc_code` to e.g. `noubomn`, the tool will never make any changes to
-subject fields that do not have `$2 noubomn`.
+Note: The tool will only make changes to fields having a `$2` value that matches
+the `vocabulary.marc_code` code set in your `lokar.yml` file.
+
+Getting help:
 
 * `lokar -h` to show help
 * `lokar rename -h` to show help for the "rename" subcommand
 
-#### Renaming/moving
+### Rename a subject heading
 
-* `lokar rename 'Term' 'New term'` to replace "Term" with "New term" in 650 fields (default).
-* `lokar rename '655 Term' 'New term'` to replace "Term" with "New term" in 655 fields.
+To replace "Term" with "New term" in 650 fields:
 
-To see the changes made to each catalog record, add the `--diffs` flag. Combined with
-the `--dry_run` flag (or `-d`), you will see the changes that would be made without
-actually doing them:
+    lokar rename '650 Term' 'New term'
 
-* `lokar rename --diffs --dry_run 'Term' 'New term'`
+or, since 650 is defined as the default field, you can also use the shorthand:
 
-Moving a subject to another MARC tag:
+    lokar rename 'Term' 'New term'
 
-* `lokar rename '650 Term' '651'` to move "Term" from 650 to 651 (replacing `650 $a Term` with `651 Term`).
+To work with any other field than the 650 field, the field number must be explicit:
 
-Renaming and moving can be combined:
+    lokar rename '655 Term' 'New term'`
 
-* `lokar rename '650 Term' '651 New term'`
+Supported fields are 084, 648, 650, 651 and 655.
 
-#### Deleting
+### Diffs and dry run
 
-* `lokar delete 'Term'` to delete 650 fields having "$a Term" or "$x Term".
-* `lokar delete '651 Term'` to delete 651 fields having "$a Term" or "$x Term".
+To see the changes made to each catalog record, add the `--diffs` flag. Combined
+with the `--dry_run` flag (or `-d`), you will see the changes that would be made
+to the records without actually touching any records:
 
-#### Notes
+    lokar rename --diffs --dry_run 'Term' 'New term'
+
+This way, you can easily get a feel for how the tool works.
+
+### Moving a subject to another MARC tag
+
+To move a subject heading from 650 to 651:
+
+    lokar rename '650 Term' '651 Term'
+
+or you can use the shorthand
+
+    lokar rename '650 Term' '651'
+
+if the term itself is the same. You can also move and change a heading in
+one operation:
+
+    lokar rename '650 Term' '651 New term'
+
+### Deleting a subject heading
+
+To delete all 650 fields having either `$a Term` or `$x Term`:
+
+    lokar delete '650 Term'
+
+or, since 650 is the default field, the shorthand:
+
+    lokar delete 'Term'
+
+
+## Notes
 
 * For terms consisting of more than one word, you must add quotation marks (single or double)
   around the term, as in the examples above. For single word terms, this is optional.
 * In search, the first letter is case insensitive. If you search for "old term", both
   "old term" and "Old term" will be replaced (but not "old Term").
+* Identifiers (`$0`) are added/updated only if you configure a ID lookup URL in `lokar.yml`.
 
 
-#### Identifiers
-
-Identifiers (`$0`) are added/updated if you configure a Skosmos instance in `config.yml`.
-
-#### Strings
+## Limited support for subject strings
 
 Four kinds of string operations are currently supported:
 
@@ -121,11 +158,7 @@ Four kinds of string operations are currently supported:
 
 Note: A term is only recognized as a string if there is space before and after colon (` : `).
 
-
-[![asciicast](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f.png)](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f)
-
-
-### Interactive usage
+## Interactive usage
 
 ```python
 from lokar import SruClient, Alma
@@ -145,32 +178,9 @@ for record in sru.search(query):
             sx = subject.findtext('subfield[@code="x"]')
 ```
 
-### Utforske SRU-endepunktet
+## Development
 
-For en oversikt over hvilke indekser som er tilgjengelig fra SRU-endepunktet:
-
-```python
-import requests
-
-explain_url = 'https://sandbox02-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_UBO?version=1.2&operation=explain'
-response = requests.get(explain_url)
-
-ns = {
-    'e20': 'http://explain.z3950.org/dtd/2.0/',
-    'e21': 'http://explain.z3950.org/dtd/2.1/',
-}
-
-root = ET.fromstring(response.text)
-indexes = root.findall('.//e20:index')
-
-print('%40s %s' % ('NAME', 'DESCRIPTION'))
-for index in indexes:
-    title = index.find('e21:title' , ns).text
-    name = index.find('.//e20:name' , ns).text
-    print(' %40s %s' % (name,title))
-```
-
-### Testing
+To run tests:
 
     pip install -r test-requirements.txt
     py.test

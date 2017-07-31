@@ -11,7 +11,6 @@ from prompter import yesno
 from requests.exceptions import HTTPError
 from tqdm import tqdm
 
-from .skosmos import Skosmos
 from .sru import TooManyResults
 from .task import AddTask, ReplaceTask, InteractiveReplaceTask, ListTask, MoveTask, DeleteTask
 
@@ -44,7 +43,6 @@ class Job(object):
         self.vocabulary = self.source_concept.vocabulary
 
         self.job_name = datetime.now().isoformat()
-        self.skosmos = Skosmos(self.vocabulary.skosmos_code)
 
         if self.source_concept.tag == '648' and self.source_concept.vocabulary.marc_code == 'noubomn':
             raise RuntimeError('Editing 648 for noubomn is disabled until we get rid of the 650 duplicates')
@@ -138,15 +136,16 @@ class Job(object):
     def authorize(self):
         if self.action in ['delete', 'list']:
             return
-        self.source_concept.authorize(self.skosmos)
-        self.target_concepts[0].authorize(self.skosmos)
+
+        self.source_concept.authorize()
+        self.target_concepts[0].authorize()
         if self.target_concepts[0].sf['0'] is None:
             # Use the source term identifier (if we just moved a concept)
             self.target_concepts[0].sf['0'] = self.source_concept.sf['0']
         if self.target_concepts[0].sf['0'] is None:
             log.warning('Neither the source term nor the (first) target term could be authorized in Skosmos.')
         for target_concept in self.target_concepts[1:]:
-            target_concept.authorize(self.skosmos)
+            target_concept.authorize()
             if target_concept.sf['0'] is None:
                 log.warning('The target term "%s" could not be authorized in Skosmos.', target_concept)
 

@@ -15,13 +15,13 @@ from functools import wraps
 from textwrap import dedent
 
 from lokar.bib import Bib
-from lokar.lokar import main, job_args, parse_args, Vocabulary, Mailer
+from lokar.lokar import main, job_args, parse_args, Mailer
+from lokar.vocabulary import Vocabulary
 from lokar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from lokar.alma import Alma
 from lokar.job import Job
 from lokar.concept import Concept
 from lokar.util import normalize_term, parse_xml
-from lokar.skosmos import Skosmos
 from lokar.marc import Record
 from lokar.task import MoveTask, DeleteTask
 
@@ -514,37 +514,37 @@ class TestAuthorizeTerm(unittest.TestCase):
     @staticmethod
     def init(results):
         url = 'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search'
-        body = {'results': results}
-        responses.add(responses.GET, url, body=json.dumps(body), content_type='application/json')
+        responses.add(responses.GET, url, body=results, content_type='application/json')
 
     @responses.activate
     def testAuthorizeTermNoResults(self):
-        self.init([])
+        self.init('')
 
-        skosmos = Skosmos('skosmos_vocab')
-        res = skosmos.authorize_term('test', '650')
+        vocab = Vocabulary('skosmos_vocab',
+                           'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search?term={term}&tag={tag}')
+        res = vocab.authorize_term('test', '650')
 
         assert res is None
         assert len(responses.calls) == 1
 
     @responses.activate
     def testAuthorizeTerm(self):
-        self.init([{'localName': 'c123', 'type': 'http://data.ub.uio.no/onto#Topic'}])
+        self.init('REAL123')
 
-        skosmos = Skosmos('skosmos_vocab')
-        res = skosmos.authorize_term('test', '650')
+        vocab = Vocabulary('skosmos_vocab',
+                           'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search?term={term}&tag={tag}')
+        res = vocab.authorize_term('test', '650')
 
-        assert res['localName'] == 'c123'
+        assert res == 'REAL123'
         assert len(responses.calls) == 1
 
     @responses.activate
     def testAuthorizeEmptyTerm(self):
-        url = 'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search'
-        body = {'results': []}
-        responses.add(responses.GET, url, body=json.dumps(body), content_type='application/json')
+        self.init('')
 
-        skosmos = Skosmos('skosmos_vocab')
-        res = skosmos.authorize_term('', '650')
+        vocab = Vocabulary('skosmos_vocab',
+                           'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search?term={test}&tag={tag}')
+        res = vocab.authorize_term('', '650')
 
         assert res is None
         assert len(responses.calls) == 0
@@ -621,7 +621,7 @@ class TestJob(unittest.TestCase):
         self.sru = None
         self.job = None
 
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRenameFromSimpleToSimpleJob(self, authorize_term):
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
                               ['rename', 'Statistiske modeller', 'Test æøå'])
@@ -629,7 +629,7 @@ class TestJob(unittest.TestCase):
         assert len(results) == 14
         assert authorize_term.called
 
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRenameFromSimpleToStringJob(self, authorize_term):
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
                               ['rename', 'Statistiske modeller', 'Test : æøå'])
@@ -637,7 +637,7 @@ class TestJob(unittest.TestCase):
         assert len(results) == 14
         assert authorize_term.called
 
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRenameFromStringToSimpleJob(self, authorize_term):
         results = self.runJob('sru_sample_response_1.xml', 'tekord',
                               ['rename', 'Økologi : Statistiske modeller', 'Test'])
@@ -645,7 +645,7 @@ class TestJob(unittest.TestCase):
         assert len(results) == 1
         assert authorize_term.called
 
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRemoveStringJob(self, authorize_term):
         results = self.runJob('sru_sample_response_1.xml', 'tekord',
                               ['delete', 'Økologi : Statistiske modeller'])
@@ -653,7 +653,7 @@ class TestJob(unittest.TestCase):
         assert len(results) == 1
         assert not authorize_term.called
 
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testMoveJob(self, authorize_term):
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
                               ['rename', 'Statistiske modeller', '655'])
@@ -661,9 +661,9 @@ class TestJob(unittest.TestCase):
         assert len(results) == 14
         assert authorize_term.called
 
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testSplitJob(self, authorize_term):
-        authorize_term.return_value = {'localname': 'c030697'}
+        authorize_term.return_value = 'REAL030697'
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
                               ['rename', 'Statistiske modeller', 'Statistikk', 'Modeller'])
 
@@ -702,14 +702,14 @@ class TestLokar(unittest.TestCase):
             yield rec
 
     @patch('lokar.lokar.Mailer', autospec=True)
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testMain(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Statistiske modeller'
         new_term = 'Test æøå'
         alma = MockAlma.return_value
-        mock_authorize_term.return_value = {'localname': 'c030697'}
+        mock_authorize_term.return_value = 'REAL030697'
         main(self.conf(), ['-e test_env', '-n', 'rename', term, new_term])
 
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
@@ -717,38 +717,38 @@ class TestLokar(unittest.TestCase):
         assert alma.bibs.call_count == 14
 
     @patch('lokar.lokar.Mailer', autospec=True)
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testMainNoHits(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Something else'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = {'localname': 'c030697'}
+        mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
         main(self.conf(), ['-e test_env', '-n', 'rename', term, new_term])
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
     @patch('lokar.lokar.Mailer', autospec=True)
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testRemoveTerm(self, sru, MockAlma, mock_authorize_term, mock_Mailer):
         term = 'Statistiske modeller'
-        mock_authorize_term.return_value = {'localname': 'c030697'}
+        mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
         main(self.conf(), ['-e test_env', '-n', 'delete', term])
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 14
 
     @patch('lokar.lokar.Mailer', autospec=True)
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testDiffs(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Matematisk biologi'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = {'localname': 'c030697'}
+        mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
 
         doc = get_sample('bib_response2.xml')
@@ -761,12 +761,12 @@ class TestLokar(unittest.TestCase):
         assert alma.put.call_count == 1
 
     @patch('lokar.lokar.Mailer', autospec=True)
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testListCommand(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Matematisk biologi'
-        mock_authorize_term.return_value = {'localname': 'c030697'}
+        mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
 
         doc = get_sample('bib_response2.xml')
@@ -780,13 +780,13 @@ class TestLokar(unittest.TestCase):
         assert alma.put.call_count == 0
 
     @patch('lokar.lokar.Mailer', autospec=True)
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testDryRun(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Matematisk biologi'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = {'localname': 'c030697'}
+        mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
 
         doc = get_sample('bib_response2.xml')
@@ -799,13 +799,13 @@ class TestLokar(unittest.TestCase):
         assert alma.put.call_count == 0
 
     @patch('lokar.lokar.Mailer', autospec=True)
-    @patch('lokar.job.Skosmos.authorize_term', autospec=True)
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_response_dm.xml')
     def testCzRecord(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Dynamisk meteorologi'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = {'localname': 'c030697'}
+        mock_authorize_term.return_value = 'REAL030697'
         alma = MockAlma.return_value
 
         doc = get_sample('bib_linked_cz.xml')
