@@ -56,7 +56,7 @@ class Concept(object):
             self.sf['0'] = self.vocabulary.marc_prefix + concept_id
             log.info(Fore.GREEN + '✔' + Style.RESET_ALL + ' Authorized:     %s %s', self.tag, self)
         else:
-            log.info(Fore.RED + '✘' + Style.RESET_ALL   + ' Not authorized: %s %s', self.tag, self)
+            log.info(Fore.RED + '✘' + Style.RESET_ALL + ' Not authorized: %s %s', self.tag, self)
 
     def field(self):
         return {'tag': self.tag, 'sf': self.sf}
