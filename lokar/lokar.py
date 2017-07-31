@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import argparse
 import getpass
+import colorlog
 import logging.handlers
 import re
 import sys
@@ -26,10 +27,18 @@ from .sru import SruClient
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 logging.getLogger('requests').setLevel(logging.WARNING)
-formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s',
-                              datefmt='%Y-%m-%d %H:%I:%S')
 console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
+console_handler.setFormatter(colorlog.ColoredFormatter(
+    '%(asctime)s %(log_color)s%(levelname)-8s%(reset)s %(message)s',
+    datefmt='%Y-%m-%d %H:%I:%S',
+    reset=True,
+    log_colors={
+        'DEBUG':    'cyan',
+        'INFO':     'green',
+        'WARNING':  'red',
+        'ERROR':    'red',
+        'CRITICAL': 'red,bg_white',
+    }))
 log.addHandler(console_handler)
 
 SUPPORTED_TAGS = ['084', '648', '650', '651', '655']
@@ -223,7 +232,8 @@ def main(config=None, args=None):
 
         if not args.dry_run:
             file_handler = logging.FileHandler('lokar.log')
-            file_handler.setFormatter(formatter)
+            file_handler.setFormatter(logging.Formatter(
+                '[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S'))
             file_handler.setLevel(logging.INFO)
             log.addHandler(file_handler)
 
