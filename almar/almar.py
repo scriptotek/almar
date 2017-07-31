@@ -172,7 +172,7 @@ def job_args(config=None, args=None):
     }
 
 
-def get_config_file():
+def get_config_filename():
     possible_file_locations = ['./almar.yml', './lokar.yml', os.path.expanduser('~/.almar.yml')]
 
     for filename in possible_file_locations:
@@ -180,19 +180,26 @@ def get_config_file():
             return filename
 
 
-def main(config=None, args=None):
-    global raven_client
-    filename = get_config_file()
+def get_config(config=None):
+    if config is not None:
+        return config
+    filename = get_config_filename()
     if filename is None:
         log.error('Could not find "almar.yml" configuration file. See https://github.com/scriptotek/almar for help.')
         sys.exit(1)
 
     try:
-        with config or open(filename) as file:
-            config = yaml.load(file)
+        return open(filename)
     except IOError:
         log.error('Could not read configuration file "%s"', filename)
         sys.exit(1)
+
+
+def main(config=None, args=None):
+    global raven_client
+
+    with get_config(config) as fp:
+        config = yaml.load(fp)
 
     username = getpass.getuser()
     log.info('Running as %s', username)
