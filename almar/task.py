@@ -1,6 +1,5 @@
 # coding=utf-8
 from __future__ import unicode_literals, print_function
-from collections import OrderedDict
 import logging
 from collections import OrderedDict
 
@@ -15,11 +14,11 @@ from .util import parse_xml, ANY_VALUE, normalize_term
 log = logging.getLogger(__name__)
 
 
-def pick(options, alpha_options=[]):
+def pick(options, alpha_options=None):
     valid = OrderedDict()
     for i, option in enumerate(options):
         valid[str(i + 1)] = option
-    for option in alpha_options:
+    for option in alpha_options or []:
         valid[option[0].upper()] = option
 
     print()

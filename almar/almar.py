@@ -21,6 +21,8 @@ from .concept import Concept
 from .job import Job
 from .sru import SruClient
 
+raven_client = None
+
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 logging.getLogger('requests').setLevel(logging.WARNING)
@@ -169,6 +171,7 @@ def job_args(config=None, args=None):
         'list_options': list_options,
     }
 
+
 def get_config_file():
     possible_file_locations = ['./almar.yml', './lokar.yml', os.path.expanduser('~/.almar.yml')]
 
@@ -178,6 +181,7 @@ def get_config_file():
 
 
 def main(config=None, args=None):
+    global raven_client
     filename = get_config_file()
     if filename is None:
         log.error('Could not find "almar.yml" configuration file. See https://github.com/scriptotek/almar for help.')
@@ -194,8 +198,8 @@ def main(config=None, args=None):
     log.info('Running as %s', username)
     try:
         if config.get('sentry') is not None:
-            raven = Client(config['sentry']['dsn'])
-            raven.context.merge({'user': {
+            raven_client = Client(config['sentry']['dsn'])
+            raven_client.context.merge({'user': {
                 'username': username
             }})
 
@@ -211,7 +215,6 @@ def main(config=None, args=None):
                 '[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S'))
             file_handler.setLevel(logging.INFO)
             log.addHandler(file_handler)
-
 
         def get_env(config, args):
             if args.env is None:
@@ -240,8 +243,8 @@ def main(config=None, args=None):
         log.info('Job complete')
 
     except Exception:  # # pylint: disable=broad-except
-        if config.get('sentry') is not None:
-            raven.captureException()
+        if raven_client is not None:
+            raven_client.captureException()
         log.exception('Uncaught exception:')
 
 

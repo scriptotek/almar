@@ -1,7 +1,6 @@
 # coding=utf-8
 from __future__ import unicode_literals, print_function
 
-import io
 import logging
 from copy import copy
 from datetime import datetime
@@ -16,6 +15,7 @@ from .task import AddTask, ReplaceTask, InteractiveReplaceTask, ListTask, MoveTa
 
 log = logging.getLogger(__name__)
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
+
 
 class Job(object):
     def __init__(self, action, source_concept, target_concepts=None, sru=None, alma=None,
