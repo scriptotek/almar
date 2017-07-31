@@ -107,10 +107,11 @@ class Job(object):
 
     def update_record(self, bib):
 
+        modified = 0
         for step in self.steps:
-            step.run(bib.marc_record)
+            modified += step.run(bib.marc_record)
 
-        if self.action == 'list':
+        if modified == 0:
             return
 
         if bib.cz_link is not None:
