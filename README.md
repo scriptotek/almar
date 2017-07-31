@@ -1,6 +1,6 @@
-# Lokar &middot; [![Travis](https://img.shields.io/travis/scriptotek/lokar.svg)](https://travis-ci.org/scriptotek/lokar) [![Codecov](https://img.shields.io/codecov/c/github/scriptotek/lokar.svg)](https://codecov.io/gh/scriptotek/lokar) [![Code Health](https://landscape.io/github/scriptotek/lokar/master/landscape.svg?style=flat)](https://landscape.io/github/scriptotek/lokar/master)
+# Almar &middot; [![Travis](https://img.shields.io/travis/scriptotek/almar.svg)](https://travis-ci.org/scriptotek/almar) [![Codecov](https://img.shields.io/codecov/c/github/scriptotek/almar.svg)](https://codecov.io/gh/scriptotek/almar) [![Code Health](https://landscape.io/github/scriptotek/almar/master/landscape.svg?style=flat)](https://landscape.io/github/scriptotek/almar/master)
 
-Lokar is a script for batch editing and removing controlled classification and
+Almar (formerly Lokar) is a script for batch editing and removing controlled classification and
 subject heading fields (084/648/650/651/655) in bibliographic records in Alma
 using the Alma APIs. Tested with Python 2.7 and Python 3.4+.
 
@@ -8,7 +8,7 @@ It will use an SRU service to search for records, fetch and modify the MARCXML
 records and use the Alma Bibs API to write the modified records back to Alma.
 
 The script will only work with fields having a vocabulary code defined in `$2`.
-Since the SRU service does not provide search indexes for any vocabulary, lokar
+Since the SRU service does not provide search indexes for any vocabulary, almar
 does a search using the `alma.subjects` + the `alma.authority_vocabulary` indices
 to find all records having a subject field A with the given term and a
 subject field B with the given vocabulary code, but where A is not necessarily
@@ -19,10 +19,10 @@ actually the same as B.
 
 ## Installation and configuration
 
-1. Run `pip install -e .` to install `lokar` and its dependencies.
-2. Create a `lokar.yml` configuration file in the directory you're planning to run `lokar` from.
+1. Run `pip install -e .` to install `almar` and its dependencies.
+2. Create a `almar.yml` configuration file in the directory you're planning to run `almar` from.
 
-Here's a minimal `lokar.yml` file to start with:
+Here's a minimal `almar.yml` file to start with:
 
 ```
 ---
@@ -76,29 +76,29 @@ env:
 ## Usage
 
 Before using the tool, make sure you hve set the vocabulary code
-(`vocabulary.marc_code`) for the vocabulary you want to work with in `lokar.yml`.
+(`vocabulary.marc_code`) for the vocabulary you want to work with in `almar.yml`.
 
 Note: The tool will only make changes to fields having a `$2` value that matches
-the `vocabulary.marc_code` code set in your `lokar.yml` file.
+the `vocabulary.marc_code` code set in your `almar.yml` file.
 
 Getting help:
 
-* `lokar -h` to show help
-* `lokar rename -h` to show help for the "rename" subcommand
+* `almar -h` to show help
+* `almar rename -h` to show help for the "rename" subcommand
 
 ### Rename a subject heading
 
 To replace "Term" with "New term" in 650 fields:
 
-    lokar rename '650 Term' 'New term'
+    almar rename '650 Term' 'New term'
 
 or, since 650 is defined as the default field, you can also use the shorthand:
 
-    lokar rename 'Term' 'New term'
+    almar rename 'Term' 'New term'
 
 To work with any other field than the 650 field, the field number must be explicit:
 
-    lokar rename '655 Term' 'New term'`
+    almar rename '655 Term' 'New term'`
 
 Supported fields are 084, 648, 650, 651 and 655.
 
@@ -108,7 +108,7 @@ To see the changes made to each catalog record, add the `--diffs` flag. Combined
 with the `--dry_run` flag (or `-d`), you will see the changes that would be made
 to the records without actually touching any records:
 
-    lokar rename --diffs --dry_run 'Term' 'New term'
+    almar rename --diffs --dry_run 'Term' 'New term'
 
 This way, you can easily get a feel for how the tool works.
 
@@ -116,26 +116,26 @@ This way, you can easily get a feel for how the tool works.
 
 To move a subject heading from 650 to 651:
 
-    lokar rename '650 Term' '651 Term'
+    almar rename '650 Term' '651 Term'
 
 or you can use the shorthand
 
-    lokar rename '650 Term' '651'
+    almar rename '650 Term' '651'
 
 if the term itself is the same. You can also move and change a heading in
 one operation:
 
-    lokar rename '650 Term' '651 New term'
+    almar rename '650 Term' '651 New term'
 
 ### Deleting a subject heading
 
 To delete all 650 fields having either `$a Term` or `$x Term`:
 
-    lokar delete '650 Term'
+    almar delete '650 Term'
 
 or, since 650 is the default field, the shorthand:
 
-    lokar delete 'Term'
+    almar delete 'Term'
 
 
 ## Notes
@@ -144,24 +144,24 @@ or, since 650 is the default field, the shorthand:
   around the term, as in the examples above. For single word terms, this is optional.
 * In search, the first letter is case insensitive. If you search for "old term", both
   "old term" and "Old term" will be replaced (but not "old Term").
-* Identifiers (`$0`) are added/updated only if you configure a ID lookup URL in `lokar.yml`.
+* Identifiers (`$0`) are added/updated only if you configure a ID lookup URL in `almar.yml`.
 
 
 ## Limited support for subject strings
 
 Four kinds of string operations are currently supported:
 
-* `lokar delete 'Aaa : Bbb'` deletes occurances of `$a Aaa $x Bbb`
-* `lokar rename 'Aaa : Bbb' 'Ccc : Ddd'` replaces `$a Aaa $x Bbb` with `$a Ccc $x Ddd`
-* `lokar rename 'Aaa : Bbb' 'Ccc'` replaces `$a Aaa $x Bbb` with `$a Ccc` (replacing subfield `$a` and removing subfield `$x`)
-* `lokar rename 'Aaa' 'Bbb : Ccc'` replaces `$a Aaa` with `$a Bbb $x $Ccc` (replacing subfield `$a` and adding subfield `$x`)
+* `almar delete 'Aaa : Bbb'` deletes occurances of `$a Aaa $x Bbb`
+* `almar rename 'Aaa : Bbb' 'Ccc : Ddd'` replaces `$a Aaa $x Bbb` with `$a Ccc $x Ddd`
+* `almar rename 'Aaa : Bbb' 'Ccc'` replaces `$a Aaa $x Bbb` with `$a Ccc` (replacing subfield `$a` and removing subfield `$x`)
+* `almar rename 'Aaa' 'Bbb : Ccc'` replaces `$a Aaa` with `$a Bbb $x $Ccc` (replacing subfield `$a` and adding subfield `$x`)
 
 Note: A term is only recognized as a string if there is space before and after colon (` : `).
 
 ## Interactive usage
 
 ```python
-from lokar import SruClient, Alma
+from almar import SruClient, Alma
 
 api_region = 'eu'
 api_key = 'SECRET'

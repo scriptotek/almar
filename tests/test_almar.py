@@ -14,16 +14,16 @@ from contextlib import contextmanager
 from functools import wraps
 from textwrap import dedent
 
-from lokar.bib import Bib
-from lokar.lokar import main, job_args, parse_args, Mailer
-from lokar.vocabulary import Vocabulary
-from lokar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
-from lokar.alma import Alma
-from lokar.job import Job
-from lokar.concept import Concept
-from lokar.util import normalize_term, parse_xml
-from lokar.marc import Record
-from lokar.task import MoveTask, DeleteTask
+from almar.bib import Bib
+from almar.almar import main, job_args, parse_args, Mailer
+from almar.vocabulary import Vocabulary
+from almar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
+from almar.alma import Alma
+from almar.job import Job
+from almar.concept import Concept
+from almar.util import normalize_term, parse_xml
+from almar.marc import Record
+from almar.task import MoveTask, DeleteTask
 
 
 def get_sample(filename, as_xml=False):
@@ -579,7 +579,7 @@ def patch_sru_search(xml_response_file):
 
     @contextmanager
     def patch_fn():
-        patcher = patch('lokar.lokar.SruClient', autospec=True)
+        patcher = patch('almar.almar.SruClient', autospec=True)
         mock_sru_class = patcher.start()
         mock_sru = setup_mock(mock_sru_class)
         yield mock_sru
@@ -671,7 +671,7 @@ class TestJob(unittest.TestCase):
         assert authorize_term.called
 
 
-class TestLokar(unittest.TestCase):
+class TestAlmar(unittest.TestCase):
 
     @staticmethod
     def conf():
@@ -701,9 +701,9 @@ class TestLokar(unittest.TestCase):
         for n, rec in enumerate(recs):
             yield rec
 
-    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testMain(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Statistiske modeller'
@@ -716,9 +716,9 @@ class TestLokar(unittest.TestCase):
 
         assert alma.bibs.call_count == 14
 
-    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testMainNoHits(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Something else'
@@ -729,9 +729,9 @@ class TestLokar(unittest.TestCase):
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 0
 
-    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testRemoveTerm(self, sru, MockAlma, mock_authorize_term, mock_Mailer):
         term = 'Statistiske modeller'
@@ -741,9 +741,9 @@ class TestLokar(unittest.TestCase):
         sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.bibs.call_count == 14
 
-    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testDiffs(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Matematisk biologi'
@@ -760,9 +760,9 @@ class TestLokar(unittest.TestCase):
         assert alma.bibs.call_count == 1
         assert alma.put.call_count == 1
 
-    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testListCommand(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Matematisk biologi'
@@ -779,9 +779,9 @@ class TestLokar(unittest.TestCase):
         assert alma.bibs.call_count == 1
         assert alma.put.call_count == 0
 
-    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testDryRun(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Matematisk biologi'
@@ -798,9 +798,9 @@ class TestLokar(unittest.TestCase):
         assert alma.bibs.call_count == 1
         assert alma.put.call_count == 0
 
-    @patch('lokar.lokar.Mailer', autospec=True)
+    @patch('almar.almar.Mailer', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('lokar.lokar.Alma', autospec=True, spec_set=True)
+    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_response_dm.xml')
     def testCzRecord(self, sru, MockAlma, mock_authorize_term, Mailer):
         term = 'Dynamisk meteorologi'
@@ -820,11 +820,11 @@ class TestLokar(unittest.TestCase):
         assert alma.bibs.call_count == 2  # It did match, but...
         assert alma.put.call_count == 0  # We're not allowed to update CZ records
 
-    @patch('lokar.lokar.open', autospec=True)
+    @patch('almar.almar.open', autospec=True)
     def testConfigMissing(self, mock_open):
         mock_open.side_effect = IOError('File not found')
         main(args=['rename', 'old', 'new'])
-        mock_open.assert_called_once_with('lokar.yml')
+        mock_open.assert_called_once_with('almar.yml')
 
     def testNormalizeTerm(self):
         term1 = normalize_term('byer : økologi')

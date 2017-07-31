@@ -78,7 +78,7 @@ class Mailer(object):
 
 
 def parse_args(args, default_env=None):
-    parser = argparse.ArgumentParser(prog='lokar', description='''
+    parser = argparse.ArgumentParser(prog='almar', description='''
             Edit or remove subject fields in Alma catalog records.
             Supported fields: {}
             '''.format(', '.join(SUPPORTED_TAGS)))
@@ -209,10 +209,10 @@ def job_args(config=None, args=None):
 def main(config=None, args=None):
 
     try:
-        with config or open('lokar.yml') as file:
+        with config or open('almar.yml') as file:
             config = yaml.load(file)
     except IOError:
-        log.error('Fant ikke lokar.yml. Se README.md for mer info.')
+        log.error('Fant ikke almar.yml. Se README.md for mer info.')
         return
 
     username = getpass.getuser()
@@ -231,7 +231,7 @@ def main(config=None, args=None):
             log.setLevel(logging.DEBUG)
 
         if not args.dry_run:
-            file_handler = logging.FileHandler('lokar.log')
+            file_handler = logging.FileHandler('almar.log')
             file_handler.setFormatter(logging.Formatter(
                 '[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S'))
             file_handler.setLevel(logging.INFO)
