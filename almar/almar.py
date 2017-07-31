@@ -6,6 +6,7 @@ import getpass
 import colorlog
 import logging.handlers
 import re
+import os
 import sys
 from email.header import Header
 from email.mime.text import MIMEText
@@ -205,15 +206,26 @@ def job_args(config=None, args=None):
         'list_options': list_options,
     }
 
+def get_config_file():
+    possible_file_locations = ['./almar.yml', './lokar.yml', os.path.expanduser('~/.almar.yml')]
+
+    for filename in possible_file_locations:
+        if os.path.exists(filename):
+            return filename
+
 
 def main(config=None, args=None):
+    filename = get_config_file()
+    if filename is None:
+        log.error('Could not find "almar.yml" configuration file. See https://github.com/scriptotek/almar for help.')
+        sys.exit(1)
 
     try:
-        with config or open('almar.yml') as file:
+        with config or open(filename) as file:
             config = yaml.load(file)
     except IOError:
-        log.error('Fant ikke almar.yml. Se README.md for mer info.')
-        return
+        log.error('Could not read configuration file "%s"', filename)
+        sys.exit(1)
 
     username = getpass.getuser()
     log.info('Running as %s', username)
@@ -237,10 +249,20 @@ def main(config=None, args=None):
             file_handler.setLevel(logging.INFO)
             log.addHandler(file_handler)
 
-        if args.env is None:
-            raise RuntimeError('No environment specified in config file')
 
-        env = config['env'][args.env]
+        def get_env(config, args):
+            if args.env is None:
+                log.error('No environment specified and no default environment found in configuration file')
+                sys.exit(1)
+
+            for env in config.get('env', []):
+                if env['name'] == args.env:
+                    return env
+
+            log.error('Environment "%s" not found in configuration file', args.env)
+            sys.exit(1)
+
+        env = get_env(config, args)
 
         sru = SruClient(env['sru_url'], args.env)
         alma = Alma(env['api_region'], env['api_key'], args.env)

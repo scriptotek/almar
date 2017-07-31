@@ -1,28 +1,30 @@
 # Almar &middot; [![Travis](https://img.shields.io/travis/scriptotek/almar.svg)](https://travis-ci.org/scriptotek/almar) [![Codecov](https://img.shields.io/codecov/c/github/scriptotek/almar.svg)](https://codecov.io/gh/scriptotek/almar) [![Code Health](https://landscape.io/github/scriptotek/almar/master/landscape.svg?style=flat)](https://landscape.io/github/scriptotek/almar/master)
 
-Almar (formerly Lokar) is a script for batch editing and removing controlled classification and
-subject heading fields (084/648/650/651/655) in bibliographic records in Alma
-using the Alma APIs. Tested with Python 2.7 and Python 3.4+.
+Almar (formerly Lokar) is a script for batch editing and removing controlled
+classification and subject heading fields (084/648/650/651/655) in bibliographic
+records in Alma using the Alma APIs. Tested with Python 2.7 and Python 3.4+.
 
 It will use an SRU service to search for records, fetch and modify the MARCXML
 records and use the Alma Bibs API to write the modified records back to Alma.
 
 The script will only work with fields having a vocabulary code defined in `$2`.
-Since the SRU service does not provide search indexes for any vocabulary, almar
-does a search using the `alma.subjects` + the `alma.authority_vocabulary` indices
-to find all records having a subject field A with the given term and a
-subject field B with the given vocabulary code, but where A is not necessarily
-equal to B. It then filters the result list to find the records where A is
-actually the same as B.
+Since the Alma SRU service does not provide search indexes for specific
+vocabularies, almar instead starts by searching using the `alma.subjects` + the
+`alma.authority_vocabulary` indices. This returns all records having a subject
+field A with the given term and a subject field B with the given vocabulary
+code, but where A is not necessarily equal to B, so almar filters the result
+list to find the records where A is actually the same as B.
 
 [![asciicast](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f.png)](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f)
 
 ## Installation and configuration
 
 1. Run `pip install -e .` to install `almar` and its dependencies.
-2. Create a `almar.yml` configuration file in the directory you're planning to run `almar` from.
+2. Create a configuration file. Almar will first look for `almar.yml` in the
+   current directory, then for `lokar.yml` (legacy) and finally for `.almar.yml`
+   in your home directory.
 
-Here's a minimal `almar.yml` file to start with:
+Here's a minimal configuration file to start with:
 
 ```
 ---
@@ -32,7 +34,7 @@ vocabulary:
 default_env: prod
 
 env:
-  prod:
+  - name: prod
     api_key: INSERT API KEY HERE
     api_region: eu
     sru_url: INSERT SRU URL HERE
@@ -51,7 +53,8 @@ env:
 
 Note: In the file above, we've configured a single Alma environment called "prod".
 It's possible to add multiple environments (for instance a sandbox and a
-production environment) and switch between them using the `-e` command line option:
+production environment) and switch between them using the `-e` command line option.
+Here's an example:
 
 ```
 ---
@@ -63,23 +66,25 @@ vocabulary:
 default_env: nz_prod
 
 env:
-  nz_sandbox:
-    api_key: FYLL INN API-NØKKEL
+  - name: nz_sandbox
+    api_key: API KEY HERE
     api_region: eu
     sru_url: https://sandbox-eu.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK
-  nz_prod:
-    api_key: FYLL INN API-NØKKEL
+  - name: nz_prod
+    api_key: API KEY HERE
     api_region: eu
     sru_url: https://bibsys-k.alma.exlibrisgroup.com/view/sru/47BIBSYS_NETWORK
 ```
 
+For all configuration options, see
+[configuration options](https://github.com/scriptotek/lokar/wiki/Configuration-options).
+
 ## Usage
 
-Before using the tool, make sure you hve set the vocabulary code
-(`vocabulary.marc_code`) for the vocabulary you want to work with in `almar.yml`.
-
-Note: The tool will only make changes to fields having a `$2` value that matches
-the `vocabulary.marc_code` code set in your `almar.yml` file.
+Before using the tool, make sure you have set the vocabulary code (`vocabulary.marc_code`)
+for the vocabulary you want to work with in the configuration file.
+The tool will only make changes to fields having a `$2` value that matches
+the `vocabulary.marc_code` code set in your configuration file.
 
 Getting help:
 
@@ -138,13 +143,50 @@ or, since 650 is the default field, the shorthand:
     almar delete 'Term'
 
 
+### Listing documents
+
+If you just want a list of documents without making any changes, use `almar list`:
+
+    almar list '650 Term'
+
+Optionally with titles:
+
+    almar list '650 Term' --titles
+
+
+### Interactive replace (splitting)
+
+If you need to split a concept into two or more concepts, you can use
+`almar interactive` mode. Example: to replace "Kretser" with "Integrerte kretser"
+on some documents, but with "Elektriske kretser" on other, run:
+
+    lokar --diffs interactive 'Kretser' 'Integrerte kretser' 'Elektriske kretser'
+
+For each document, you will be presented with the title and subject headings,
+and can make a choice of whether to (1) replace "Kretser" with "Integrerte kretser",
+(2) replace it with "Elektriske kretser", or (3) just remove "Kretser".
+
 ## Notes
 
 * For terms consisting of more than one word, you must add quotation marks (single or double)
   around the term, as in the examples above. For single word terms, this is optional.
 * In search, the first letter is case insensitive. If you search for "old term", both
   "old term" and "Old term" will be replaced (but not "old Term").
-* Identifiers (`$0`) are added/updated only if you configure a ID lookup URL in `almar.yml`.
+
+
+## Identifiers
+
+Identifiers (`$0`) are added/updated if you configure a ID lookup service URL
+(`vocabulary.id_service`) in your configuration file. The service should accept
+a GET request with the parameters "vocabulary", "term" and "tag" and return the
+identifier of the matched concept. If not found, it should return an empty or
+non-200 response. Example request:
+
+    {service-url}?vocabulary=realfagstermer&term=Diagrambasert%20resonnering&tag=650
+
+For an example service using [Skosmos](https://github.com/NatLibFi/Skosmos), see
+[code](https://github.com/scriptotek/data.ub.uio.no/blob/v2/www/default/microservices/authorize.php)
+and [demo](https://data.ub.uio.no/microservices/authorize.php?vocabulary=realfagstermer&term=Diagrambasert%20resonnering&tag=650).
 
 
 ## Limited support for subject strings
@@ -158,7 +200,7 @@ Four kinds of string operations are currently supported:
 
 Note: A term is only recognized as a string if there is space before and after colon (` : `).
 
-## Interactive usage
+## Using it as a Python library
 
 ```python
 from almar import SruClient, Alma

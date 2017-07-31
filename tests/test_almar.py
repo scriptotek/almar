@@ -689,7 +689,7 @@ class TestAlmar(unittest.TestCase):
         default_env: test_env
 
         env:
-          test_env:
+          - name: test_env
             api_key: secret1
             api_region: eu
             sru_url: https://sandbox-eu.alma.exlibrisgroup.com/view/sru/DUMMY_SITE
@@ -821,10 +821,15 @@ class TestAlmar(unittest.TestCase):
         assert alma.put.call_count == 0  # We're not allowed to update CZ records
 
     @patch('almar.almar.open', autospec=True)
-    def testConfigMissing(self, mock_open):
+    @patch('almar.almar.os.path.exists', autospec=True)
+    def testConfigMissing(self, exists, mock_open):
+        exists.return_value = True
         mock_open.side_effect = IOError('File not found')
-        main(args=['rename', 'old', 'new'])
-        mock_open.assert_called_once_with('almar.yml')
+
+        with pytest.raises(SystemExit):
+            main(args=['rename', 'old', 'new'])
+
+        mock_open.assert_called_once_with('./almar.yml')
 
     def testNormalizeTerm(self):
         term1 = normalize_term('byer : økologi')
