@@ -3,10 +3,15 @@ from __future__ import unicode_literals
 
 import json
 import os
+import re
+import sys
 import unittest
+from collections import OrderedDict
+
 import pytest
 import responses
-from mock import Mock, MagicMock, patch, ANY
+import logging
+from mock import Mock, MagicMock, patch, ANY, call
 from io import BytesIO
 from io import open
 from six import text_type
@@ -15,15 +20,17 @@ from functools import wraps
 from textwrap import dedent
 
 from almar.bib import Bib
-from almar.almar import main, job_args, parse_args
-from almar.vocabulary import Vocabulary
+from almar.almar import main, job_args, parse_args, log
+from almar.authorities import Vocabulary
 from almar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from almar.alma import Alma
 from almar.job import Job
 from almar.concept import Concept
-from almar.util import normalize_term, parse_xml
+from almar.util import normalize_term, parse_xml, ANY_VALUE
 from almar.marc import Record
-from almar.task import MoveTask, DeleteTask
+from almar.task import DeleteTask, ReplaceTask, AddTask
+
+log.setLevel(logging.DEBUG)
 
 
 def get_sample(filename, as_xml=False):
@@ -34,12 +41,36 @@ def get_sample(filename, as_xml=False):
     return body
 
 
+def record_search(record, tag, sf):
+    return len(list(record.search(Concept(tag, sf), ignore_extra_subfields=True)))
+
+
+def record_search_exact(record, tag, sf):
+    return len(list(record.search(Concept(tag, sf), ignore_extra_subfields=False)))
+
+
+def strip_colors(txt):
+    return re.sub(r'\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))', '', text_type(txt))
+
+
 class TestRecord(unittest.TestCase):
 
     @staticmethod
     def getRecord():
         return Record(parse_xml('''
               <record>
+                <datafield tag="245" ind1="1" ind2="0">
+                  <subfield code="a">A</subfield>
+                  <subfield code="b">B</subfield>
+                  <subfield code="c">C</subfield>
+                  <subfield code="p">P</subfield>
+                  <subfield code="n">N</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="260">
+                  <subfield code="a">London</subfield>
+                  <subfield code="b">A &amp; C Black</subfield>
+                  <subfield code="c">2003</subfield>
+                </datafield>
                 <datafield tag="650" ind1=" " ind2="7">
                   <subfield code="a">Mønstre</subfield>
                   <subfield code="2">humord</subfield>
@@ -82,6 +113,10 @@ class TestRecord(unittest.TestCase):
               </record>
         '''.encode('utf-8')))
 
+    def testTitle(self):
+        record = self.getRecord()
+        assert 'A : B. P. N / C. 2003' == record.title()
+
     def testFind650a(self):
         """
         1st field should not match because of $2
@@ -89,24 +124,26 @@ class TestRecord(unittest.TestCase):
         4th and 6th value should match because we didn't restrict to $x: None
         The rest should not match because of $a or tag != 650
         """
-        record = self.getRecord()
-        fields = list(record.fields('650', {'2': 'noubomn', 'a': 'Mønstre'}))
+        concept = Concept('650', {'2': 'noubomn', 'a': 'Mønstre'})
+        fields1 = list(self.getRecord().search(concept, ignore_extra_subfields=False))
+        fields2 = list(self.getRecord().search(concept, ignore_extra_subfields=True))
 
-        assert len(fields) == 3
-        assert fields[0].node.findtext('subfield[@code="a"]') == 'Mønstre'
+        assert len(fields1) == 1
+        assert len(fields2) == 3
 
     def testFind650x(self):
         """
         4th field should match because of $x
         The rest should not match because of $a or tag != 650
         """
-        record = self.getRecord()
+        concept = Concept('650', {'2': 'noubomn', 'x': 'Atferd'})
+        fields1 = list(self.getRecord().search(concept, ignore_extra_subfields=False))
+        fields2 = list(self.getRecord().search(concept, ignore_extra_subfields=True))
 
-        fields = list(record.fields('650', {'2': 'noubomn', 'x': 'Atferd'}))
-
-        assert len(fields) == 1
-        assert fields[0].node.findtext('subfield[@code="a"]') == 'Mønstre'
-        assert fields[0].node.findtext('subfield[@code="x"]') == 'Atferd'
+        assert len(fields1) == 0
+        assert len(fields2) == 1
+        assert fields2[0].node.findtext('subfield[@code="a"]') == 'Mønstre'
+        assert fields2[0].node.findtext('subfield[@code="x"]') == 'Atferd'
 
     def testMove(self):
         """
@@ -114,105 +151,108 @@ class TestRecord(unittest.TestCase):
         fields should not be moved!
         """
         record = self.getRecord()
-        assert len(record.fields('655', {'2': 'noubomn'})) == 1
+        assert record_search(record, '655', {'2': 'noubomn'}) == 1
 
-        src = Concept('Atferd', Vocabulary('noubomn'), '650')
-        task = MoveTask(src, '655')
-        self.assertTrue(task.match(record))
+        src = Concept('650', {'a': 'Atferd', '2': 'noubomn'})
+        dst = Concept('655', {'a': 'Atferd', '2': 'noubomn'})
+        task = ReplaceTask(src, dst)
+        self.assertTrue(task.match_record(record))
 
         task.run(record)
-        self.assertFalse(task.match(record))
-        assert len(record.fields('655', {'2': 'noubomn'})) == 2
+        self.assertFalse(task.match_record(record))
+        assert record_search(record, '655', {'2': 'noubomn'}) == 2
 
     def testReplace2to2(self):
         """Replace $a : $x with $a : $x"""
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Mønstre : Dagbøker', voc),
-                                           Concept('Test to : Atlas', voc))
+
+        tasks = Job.generate_replace_tasks(Concept('650', {'a': 'Mønstre', 'x': 'Dagbøker', '2': 'noubomn'}),
+                                           Concept('650', {'a': 'Test to', 'x': 'Atlas', '2': 'noubomn'}))
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(task.match(record))
+            self.assertTrue(task.match_record(record))
             task.run(record)
-            self.assertFalse(task.match(record))
-            assert text_type(task) == 'Replace $a Mønstre $x Dagbøker with $a Test to $x Atlas in 650 $2 noubomn'
+            self.assertFalse(task.match_record(record))
+            assert strip_colors(task) == 'Replace `650 $a Mønstre $x Dagbøker $2 noubomn` → `650 $a Test to $x Atlas $2 noubomn`'
 
-        assert len(record.fields('650', {'a': 'Mønstre', 'x': 'Dagbøker', '2': 'noubomn'})) == 0
-        assert len(record.fields('650', {'a': 'Test to', 'x': 'Atlas', '2': 'noubomn'})) == 1
+        assert record_search(record, '650', {'a': 'Mønstre', 'x': 'Dagbøker', '2': 'noubomn'}) == 0
+        assert record_search(record, '650', {'a': 'Test to', 'x': 'Atlas', '2': 'noubomn'}) == 1
 
     def testReplace1to2(self):
         """Replace $a with $a : $x"""
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Mønstre', voc),
-                                           Concept('Mønstre : Test', voc))
+        tasks = Job.generate_replace_tasks(Concept('650', {'a': 'Mønstre', 'x': None, '2': 'noubomn'}),
+                                           Concept('650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'}))
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(task.match(record))
+            self.assertTrue(task.match_record(record))
             task.run(record)
-            self.assertFalse(task.match(record))
-            assert text_type(task) == 'Replace $a Mønstre with $a Mønstre $x Test in 650 $2 noubomn'
+            self.assertFalse(task.match_record(record))
+            assert strip_colors(task) == 'Replace `650 $a Mønstre $2 noubomn` → `650 $a Mønstre $x Test $2 noubomn`'
 
-        assert len(record.fields('650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'})) == 1
+        assert record_search(record, '650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'}) == 1
 
     def testReplace2to1(self):
         """Replace $a : $x with $a"""
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Mønstre : Atferd', voc),
-                                           Concept('Ost', voc))
+        tasks = Job.generate_replace_tasks(Concept('650', {'a': 'Mønstre', 'x': 'Atferd', '2': 'noubomn'}),
+                                           Concept('650', {'a': 'Ost', 'x': None, '2': 'noubomn'}))
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(task.match(record))
+            self.assertTrue(task.match_record(record))
             task.run(record)
-            self.assertFalse(task.match(record))
-            assert text_type(task) == 'Replace $a Mønstre $x Atferd with $a Ost in 650 $2 noubomn'
+            self.assertFalse(task.match_record(record))
+            assert strip_colors(task) == 'Replace `650 $a Mønstre $x Atferd $2 noubomn` → `650 $a Ost $2 noubomn`'
 
-        assert len(record.fields('650', {'a': 'Ost', '2': 'noubomn'})) == 1
+        assert record_search(record, '650', {'a': 'Ost', 'x': None, '2': 'noubomn'}) == 1
 
     def testReplace1to1(self):
         """Replace $a with $a"""
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Atferd', voc),
-                                           Concept('Testerstatning', voc))
+        tasks = Job.generate_replace_tasks(Concept('650', {'a_or_x': 'Atferd', '2': 'noubomn'}),
+                                           Concept('650', {'a_or_x': 'Testerstatning', '2': 'noubomn'}))
 
-        assert len(tasks) == 2  # one for $a, one for $x
+        assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         modified = 0
         for task in tasks:
-            self.assertTrue(task.match(record))
             modified += task.run(record)
-            self.assertFalse(task.match(record))
 
         assert modified == 3
-        assert len(record.fields('650', {'a': 'Testerstatning', '2': 'noubomn'})) == 2
-        assert len(record.fields('650', {'a': 'Testerstatning', 'x': 'Mennesker', '2': 'noubomn'})) == 1
-        assert len(record.fields('650', {'x': 'Testerstatning', '2': 'noubomn'})) == 1
-        assert len(record.fields('650', {'a': 'Mønstre', 'x': 'Testerstatning', '2': 'noubomn'})) == 1
+        assert record_search(record, '650', {'a': 'Testerstatning', '2': 'noubomn'}) == 2
+        assert record_search(record, '650', {'a': 'Testerstatning', 'x': 'Mennesker', '2': 'noubomn'}) == 1
+        assert record_search(record, '650', {'x': 'Testerstatning', '2': 'noubomn'}) == 1
+        assert record_search(record, '650', {'a': 'Mønstre', 'x': 'Testerstatning', '2': 'noubomn'}) == 1
 
-    def testReplace651(self):
-        """Replace 651 field"""
+    def testReplace648(self):
+        """Replace 648 field"""
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Mønstre', voc, '648'),
-                                           Concept('Testerstatning', voc, '648'))
+        tasks = Job.generate_replace_tasks(Concept('648', {'a_or_x': 'Mønstre', '2': 'noubomn'}),
+                                           Concept('648', {'a_or_x': 'Testerstatning', '2': 'noubomn'}))
 
-        assert len(tasks) == 2  # one for $a, one for $x
+        assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         modified = 0
         for task in tasks:
             modified += task.run(record)
 
         assert modified == 1
-        assert len(record.fields('648', {'a': 'Testerstatning', '2': 'noubomn'})) == 1
+        assert record_search(record, '648', {'a': 'Testerstatning', '2': 'noubomn'}) == 1
+
+    def testAddTask(self):
+        """Add field"""
+        record = self.getRecord()
+        task = AddTask(Concept('600', {'a': 'ABCDEF', 'd': '1983', '2': 'test'}))
+        modified = task.run(record)
+
+        assert modified == 1
+        assert record_search_exact(record, '600', {'a': 'ABCDEF', 'd': '1983', '2': 'test'}) == 1
 
     def testRemove(self):
         """Remove subject"""
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        task = DeleteTask(Concept('atferd', voc, '650'))
+        task = DeleteTask(Concept('650', {'a': 'atferd', '2': 'noubomn'}))
 
         fc0 = len(record.el.findall('.//datafield[@tag="650"]'))
         modified = task.run(record)
@@ -224,13 +264,13 @@ class TestRecord(unittest.TestCase):
     def testCaseSensitive(self):
         """Se2arch should in general be case sensitive ..."""
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('ATFerd', voc),
-                                           Concept('Testerstatning', voc))
+        tasks = Job.generate_replace_tasks(Concept('650', {'a_or_x': 'ATFerd', '2': 'noubomn'}),
+                                           Concept('650', {'a_or_x': 'Testerstatning', '2': 'noubomn'})
+                                           )
 
-        assert len(tasks) == 2  # one for $a, one for $x
+        assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         for task in tasks:
-            self.assertFalse(task.match(record))
+            self.assertFalse(task.match_record(record))
 
     def testCaseInsensitiveFirstCharacter(self):
         """
@@ -238,19 +278,21 @@ class TestRecord(unittest.TestCase):
         The replacement term should not be normalized.
         """
         record = self.getRecord()
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('atferd', voc),
-                                           Concept('testerstatning', voc))
+        tasks = Job.generate_replace_tasks(Concept('650', OrderedDict([('a_or_x', 'atferd'), ('2', 'noubomn')])),
+                                           Concept('650', OrderedDict([('a_or_x', 'testerstatning'), ('2', 'noubomn')]))
+                                           )
 
-        assert len(tasks) == 2  # one for $a, one for $x
+        for task in tasks:
+            print(task)
+
+        assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         modified = 0
         for task in tasks:
-            self.assertTrue(task.match(record))
             modified += task.run(record)
-            self.assertFalse(task.match(record))
 
-        assert text_type(tasks[0]) == 'Replace $a atferd with $a testerstatning in 650 $2 noubomn'
-        assert text_type(tasks[1]) == 'Replace $x atferd with $x testerstatning in 650 $2 noubomn'
+        assert strip_colors(tasks[0]) == 'Replace `650 $a atferd $2 noubomn` → `650 $a testerstatning $2 noubomn`'
+        assert strip_colors(tasks[1]) == 'Replace `650 $a atferd $2 noubomn` → `650 $a testerstatning $2 noubomn` (ignoring any extra subfields)'
+        assert strip_colors(tasks[2]) == 'Replace `650 $x atferd $2 noubomn` → `650 $x testerstatning $2 noubomn` (ignoring any extra subfields)'
 
         assert modified == 3
         f = record.el.xpath('.//datafield[@tag="650"]/subfield[@code="a"][text()="testerstatning"]')
@@ -261,7 +303,7 @@ class TestRecord(unittest.TestCase):
 
     def testDuplicatesAreRemoved(self):
         # If the new term already exists, don't duplicate it
-        rec = """
+        bib = Bib("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -274,25 +316,48 @@ class TestRecord(unittest.TestCase):
                   </datafield>
                 </record>
             </bib>
-        """
-        bib = Bib(Mock(), rec)
-
-        voc = Vocabulary('noubomn')
-        tasks = Job.generate_replace_tasks(Concept('Mønstre', voc),
-                                           Concept('Monstre', voc))
+        """)
 
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
 
-        modified = 0
-        for task in tasks:
-            modified += task.run(bib.marc_record)
+        modified = ReplaceTask(
+            Concept('650', {'a': 'Mønstre', '2': 'noubomn'}),
+            Concept('650', {'a': 'Monstre', '2': 'noubomn'})
+        ).run(bib.marc_record)
 
         assert modified == 1
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 1
 
+    def testDuplicatesAreRemovedIgnoreD0(self):
+        # Two fields are considered duplicates even if one doesn't have a $0 value
+        bib = Bib("""
+            <bib>
+                <record>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Mønstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                  <datafield ind1=" " ind2="7" tag="650">
+                    <subfield code="a">Monstre</subfield>
+                    <subfield code="2">noubomn</subfield>
+                  </datafield>
+                </record>
+            </bib>
+        """)
+
+        assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
+
+        modified = ReplaceTask(
+            Concept('650', {'a': 'Mønstre', '2': 'noubomn', '0': ANY_VALUE}),
+            Concept('650', {'a': 'Monstre', '2': 'noubomn', '0': '123'})
+        ).run(bib.marc_record)
+
+        assert modified == 2  # change $a, add $0
+        assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 1
+
     def testDuplicatesAreRemovedUponMoveAndFirstCharacterIsCaseInsensitive(self):
         # If the new term already exists, don't duplicate it
-        rec = """
+        bib = Bib("""
             <bib>
                 <record>
                   <datafield ind1=" " ind2="7" tag="650">
@@ -309,121 +374,118 @@ class TestRecord(unittest.TestCase):
                   </datafield>
                 </record>
             </bib>
-        """
-        bib = Bib(Mock(), rec)
+        """)
+
         assert len(bib.doc.findall('record/datafield[@tag="648"]')) == 1
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
 
-        src = Concept('Monstre', Vocabulary('noubomn'), '648')
-        task = MoveTask(src, '650')
-        task.run(bib.marc_record)
+        ReplaceTask(
+            Concept('648', {'a': 'Monstre', '2': 'noubomn'}),
+            Concept('650', {'a': 'Monstre', '2': 'noubomn'})
+        ).run(bib.marc_record)
 
         assert len(bib.doc.findall('record/datafield[@tag="648"]')) == 0
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 1
 
-    def testAddIdentifier(self):
+
+class TestRecordModifyIdentifiers(unittest.TestCase):
+
+    @staticmethod
+    def make_bib(identifier=None):
+        sf0 = ''
+        if identifier is not None:
+            sf0 = '<subfield code="0">%s</subfield>' % identifier
         rec = """
-            <bib>
+              <bib>
                 <record>
                   <datafield tag="650" ind1=" " ind2="7">
                     <subfield code="a">Middelalder</subfield>
                     <subfield code="2">noubomn</subfield>
+                    %s
                   </datafield>
                 </record>
             </bib>
-        """
-        bib = Bib(Mock(), rec)
+        """ % sf0
+        bib = Bib(rec)
 
-        voc = Vocabulary('noubomn')
-        src = Concept('Middelalder', voc)
-        dst = Concept('Middelalderen', voc)
-        dst.sf['0'] = 'REAL12345'
+        return bib
+
+    @staticmethod
+    def make_tasks(src_identifier=None, dst_identifier=None):
+        src = {'a': 'Middelalder', '2': 'noubomn'}
+        dst = {'a': 'Middelalderen', '2': 'noubomn'}
+        if src_identifier is not None:
+            src['0'] = src_identifier
+        if dst_identifier is not None:
+            dst['0'] = dst_identifier
+
+        src = Concept('650', src)
+        dst = Concept('650', dst)
         tasks = Job.generate_replace_tasks(src, dst)
 
-        for task in tasks:
-            task.run(bib.marc_record)
+        return tasks
 
+    @classmethod
+    def run_tasks(cls, bib, src_identifier=None, dst_identifier=None):
+        modifications = 0
+        for task in cls.make_tasks(src_identifier, dst_identifier):
+            modifications += task.run(bib.marc_record)
+        return modifications
+
+    @staticmethod
+    def get_term(bib):
         f650 = bib.doc.findall('record/datafield[@tag="650"]')
-        assert len(f650) == 1
-        assert 'Middelalderen' == f650[0].findtext('subfield[@code="a"]')
-        assert 'REAL12345' == f650[0].findtext('subfield[@code="0"]')
+        return f650[0].findtext('subfield[@code="a"]')
 
-    def testIdentifierShouldNotBeAddedForComponentMatches(self):
-        rec = """
-            <bib>
-                <record>
-                  <datafield tag="650" ind1=" " ind2="7">
-                    <subfield code="a">Middelalder</subfield>
-                    <subfield code="x">Kjemi</subfield>
-                    <subfield code="2">noubomn</subfield>
-                  </datafield>
-                </record>
-            </bib>
-        """
-        bib = Bib(Mock(), rec)
-
-        voc = Vocabulary('noubomn')
-        src = Concept('Middelalder', voc)
-        dst = Concept('Middelalderen', voc)
-        dst.sf['0'] = 'REAL12345'
-        tasks = Job.generate_replace_tasks(src, dst)
-
-        for task in tasks:
-            task.run(bib.marc_record)
-
+    @staticmethod
+    def get_identifier(bib):
         f650 = bib.doc.findall('record/datafield[@tag="650"]')
-        assert len(f650) == 1
-        assert 'Middelalderen' == f650[0].findtext('subfield[@code="a"]')
-        assert 'Kjemi' == f650[0].findtext('subfield[@code="x"]')
-        assert f650[0].find('subfield[@code="0"]') is None
+        return f650[0].findtext('subfield[@code="0"]')
 
-    def testModifyIdentifier(self):
-        rec = """
-            <bib>
-                <record>
-                  <datafield tag="650" ind1=" " ind2="7">
-                    <subfield code="a">Middelalder</subfield>
-                    <subfield code="2">noubomn</subfield>
-                    <subfield code="0">REAL00000</subfield>
-                  </datafield>
-                  <datafield tag="650" ind1=" " ind2="7">
-                    <subfield code="a">Middelalderen</subfield>
-                    <subfield code="2">noubomn</subfield>
-                  </datafield>
-                </record>
-            </bib>
-        """
-        bib = Bib(Mock(), rec)
+    def testAddIdentifierIfNotPresent(self):
+        # If no $0 value is present, it should be added
+        bib = self.make_bib()
+        modifications = self.run_tasks(bib, src_identifier=ANY_VALUE, dst_identifier='REAL12345')
 
-        voc = Vocabulary('noubomn')
-        src = Concept('Middelalder', voc)
-        dst = Concept('Yngre middelalder', voc)
-        dst.sf['0'] = 'REAL12345'
-        tasks = Job.generate_replace_tasks(src, dst)
+        assert modifications == 2  # (1) edit $a (2) add $0
+        assert self.get_identifier(bib) == 'REAL12345'
+        assert self.get_term(bib) == 'Middelalderen'
 
-        for task in tasks:
-            task.run(bib.marc_record)
+    def testUpdateIdentifierIfMatching(self):
+        # If the $0 value matches the one in the query, it should be updated
+        bib = self.make_bib('REAL00000')
+        modifications = self.run_tasks(bib, src_identifier='REAL00000', dst_identifier='REAL12345')
 
-        f650 = bib.doc.findall('record/datafield[@tag="650"]')
-        assert len(f650) == 2
-        assert 'Yngre middelalder' == f650[0].findtext('subfield[@code="a"]')
-        assert 'REAL12345' == f650[0].findtext('subfield[@code="0"]')
+        assert modifications == 2  # (1) edit $a (2) add $0
+        assert self.get_identifier(bib) == 'REAL12345'
+        assert self.get_term(bib) == 'Middelalderen'
 
+    def testUpdateIdentifierIfMatchingAnyValue(self):
+        # If the query contains $0 ANY_VALUE, we should replace it
+        bib = self.make_bib('REAL00000')
+        modifications = self.run_tasks(bib, src_identifier=ANY_VALUE, dst_identifier='REAL12345')
 
-class TestBib(unittest.TestCase):
+        assert modifications == 2  # (1) edit $a (2) add $0
+        assert self.get_identifier(bib) == 'REAL12345'
+        assert self.get_term(bib) == 'Middelalderen'
 
-    def testSave(self):
-        alma = Mock()
-        alma.put.return_value = '<bib><mms_id>991416299674702204</mms_id><record></record></bib>'
-        doc = get_sample('bib_response.xml')
-        bib = Bib(alma, doc)
-        src = Concept('Kryptozoologi', Vocabulary('noubomn'), '650')
-        task = MoveTask(src, '651')
-        task.run(bib.marc_record)
-        bib.save()
+    def testDontUpdateIdentifierIfNotMatching(self):
+        # If the $0 value doesn't match the one in the query, it should not be updated
+        bib = self.make_bib('REAL00000')
+        modifications = self.run_tasks(bib, src_identifier='REAL00001', dst_identifier='REAL12345')
 
-        alma.put.assert_called_once_with('/bibs/991416299674702204', data=ANY,
-                                         headers={'Content-Type': 'application/xml'})
+        assert modifications == 0  # (1) edit $a (2) add $0
+        assert self.get_identifier(bib) == 'REAL00000'
+        assert self.get_term(bib) == 'Middelalder'
+
+    def testUpdateTermEvenIfIdentifierNotDefinedInSourceQuery(self):
+        # TODO: Clarify
+        bib = self.make_bib('REAL00000')
+        modifications = self.run_tasks(bib, src_identifier=ANY_VALUE, dst_identifier='REAL00000')
+
+        assert modifications == 1  # (1) edit $a
+        assert self.get_identifier(bib) == 'REAL00000'
+        assert self.get_term(bib) == 'Middelalderen'
 
 
 class TestSruSearch(unittest.TestCase):
@@ -486,27 +548,28 @@ class TestSruSearch(unittest.TestCase):
 class TestAlma(unittest.TestCase):
 
     @responses.activate
-    def testBibs(self):
-        mms_id = '991416299674702204'
+    def testGetRecord(self):
+        id = '991416299674702204'
         alma = Alma('test', 'key')
-        url = '{}/bibs/{}'.format(alma.base_url, mms_id)
-        body = get_sample('bib_response.xml')
+        url = '{}/bibs/{}'.format(alma.base_url, id)
+        body = get_sample('bib_991416299674702204.xml')
         responses.add(responses.GET, url, body=body, content_type='application/xml')
-        alma.bibs(mms_id).marc_record
+        alma.get_record(id).marc_record
 
         assert len(responses.calls) == 1
 
     @responses.activate
-    def testPut(self):
-        mms_id = '991416299674702204'
+    def testPutRecord(self):
+        id = '991416299674702204'
         alma = Alma('test', 'key')
-        url = '/bibs/{}'.format(mms_id)
-        body = get_sample('bib_response.xml')
+        url = '/bibs/{}'.format(id)
+        body = get_sample('bib_991416299674702204.xml')
+        bib = Bib(body)
         responses.add(responses.PUT, alma.base_url + url, body=body, content_type='application/xml')
-        alma.put(url, data=body, headers={'Content-Type': 'application/xml'})
+        alma.put_record(bib)
 
         assert len(responses.calls) == 1
-        assert responses.calls[0].request.body == body
+        assert responses.calls[0].request.body.read().decode('utf-8') == body
 
 
 class TestAuthorizeTerm(unittest.TestCase):
@@ -524,18 +587,18 @@ class TestAuthorizeTerm(unittest.TestCase):
                            'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search?term={term}&tag={tag}')
         res = vocab.authorize_term('test', '650')
 
-        assert res is None
+        assert res == {}
         assert len(responses.calls) == 1
 
     @responses.activate
     def testAuthorizeTerm(self):
-        self.init('REAL123')
+        self.init('{"id": "REAL123"}')
 
         vocab = Vocabulary('skosmos_vocab',
                            'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search?term={term}&tag={tag}')
         res = vocab.authorize_term('test', '650')
 
-        assert res == 'REAL123'
+        assert res == {'id': 'REAL123'}
         assert len(responses.calls) == 1
 
     @responses.activate
@@ -546,7 +609,7 @@ class TestAuthorizeTerm(unittest.TestCase):
                            'http://data.ub.uio.no/skosmos/rest/v1/skosmos_vocab/search?term={test}&tag={tag}')
         res = vocab.authorize_term('', '650')
 
-        assert res is None
+        assert res == {}
         assert len(responses.calls) == 0
 
 
@@ -597,18 +660,21 @@ def patch_sru_search(xml_response_file):
 
 class TestJob(unittest.TestCase):
 
-    def runJob(self, sru_response, vocabulary, args):
-        self.sru = setup_sru_mock(sru_response)
+    def setUp(self):
         MockAlma = MagicMock(spec=Alma, spec_set=True)
         self.alma = MockAlma('eu', 'dummy')
+
+    def runJob(self, sru_response, vocabulary, args):
+        self.sru = setup_sru_mock(sru_response)
         conf = {
-            'vocabulary': {
+            'vocabularies': [{
                 'marc_code': vocabulary,
                 'skosmos_code': 'skosmos_vocab',
-            }
+            }],
+            'default_vocabulary': vocabulary,
         }
-        self.job = Job(sru=self.sru, alma=self.alma, **job_args(conf, parse_args(args)))
-        self.job.dry_run = True
+        self.job = Job(sru=self.sru, ils=self.alma, **job_args(conf, parse_args(args)))
+        # self.job.dry_run = True
         self.job.interactive = False
 
         # Job(self.sru, self.alma, voc, tag, term, new_term, new_tag)
@@ -621,52 +687,119 @@ class TestJob(unittest.TestCase):
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRenameFromSimpleToSimpleJob(self, authorize_term):
+        authorize_term.return_value = {}
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
-                              ['rename', 'Statistiske modeller', 'Test æøå'])
+                              ['replace', 'Statistiske modeller', 'Test æøå'])
 
         assert len(results) == 14
         assert authorize_term.called
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRenameFromSimpleToStringJob(self, authorize_term):
+        authorize_term.return_value = {}
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
-                              ['rename', 'Statistiske modeller', 'Test : æøå'])
+                              ['replace', 'Statistiske modeller', 'Test : æøå'])
 
         assert len(results) == 14
         assert authorize_term.called
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRenameFromStringToSimpleJob(self, authorize_term):
+        authorize_term.return_value = {}
         results = self.runJob('sru_sample_response_1.xml', 'tekord',
-                              ['rename', 'Økologi : Statistiske modeller', 'Test'])
+                              ['replace', 'Økologi : Statistiske modeller', 'Test'])
 
         assert len(results) == 1
         assert authorize_term.called
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testRemoveStringJob(self, authorize_term):
+        authorize_term.return_value = {}
         results = self.runJob('sru_sample_response_1.xml', 'tekord',
-                              ['delete', 'Økologi : Statistiske modeller'])
+                              ['remove', 'Økologi : Statistiske modeller'])
 
         assert len(results) == 1
         assert not authorize_term.called
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testMoveJob(self, authorize_term):
+        authorize_term.return_value = {}
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
-                              ['rename', 'Statistiske modeller', '655'])
+                              ['replace', 'Statistiske modeller', '655'])
 
         assert len(results) == 14
         assert authorize_term.called
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     def testSplitJob(self, authorize_term):
-        authorize_term.return_value = 'REAL030697'
+        authorize_term.return_value = {'id': 'REAL030697'}
         results = self.runJob('sru_sample_response_1.xml', 'noubomn',
-                              ['rename', 'Statistiske modeller', 'Statistikk', 'Modeller'])
+                              ['replace', 'Statistiske modeller', 'Statistikk', 'Modeller'])
 
         assert len(results) == 14
         assert authorize_term.called
+
+    @patch.object(Vocabulary, 'authorize_term', autospec=True)
+    def testIdentifierShouldNotBeAddedForComponentMatches(self, authorize_term):
+
+        def side_effect(*args):
+            print(args)
+            if args[1] == 'Geologi':
+                return {}
+            else:
+                return {'id': 'identifier_13245'}
+
+        authorize_term.side_effect = side_effect
+
+        def get_record(record_id):
+            bib = Bib({
+                '990715687274702201': get_sample('bib_990715687274702201.xml'),
+                '990100089184702201': get_sample('bib_990100089184702201.xml'),
+            }[record_id])
+
+            return bib
+
+        self.alma.get_record.side_effect = get_record
+
+        def put_record(record, **kwargs):
+            if '990715687274702201' == record.id:
+                assert 'identifier_13245' not in record.xml()
+                return get_sample('bib_990715687274702201.xml',)
+            if '990100089184702201' == record.id:
+                assert 'identifier_13245' not in record.xml()
+                return get_sample('bib_990100089184702201.xml',)
+
+        self.alma.put_record.side_effect = put_record
+
+        results = self.runJob('sru_sample_response_1.xml', 'tekord',
+                              ['replace', 'Geologi', 'TestReplace'])
+
+        assert len(results) == 2
+
+        self.alma.get_record.assert_called()
+        # self.alma.put.assert_called()
+
+        # assert_has_calls([
+        #     call(ANY, 'Geologi', '650'),
+        #     call(ANY, 'TestReplace', '650'),
+        # ])
+
+        # bib = Bib(rec)
+
+        # vocabularies = {'noubomn': Vocabulary('noubomn')}
+        # src = Concept({'a': 'Middelalder', '2': 'noubomn'}, vocabularies)
+        # dst = Concept({'a': 'Middelalderen', '2': 'noubomn', '0': 'REAL12345'}, vocabularies)
+
+        # tasks = Job.generate_replace_tasks(src, dst)
+
+        # for task in tasks:
+        #     task.run(bib.marc_record)
+
+        # f650 = bib.doc.findall('record/datafield[@tag="650"]')
+        # assert len(f650) == 1
+        # assert 'Middelalderen' == f650[0].findtext('subfield[@code="a"]')
+        # assert 'Kjemi' == f650[0].findtext('subfield[@code="x"]')
+        # assert f650[0].find('subfield[@code="0"]') is None
 
 
 class TestAlmar(unittest.TestCase):
@@ -674,10 +807,11 @@ class TestAlmar(unittest.TestCase):
     @staticmethod
     def conf():
         return BytesIO(dedent('''
-        vocabulary:
-          marc_code: noubomn
-          skosmos_vocab: skosmos_vocab
+        vocabularies:
+          - marc_code: noubomn
+            skosmos_vocab: skosmos_vocab
 
+        default_vocabulary: noubomn
         default_env: test_env
 
         env:
@@ -700,12 +834,12 @@ class TestAlmar(unittest.TestCase):
         term = 'Statistiske modeller'
         new_term = 'Test æøå'
         alma = MockAlma.return_value
-        mock_authorize_term.return_value = 'REAL030697'
-        main(self.conf(), ['-e test_env', '-n', 'rename', term, new_term])
+        mock_authorize_term.return_value = {'id': 'REAL030697'}
+        main(self.conf(), ['-e test_env', '-n', 'replace', term, new_term])
 
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
 
-        assert alma.bibs.call_count == 14
+        assert alma.get_record.call_count == 14
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
@@ -713,22 +847,22 @@ class TestAlmar(unittest.TestCase):
     def testMainNoHits(self, sru, MockAlma, mock_authorize_term):
         term = 'Something else'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = 'REAL030697'
+        mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
-        main(self.conf(), ['-e test_env', '-n', 'rename', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
-        assert alma.bibs.call_count == 0
+        main(self.conf(), ['-e test_env', '-n', 'replace', term, new_term])
+        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        assert alma.get_record.call_count == 0
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testRemoveTerm(self, sru, MockAlma, mock_authorize_term):
         term = 'Statistiske modeller'
-        mock_authorize_term.return_value = 'REAL030697'
+        mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
-        main(self.conf(), ['-e test_env', '-n', 'delete', term])
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
-        assert alma.bibs.call_count == 14
+        main(self.conf(), ['-e test_env', '-n', 'remove', term])
+        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        assert alma.get_record.call_count == 14
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
@@ -736,74 +870,72 @@ class TestAlmar(unittest.TestCase):
     def testDiffs(self, sru, MockAlma, mock_authorize_term):
         term = 'Matematisk biologi'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = 'REAL030697'
+        mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
 
-        doc = get_sample('bib_response2.xml')
-        bib = Bib(alma, doc)
-        alma.bibs.return_value = bib
+        doc = get_sample('bib_990705558424702201.xml')
+        bib = Bib(doc)
+        alma.get_record.return_value = bib
 
-        main(self.conf(), ['--diffs', '-e test_env', '-n', 'rename', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
-        assert alma.bibs.call_count == 1
-        assert alma.put.call_count == 1
+        main(self.conf(), ['--diffs', '-e test_env', '-n', 'replace', term, new_term])
+        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        assert alma.get_record.call_count == 1
+        assert alma.put_record.call_count == 1
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
     @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_sample_response_1.xml')
     def testListCommand(self, sru, MockAlma, mock_authorize_term):
         term = 'Matematisk biologi'
-        mock_authorize_term.return_value = 'REAL030697'
+        mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
 
-        doc = get_sample('bib_response2.xml')
-        bib = Bib(alma, doc)
-        alma.bibs.return_value = bib
+        doc = get_sample('bib_990705558424702201.xml')
+        bib = Bib(doc)
+        alma.get_record.return_value = bib
 
         main(self.conf(), ['-e test_env', '-n', 'list', term])
         sru.search.assert_called_once_with(
-            'alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
-        assert alma.bibs.call_count == 1
-        assert alma.put.call_count == 0
+            'alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        assert alma.get_record.call_count == 1
+        assert alma.put_record.call_count == 0
 
+    @responses.activate
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('almar.almar.Alma', autospec=True, spec_set=True)
+    @patch.object(Alma, 'get_record', autospec=True)
     @patch_sru_search('sru_sample_response_1.xml')
-    def testDryRun(self, sru, MockAlma, mock_authorize_term):
+    def testDryRun(self, sru, get_record, mock_authorize_term):
         term = 'Matematisk biologi'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = 'REAL030697'
-        alma = MockAlma.return_value
+        mock_authorize_term.return_value = {'id': 'REAL030697'}
 
-        doc = get_sample('bib_response2.xml')
-        bib = Bib(alma, doc)
-        alma.bibs.return_value = bib
+        doc = get_sample('bib_990705558424702201.xml')
+        get_record.return_value = Bib(doc)
 
-        main(self.conf(), ['--dry_run', '-e test_env', '-n', 'rename', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
-        assert alma.bibs.call_count == 1
-        assert alma.put.call_count == 0
+        main(self.conf(), ['--dry_run', '-e test_env', '-n', 'replace', term, new_term])
+        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        assert get_record.call_count == 1
+        assert len(responses.calls) == 0
 
+    @responses.activate
+    @patch.object(Alma, 'get_record', autospec=True)
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
-    @patch('almar.almar.Alma', autospec=True, spec_set=True)
     @patch_sru_search('sru_response_dm.xml')
-    def testCzRecord(self, sru, MockAlma, mock_authorize_term):
+    def testCzRecord(self, sru, mock_authorize_term, get_record):
         term = 'Dynamisk meteorologi'
         new_term = 'Test æøå'
-        mock_authorize_term.return_value = 'REAL030697'
-        alma = MockAlma.return_value
+        mock_authorize_term.return_value = {'id': 'REAL030697'}
 
         doc = get_sample('bib_linked_cz.xml')
-        bib = Bib(alma, doc)
+        bib = Bib(doc)
+        get_record.return_value = bib
 
-        alma.bibs.return_value = bib
-
-        main(self.conf(), ['-e test_env', '-n', 'rename', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects=="%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        main(self.conf(), ['-e test_env', '-n', 'replace', term, new_term])
+        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
 
         assert bib.cz_link is not None
-        assert alma.bibs.call_count == 2  # It did match, but...
-        assert alma.put.call_count == 0  # We're not allowed to update CZ records
+        assert get_record.call_count == 2  # It did match, but...
+        assert len(responses.calls) == 0  # We can't update CZ records
 
     @patch('almar.almar.open', autospec=True)
     @patch('almar.almar.os.path.exists', autospec=True)
@@ -812,7 +944,7 @@ class TestAlmar(unittest.TestCase):
         mock_open.side_effect = IOError('File not found')
 
         with pytest.raises(SystemExit):
-            main(args=['rename', 'old', 'new'])
+            main(args=['replace', 'old', 'new'])
 
         mock_open.assert_called_once_with('./almar.yml')
 
@@ -824,19 +956,19 @@ class TestAlmar(unittest.TestCase):
         assert term2 == 'Administrativ historie'
 
 
-class TestParseArgs(unittest.TestCase):
+class TestArgumentParsing(unittest.TestCase):
 
     def test_missing_arguments(self):
         with pytest.raises(SystemExit):
             parse_args([], None)
 
     def test_defaults(self):
-        args = parse_args(['rename', 'Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
-        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+        args = parse_args(['replace', 'Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
         assert args.env == 'test_env'
         assert args.dry_run is False
-        assert args.action == 'rename'
+        assert args.action == 'replace'
         assert args.term == 'Sekvensering'
         assert args.new_terms == ['Sekvenseringsmetoder']
 
@@ -844,62 +976,126 @@ class TestParseArgs(unittest.TestCase):
         assert jargs['source_concept'].term == 'Sekvensering'
 
     def test_unicode_input(self):
-        args = parse_args(['rename', 'Byer : Økologi', 'Byøkologi'], default_env='test_env')
+        args = parse_args(['replace', 'Byer : Økologi', 'Byøkologi'], default_env='test_env')
 
-        assert args.action == 'rename'
+        assert args.action == 'replace'
         assert args.term == 'Byer : Økologi'
         assert args.new_terms == ['Byøkologi']
         assert type(args.term) == text_type
         assert type(args.new_terms[0]) == text_type
 
-    def test_concept_parsing(self):
-        args = parse_args(['rename', '651 Sekvensering', '655 Sekvenseringsmetoder'], default_env='test_env')
-        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+    def test_tag_move(self):
+        args = parse_args(['replace', '651 Sekvensering', '655 Sekvenseringsmetoder'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
         assert jargs['source_concept'].tag == '651'
-        assert jargs['source_concept'].term == 'Sekvensering'
+        assert jargs['source_concept'].sf == {'a': 'Sekvensering', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '655'
-        assert jargs['target_concepts'][0].term == 'Sekvenseringsmetoder'
+        assert jargs['target_concepts'][0].sf == {'a': 'Sekvenseringsmetoder', '2': 'noubomn'}
 
-    def test_move_to_other_tag(self):
-        args = parse_args(['rename', '650 100 tallet f.Kr.', '648'], default_env='test_env')
-        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+    def test_tag_move_abbr(self):
+        args = parse_args(['replace', '650 100 tallet f.Kr.', '648'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
         assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].term == '100 tallet f.Kr.'
+        assert jargs['source_concept'].sf == {'a': '100 tallet f.Kr.', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '648'
-        assert jargs['target_concepts'][0].term == '100 tallet f.Kr.'
+        assert jargs['target_concepts'][0].sf == {'a': '100 tallet f.Kr.', '2': 'noubomn'}
+
+    def test_simple_to_string(self):
+        args = parse_args(['replace', 'Sekvenseringsmetoder', 'Sekvensering : Metoder'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
+
+        assert jargs['source_concept'].tag == '650'
+        assert jargs['source_concept'].sf == {'a': 'Sekvenseringsmetoder', 'x': None, '2': 'noubomn', '0': ANY_VALUE}
+
+        assert len(jargs['target_concepts']) == 1
+        assert jargs['target_concepts'][0].tag == '650'
+        assert jargs['target_concepts'][0].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn'}
+
+    def test_string_to_simple(self):
+        args = parse_args(['replace', 'Sekvensering : Metoder', 'Sekvenseringsmetoder'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
+
+        assert jargs['source_concept'].tag == '650'
+        assert jargs['source_concept'].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn', '0': ANY_VALUE}
+
+        assert len(jargs['target_concepts']) == 1
+        assert jargs['target_concepts'][0].tag == '650'
+        assert jargs['target_concepts'][0].sf == {'a': 'Sekvenseringsmetoder', 'x': None, '2': 'noubomn'}
+
+    def test_string_to_string(self):
+        args = parse_args(['replace', 'Sekvensering : Metoder', 'Metoder : Sekvensiering'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
+
+        assert jargs['source_concept'].tag == '650'
+        assert jargs['source_concept'].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn', '0': ANY_VALUE}
+
+        assert len(jargs['target_concepts']) == 1
+        assert jargs['target_concepts'][0].tag == '650'
+        assert jargs['target_concepts'][0].sf == {'a': 'Metoder', 'x': 'Sekvensiering', '2': 'noubomn'}
 
     def test_destination_tag_should_default_to_source_tag(self):
-        args = parse_args(['rename', '651 Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
-        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+        args = parse_args(['replace', '651 Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
         assert jargs['source_concept'].tag == '651'
-        assert jargs['source_concept'].term == 'Sekvensering'
+        assert jargs['source_concept'].sf == {'a_or_x': 'Sekvensering', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '651'
-        assert jargs['target_concepts'][0].term == 'Sekvenseringsmetoder'
+        assert jargs['target_concepts'][0].sf == {'a_or_x': 'Sekvenseringsmetoder', '2': 'noubomn'}
 
     def test_multiple_target_args(self):
-        args = parse_args(['rename', '651 Sekvenseringsmetoder', 'Sekvensering', 'Metoder'], default_env='test_env')
-        jargs = job_args({'vocabulary': {'marc_code': 'noubomn'}}, args)
+        args = parse_args(['replace', '651 Sekvenseringsmetoder', 'Sekvensering', 'Metoder'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
         assert jargs['source_concept'].tag == '651'
-        assert jargs['source_concept'].term == 'Sekvenseringsmetoder'
+        assert jargs['source_concept'].sf == {'a_or_x': 'Sekvenseringsmetoder', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 2
 
         assert jargs['target_concepts'][0].tag == '651'
-        assert jargs['target_concepts'][0].term == 'Sekvensering'
+        assert jargs['target_concepts'][0].sf == {'a_or_x': 'Sekvensering', '2': 'noubomn'}
 
         assert jargs['target_concepts'][1].tag == '651'
-        assert jargs['target_concepts'][1].term == 'Metoder'
+        assert jargs['target_concepts'][1].sf == {'a_or_x': 'Metoder', '2': 'noubomn'}
 
+    def test_advanced_syntax1(self):
+        args = parse_args(['replace',
+                           '650 #7 $$a Osloavtalen $$2 humord',
+                           '630 2# $$a Osloavtalen $$d 1993 $$0 90918232 $$2 bare'
+                           ], default_env='test_env')
+
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
+
+        assert jargs['source_concept'].tag == '650'
+        assert jargs['source_concept'].sf == {'a': 'Osloavtalen', 'd': None, '2': 'humord', '0': ANY_VALUE}
+
+        assert len(jargs['target_concepts']) == 1
+
+        assert jargs['target_concepts'][0].tag == '630'
+        assert jargs['target_concepts'][0].sf == {'a': 'Osloavtalen', 'd': '1993', '0': '90918232', '2': 'bare'}
+
+    def test_advanced_syntax2(self):
+        args = parse_args(['replace',
+                           '650 #7 $$a Habsburg $$2 humord',
+                           '600 3# $$a Habsburg $$c slekten $$0 90200245 $$2 bare'
+                           ], default_env='test_env')
+
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
+
+        assert jargs['source_concept'].tag == '650'
+        assert jargs['source_concept'].sf == {'a': 'Habsburg', 'c': None, '2': 'humord', '0': ANY_VALUE}
+
+        assert len(jargs['target_concepts']) == 1
+
+        assert jargs['target_concepts'][0].tag == '600'
+        assert jargs['target_concepts'][0].sf == {'a': 'Habsburg', 'c': 'slekten', '0': '90200245', '2': 'bare'}
 
 if __name__ == '__main__':
     unittest.main()

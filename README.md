@@ -28,7 +28,9 @@ Here's a minimal configuration file to start with:
 
 ```
 ---
-vocabulary:
+default_vocabulary: INSERT MARC VOCABULARY CODE HERE
+
+vocabularies:
   marc_code: INSERT MARC VOCABULARY CODE HERE
 
 default_env: prod
@@ -58,10 +60,11 @@ Here's an example:
 
 ```
 ---
-vocabulary:
-  marc_code: noubomn
-  id_service: http://data.ub.uio.no/microservices/authorize.php?vocabulary=realfagstermer&term={term}&tag={tag}
-  marc_prefix: (NO-TrBIB)
+default_vocabulary: noubomn
+
+vocabularies:
+  - marc_code: noubomn
+    id_service: http://data.ub.uio.no/microservices/authorize.php?vocabulary=realfagstermer&term={term}&tag={tag}
 
 default_env: nz_prod
 
@@ -89,21 +92,21 @@ the `vocabulary.marc_code` code set in your configuration file.
 Getting help:
 
 * `almar -h` to show help
-* `almar rename -h` to show help for the "rename" subcommand
+* `almar replace -h` to show help for the "replace" subcommand
 
-### Rename a subject heading
+### Replace a subject heading
 
 To replace "Term" with "New term" in 650 fields:
 
-    almar rename '650 Term' 'New term'
+    almar replace '650 Term' 'New term'
 
 or, since 650 is defined as the default field, you can also use the shorthand:
 
-    almar rename 'Term' 'New term'
+    almar replace 'Term' 'New term'
 
 To work with any other field than the 650 field, the field number must be explicit:
 
-    almar rename '655 Term' 'New term'`
+    almar replace '655 Term' 'New term'`
 
 Supported fields are 084, 648, 650, 651 and 655.
 
@@ -113,7 +116,7 @@ To see the changes made to each catalog record, add the `--diffs` flag. Combined
 with the `--dry_run` flag (or `-d`), you will see the changes that would be made
 to the records without actually touching any records:
 
-    almar rename --diffs --dry_run 'Term' 'New term'
+    almar replace --diffs --dry_run 'Term' 'New term'
 
 This way, you can easily get a feel for how the tool works.
 
@@ -121,26 +124,26 @@ This way, you can easily get a feel for how the tool works.
 
 To move a subject heading from 650 to 651:
 
-    almar rename '650 Term' '651 Term'
+    almar replace '650 Term' '651 Term'
 
 or you can use the shorthand
 
-    almar rename '650 Term' '651'
+    almar replace '650 Term' '651'
 
 if the term itself is the same. You can also move and change a heading in
 one operation:
 
-    almar rename '650 Term' '651 New term'
+    almar replace '650 Term' '651 New term'
 
-### Deleting a subject heading
+### Removing a subject heading
 
-To delete all 650 fields having either `$a Term` or `$x Term`:
+To remove all 650 fields having either `$a Term` or `$x Term`:
 
-    almar delete '650 Term'
+    almar remove '650 Term'
 
 or, since 650 is the default field, the shorthand:
 
-    almar delete 'Term'
+    almar remove 'Term'
 
 
 ### Listing documents
@@ -162,9 +165,10 @@ on some documents, but with "Elektriske kretser" on other, run:
 
     lokar --diffs interactive 'Kretser' 'Integrerte kretser' 'Elektriske kretser'
 
-For each document, you will be presented with the title and subject headings,
-and can make a choice of whether to (1) replace "Kretser" with "Integrerte kretser",
-(2) replace it with "Elektriske kretser", or (3) just remove "Kretser".
+For each record, Almar will print the title and subject headings and ask you
+which of the two headings to include on the record. Use the arrow keys and space
+to check one or the other, both or none of the headings, then press Enter to
+confirm the selection and save the record.
 
 ## Notes
 
@@ -176,13 +180,13 @@ and can make a choice of whether to (1) replace "Kretser" with "Integrerte krets
 
 ## Identifiers
 
-Identifiers (`$0`) are added/updated if you configure a ID lookup service URL
-(`vocabulary.id_service`) in your configuration file. The service should accept
-a GET request with the parameters "vocabulary", "term" and "tag" and return the
-identifier of the matched concept. If not found, it should return an empty or
-non-200 response. Example request:
-
-    {service-url}?vocabulary=realfagstermer&term=Diagrambasert%20resonnering&tag=650
+Identifiers (`$0`) are added/updated if you configure a
+[ID lookup service URL](https://github.com/scriptotek/almar/wiki/Authority-ID-lookup-service)
+(`id_service`) in your configuration file. The service should accept
+a GET request with the parameters `vocabulary`, `term` and `tag` and return the
+identifier of the matched concept as a JSON object. See
+[this page](https://github.com/scriptotek/almar/wiki/Authority-ID-lookup-service)
+for more details.
 
 For an example service using [Skosmos](https://github.com/NatLibFi/Skosmos), see
 [code](https://github.com/scriptotek/data.ub.uio.no/blob/v2/www/default/microservices/authorize.php)
@@ -193,12 +197,43 @@ and [demo](https://data.ub.uio.no/microservices/authorize.php?vocabulary=realfag
 
 Four kinds of string operations are currently supported:
 
-* `almar delete 'Aaa : Bbb'` deletes occurances of `$a Aaa $x Bbb`
-* `almar rename 'Aaa : Bbb' 'Ccc : Ddd'` replaces `$a Aaa $x Bbb` with `$a Ccc $x Ddd`
-* `almar rename 'Aaa : Bbb' 'Ccc'` replaces `$a Aaa $x Bbb` with `$a Ccc` (replacing subfield `$a` and removing subfield `$x`)
-* `almar rename 'Aaa' 'Bbb : Ccc'` replaces `$a Aaa` with `$a Bbb $x $Ccc` (replacing subfield `$a` and adding subfield `$x`)
+* `almar remove 'Aaa : Bbb'` deletes occurances of `$a Aaa $x Bbb`
+* `almar replace 'Aaa : Bbb' 'Ccc : Ddd'` replaces `$a Aaa $x Bbb` with `$a Ccc $x Ddd`
+* `almar replace 'Aaa : Bbb' 'Ccc'` replaces `$a Aaa $x Bbb` with `$a Ccc` (replacing subfield `$a` and removing subfield `$x`)
+* `almar replace 'Aaa' 'Bbb : Ccc'` replaces `$a Aaa` with `$a Bbb $x $Ccc` (replacing subfield `$a` and adding subfield `$x`)
 
 Note: A term is only recognized as a string if there is space before and after colon (` : `).
+
+## More complex replacements
+
+To make more complex replacements, we can use the advanced MARC syntax, where
+each argument is a complete MARC field using double `$`s as subfield delimiters.
+
+Let's start by listing documents having the subject "Advanced Composition Explorer"
+in our default vocabulary using the simple syntax:
+
+    almar list 'Advanced Composition Explorer'
+
+To get the same list using the advanced syntax, we would write:
+
+    almar list '650 #7 $$a Advanced Composition Explorer $$2 noubomn'
+
+Notice that the quotation encapsulates the entire MARC field. And that we have explicitly
+specified the vocabulary. This means we can make inter-vocabulary replacements.
+To move the term to the "bare" vocabulary:
+
+    almar replace '650 #7 $$a Advanced Composition Explorer $$2 noubomn' '610 27 $$a The Advanced Composition Explorer $$2 noubomn'
+
+We also changed the Marc tag and the field indicators in the same process.
+We could also include more subfields in the process:
+
+    almar replace '650 #7 $$a Advanced Composition Explorer $$2 noubomn' '610 27 $$a The Advanced Composition Explorer $$2 noubomn $$0 (NO-TrBIB)99023187'
+
+Note that unlike simple search and replace, the order of the subfields does not matter when matching.
+Extra subfields do matter, however, except for `$0` and `$9`. To match any value (including no value)
+for some subfield, use the value `{ANY_VALUE}`. Example:
+
+    almar list --subjects '650 #7 $$a Sekvenseringsmetoder $$x {ANY_VALUE} $$2 noubomn'
 
 ## Using it as a Python library
 

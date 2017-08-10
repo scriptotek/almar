@@ -1,13 +1,47 @@
 # coding=utf-8
+from __future__ import unicode_literals
 import difflib
 import sys
-
+from collections import OrderedDict
 import vkbeautify
 from colorama import Fore
 from lxml import etree
 from six import text_type
+import inquirer
 
-ANY_VALUE = '___any_value___'
+ANY_VALUE = '{ANY_VALUE}'
+
+
+def pick(msg, options, alpha_options=None):
+    choices = OrderedDict()
+    for i, option in enumerate(options):
+        choice_text = text_type(option)
+        choices[choice_text] = option
+    if alpha_options is not None:
+        for k, v in alpha_options.items():
+            choices[v] = k
+
+    answers = inquirer.prompt([
+        inquirer.Checkbox('whattodo', message=msg, choices=choices.keys())
+    ])
+
+    return [choices[x] for x in answers['whattodo']]
+
+
+def pick_one(msg, options, alpha_options=None):
+    choices = OrderedDict()
+    for i, option in enumerate(options):
+        choice_text = text_type(option)
+        choices[choice_text] = option
+    if alpha_options is not None:
+        for k, v in alpha_options.items():
+            choices[v] = k
+
+    answers = inquirer.prompt([
+        inquirer.List('whattodo', message=msg, choices=choices.keys())
+    ])
+
+    return choices[answers['whattodo']]
 
 
 def parse_xml(txt):
@@ -42,9 +76,25 @@ def color_diff(diff):
             yield line
 
 
+def line_marc(root):
+
+    st = []
+    for node in root.xpath('//datafield'):
+        t = '%s %s%s' % (node.get('tag'), node.get('ind1').replace(' ', '#'), node.get('ind2').replace(' ', '#'))
+        for sf in node.findall('subfield'):
+            t += ' $%s %s' % (sf.get('code'), sf.text)
+        t += '\n'
+        st.append(t)
+
+    return st
+
+
 def show_diff(src, dst):
-    src = vkbeautify.xml(src).splitlines(True)
-    dst = vkbeautify.xml(dst).splitlines(True)
+    src = line_marc(etree.fromstring(src.encode('utf-8')))
+    dst = line_marc(etree.fromstring(dst.encode('utf-8')))
+
+    # src = vkbeautify.xml(src).splitlines(True)
+    # dst = vkbeautify.xml(dst).splitlines(True)
 
     for line in color_diff(difflib.unified_diff(src, dst, fromfile='Original', tofile='Modified')):
         sys.stdout.write(line)

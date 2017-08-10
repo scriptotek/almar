@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 
 import argparse
 import getpass
+from collections import OrderedDict
+
 import colorlog
 import logging.handlers
 import re
@@ -15,11 +17,12 @@ from raven import Client
 from six import binary_type
 
 from . import __version__
-from .vocabulary import Vocabulary
+from .authorities import Vocabulary, Authorities
 from .alma import Alma
 from .concept import Concept
 from .job import Job
 from .sru import SruClient
+from .util import ANY_VALUE
 
 raven_client = None
 
@@ -33,14 +36,12 @@ console_handler.setFormatter(colorlog.ColoredFormatter(
     reset=True,
     log_colors={
         'DEBUG':    'cyan',
-        'INFO':     'green',
+        'INFO':     'white',
         'WARNING':  'red',
         'ERROR':    'red',
         'CRITICAL': 'red,bg_white',
     }))
 log.addHandler(console_handler)
-
-SUPPORTED_TAGS = ['084', '648', '650', '651', '655']
 
 
 def ensure_unicode(arg):
@@ -50,10 +51,8 @@ def ensure_unicode(arg):
 
 
 def parse_args(args, default_env=None):
-    parser = argparse.ArgumentParser(prog='almar', description='''
-            Edit or remove subject fields in Alma catalog records.
-            Supported fields: {}
-            '''.format(', '.join(SUPPORTED_TAGS)))
+    parser = argparse.ArgumentParser(prog='almar',
+                                     description='Edit or remove subject fields in Alma catalog records.')
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     parser.add_argument('-e', '--env', dest='env', nargs='?',
@@ -74,17 +73,21 @@ def parse_args(args, default_env=None):
 
     subparsers = parser.add_subparsers(title='subcommands')
 
-    # Create parser for the "move" command
-    parser_move = subparsers.add_parser('rename', help='Rename/move term')
+    # Create parser for the "replace" command
+    parser_move = subparsers.add_parser('replace', help='Replace/rename/move subject field')
+    # TODO: , aliases=['rename', 'move'] added in Python 3.5
+
     parser_move.add_argument('term', nargs=1, help='Term to search for')
     parser_move.add_argument('new_term', nargs=1, default='', help='Replacement term')
     parser_move.add_argument('new_term2', nargs='?', default='', help='Second replacement term')
-    parser_move.set_defaults(action='rename')
+    parser_move.set_defaults(action='replace')
 
-    # Create parser for the "delete" command
-    parser_del = subparsers.add_parser('delete', help='Delete term')
-    parser_del.add_argument('term', nargs=1, help='Term to delete')
-    parser_del.set_defaults(action='delete')
+    # Create parser for the "remove" command
+    parser_del = subparsers.add_parser('remove', help='Remove subject field')
+    # TODO: # , aliases=['delete'] added in Python 3.5
+
+    parser_del.add_argument('term', nargs=1, help='Term to remove')
+    parser_del.set_defaults(action='remove')
 
     # Create parser for the "interactive" command
     parser_int = subparsers.add_parser('interactive', help='Interactive reclassification')
@@ -110,9 +113,9 @@ def parse_args(args, default_env=None):
 
     args.term = args.term[0]
 
-    if args.action in ['delete', 'list']:
+    if args.action in ['remove', 'list']:
         args.new_terms = []
-    elif args.action == 'rename':
+    elif args.action == 'replace':
         args.new_terms = [args.new_term[0]]
         if args.new_term2 != '':
             args.new_terms.append(args.new_term2)
@@ -124,42 +127,183 @@ def parse_args(args, default_env=None):
     return args
 
 
-def get_concept(term, vocabulary, default_tag='650', default_term=None):
-    match = re.match('^({})$'.format('|'.join(SUPPORTED_TAGS)), term)
+def normalize_ind(value):
+    if value == '#':
+        return ' '
+    return value
+
+
+def parse_advanced_input(value):
+    m = re.match(r'^(?P<tag>[0-9]{3}) (?P<ind1>[0-9#])(?P<ind2>[0-9#]) (?P<sf>\$\$.*)$', value)
+    if not m:
+        log.error('Invalid input format')
+        sys.exit(1)
+    sf = OrderedDict()
+    for m2 in re.finditer(r'(?P<code>[a-z0-9]) (?P<val>[^\$]+)', m.group('sf')):
+        sf[m2.group('code')] = m2.group('val').strip()
+
+    if len(sf) == 0:
+        log.error('Invalid input format')
+        sys.exit(1)
+
+    return {
+        'tag': m.group('tag'),
+        'ind1': normalize_ind(m.group('ind1')),
+        'ind2': normalize_ind(m.group('ind2')),
+        'sf': sf,
+    }
+
+
+def parse_components(streng):
+    components = streng.split(' : ')
+    sf = OrderedDict()
+    if len(components) == 1:
+        sf['a_or_x'] = components[0]
+    elif len(components) == 2:
+        sf['a'] = components[0]
+        sf['x'] = components[1]
+    if len(components) > 2:
+        raise RuntimeError('Strings with more than two components are not supported')
+    return sf
+
+
+def get_concept(term, default_vocabulary, default_tag='650', default_term=None):
+
+    # 1) Advanced syntax
+    if '$$' in term:
+        return Concept(**parse_advanced_input(term))
+
+    # 2) Just tag
+    match = re.match('^([0-9]{3})$', term)
     if match:
         if default_term is None:
             raise RuntimeError('No source term specified')
-        return Concept(default_term, vocabulary, match.group(1))
+        sf = parse_components(default_term)
+        sf['2'] = default_vocabulary
+        return Concept(match.group(1), sf)
 
-    match = re.match('^({}) (.+)$'.format('|'.join(SUPPORTED_TAGS)), term)
+    # 3) Tag and term
+    match = re.match('^([0-9]{3}) (.+)$', term)
     if match:
-        return Concept(match.group(2), vocabulary, match.group(1))
+        sf = parse_components(match.group(2))
+        sf['2'] = default_vocabulary
+        return Concept(match.group(1), sf)
 
-    return Concept(term, vocabulary, default_tag)
+    # 4) Just term
+    sf = parse_components(term)
+    sf['2'] = default_vocabulary
+    return Concept(default_tag, sf)
 
 
 def job_args(config=None, args=None):
-    vocabulary = Vocabulary(ensure_unicode(config['vocabulary']['marc_code']),
-                            ensure_unicode(config['vocabulary'].get('id_service')),
-                            ensure_unicode(config['vocabulary'].get('marc_prefix', '')))
 
-    source_concept = get_concept(args.term, vocabulary)
+    vocabularies = {}
+    for vocab in config.get('vocabularies', []):
+        vocabularies[ensure_unicode(vocab['marc_code'])] = Vocabulary(
+            ensure_unicode(vocab['marc_code']),
+            ensure_unicode(vocab.get('id_service')),
+        )
+    default_vocabulary = ensure_unicode(config['default_vocabulary'])
+
+    source_concept = get_concept(args.term, default_vocabulary)
     target_concepts = []
     list_options = {}
 
-    if args.action == 'rename':
-        target_concepts.append(get_concept(args.new_terms[0], vocabulary,
+    if args.action == 'replace':
+        target_concepts.append(get_concept(args.new_terms[0], default_vocabulary,
                                            default_term=source_concept.term,
                                            default_tag=source_concept.tag))
 
         if len(args.new_terms) > 1:
-            target_concepts.append(get_concept(args.new_terms[1], vocabulary,
+            target_concepts.append(get_concept(args.new_terms[1], default_vocabulary,
                                                default_tag=source_concept.tag))
 
-    elif args.action in ['interactive', 'list']:
+    elif args.action == 'interactive':
         target_concepts = [
-            get_concept(term, vocabulary, default_tag=source_concept.tag) for term in args.new_terms
+            get_concept(term, default_vocabulary, default_tag=source_concept.tag)
+            for term in args.new_terms
         ]
+
+    """ Caveat 1:
+
+    We will do fuzzy matching (matching either $a or $x) only if both the source
+    and target supports it
+    """
+    if len(target_concepts) > 0:
+        if 'a_or_x' in source_concept.sf and 'a_or_x' not in target_concepts[0].sf:
+            source_concept.set_a_or_x_to('a')
+
+        if 'a_or_x' in target_concepts[0].sf and 'a_or_x' not in source_concept.sf:
+            target_concepts[0].set_a_or_x_to('a')
+
+    """ Caveat 2:
+
+    If a tag move is involved, avoid fuzzy matching
+    """
+    if len(target_concepts) > 0:
+        if source_concept.tag != target_concepts[0].tag:
+            if 'a_or_x' in source_concept.sf:
+                source_concept.set_a_or_x_to('a')
+            if 'a_or_x' in target_concepts[0].sf:
+                target_concepts[0].set_a_or_x_to('a')
+
+    """ Caveat 3a:
+
+    If a subfield exists in the source query, but not in the target query,
+    we interpret that as a request for removing the subfield.
+    As an example, the command
+
+        almar replace '650 $$a TermA $$b TermB' '650 $$a TermC'
+
+    should replace 'TermA' with 'TermC' in $$a and remove $$b.
+
+    Developer note: This should be run before caveat 4 below, since we don't
+    want to remove identifiers! (This is covered by tests)
+    """
+    for target_concept in target_concepts:
+        # loop over all target concepts because of InteractiveReplaceTask
+        for code in source_concept.sf:
+            if not target_concept.has_subfield(code) and code != '0':
+                log.debug('Adding explicit "%s: None" to target concept %s', code, target_concept)
+                target_concept.sf[code] = None  # meaning NO_VALUE
+
+    """ Caveat 3b:
+
+    If a subfield (except for $0) exists in the target query, but not in the
+    source query, we should not match fields already having some value for
+    that subfield. As an example, the command
+
+        almar replace '650 $$a TermA' '650 $$a TermB $$b TermC'
+
+    should not match fields having '650 $$a TermA $$b SomeValue'
+
+    Note: If there are multiple targets with varying number of components,
+    this still applies for any subfield found in *any* of the targets. E.g.
+
+        almar replace '650 $$a TermA' '650 $$a TermB' '650 $$a TermB $$b TermC'
+
+    would not match '650 $$a TermA $$b SomeValue' Could this be counterintuitive?
+
+    Developer note: This should be run before caveat 4 below
+    """
+    for target_concept in target_concepts:
+        # loop over all target concepts because of InteractiveReplaceTask
+        for code in target_concept.sf:
+            if not source_concept.has_subfield(code) and code != '0':
+                log.debug('Adding explicit "%s: None" to source concept %s', code, source_concept)
+                source_concept.sf[code] = None  # meaning NO_VALUE
+
+    """ Caveat 4:
+
+    Some fields will have $0 values, but many won't, so we cannot require
+    a $0 value at this point. If you want to match only fields with a given
+    $0 value, use the advanced syntax:
+
+        almar replace '650 $$a Test $$b Test $$0 identifer' ...
+
+    """
+    if '0' not in source_concept.sf:
+        source_concept.sf['0'] = ANY_VALUE
 
     if args.action == 'list':
         list_options['show_titles'] = args.show_titles
@@ -170,6 +314,7 @@ def job_args(config=None, args=None):
         'source_concept': source_concept,
         'target_concepts': target_concepts,
         'list_options': list_options,
+        'authorities': Authorities(vocabularies)
     }
 
 
@@ -212,10 +357,12 @@ def main(config=None, args=None):
             }})
 
         args = parse_args(args or sys.argv[1:], config.get('default_env'))
-        jargs = job_args(config, args)
 
         if args.verbose:
+            # Do this as early as possible
             log.setLevel(logging.DEBUG)
+
+        jargs = job_args(config, args)
 
         if not args.dry_run:
             file_handler = logging.FileHandler('almar.log')
@@ -239,9 +386,9 @@ def main(config=None, args=None):
         env = get_env(config, args)
 
         sru = SruClient(env['sru_url'], args.env)
-        alma = Alma(env['api_region'], env['api_key'], args.env)
+        alma = Alma(env['api_region'], env['api_key'], args.env, dry_run=args.dry_run)
 
-        job = Job(sru=sru, alma=alma, **jargs)
+        job = Job(sru=sru, ils=alma, **jargs)
         job.dry_run = args.dry_run
         job.interactive = not args.non_interactive
         job.verbose = args.verbose

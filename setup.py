@@ -32,11 +32,16 @@ setup(name='almar',
                         'raven',
                         'vkbeautify',
                         'lxml',
-                        'pick',
+                        'inquirer',
                         ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest', 'pytest-pep8', 'pytest-cov', 'responses', 'mock'],
       entry_points={'console_scripts': ['almar=almar.almar:main']},
+      options={
+          'build_scripts': {
+              'executable': '/usr/bin/env python',
+          },
+      },
       packages=['almar']
       # data_files=[(AppDirs('Lokar').user_config_dir, ['almar.cfg'])]
       )
