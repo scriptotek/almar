@@ -6,7 +6,7 @@ import six
 from colorama import Fore, Back, Style
 from six import python_2_unicode_compatible
 from copy import deepcopy
-
+import time
 from .concept import Concept
 from .util import ANY_VALUE, normalize_term, pick
 
@@ -86,21 +86,27 @@ class InteractiveReplaceTask(Task):
           field "$a Fish $x Behaviour".
     """
 
-    def __init__(self, source, targets):
+    def __init__(self, source, targets, ignore_extra_subfields=False):
         self.source = deepcopy(source)
+        self.source.set_a_or_x_to('a')
         self.targets = deepcopy(targets)
+        for target in self.targets:
+            target.set_a_or_x_to('a')
+        self.ignore_extra_subfields = ignore_extra_subfields
 
     def _run(self, marc_record):
         print()
+        time.sleep(1)
         print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
-        for field in marc_record.fields(self.source.tag, {}):
-            if field.subfield_text('2') == self.source.sf['2']:
-                if field.match(self.make_query()):
-                    print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+        for field in marc_record.fields:
+            if field.tag.startswith('6'):
+                if field.sf('2') == self.source.sf['2']:
+                    if field.match(self.source):
+                        print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                    else:
+                        print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
                 else:
-                    print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
-            else:
-                print('    {}'.format(field))
+                    print('    {}'.format(field))
 
         while True:
             targets = pick('Make a selection (or press Ctrl-C to abort)', self.targets, OrderedDict((
@@ -117,9 +123,9 @@ class InteractiveReplaceTask(Task):
 
         tasks = []
         if 'REMOVE' in targets:
-            tasks.append(DeleteTask(self.source))
+            tasks.append(DeleteTask(self.source, ignore_extra_subfields=self.ignore_extra_subfields))
         else:
-            tasks.append(ReplaceTask(self.source, targets[0]))
+            tasks.append(ReplaceTask(self.source, targets[0], ignore_extra_subfields=self.ignore_extra_subfields))
             for target in targets[1:]:
                 tasks.append(AddTask(target))
 
