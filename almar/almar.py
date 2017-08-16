@@ -6,6 +6,7 @@ import getpass
 from collections import OrderedDict
 
 import colorlog
+import colorama
 import logging.handlers
 import re
 import os
@@ -30,17 +31,26 @@ log = logging.getLogger()
 log.setLevel(logging.INFO)
 logging.getLogger('requests').setLevel(logging.WARNING)
 console_handler = logging.StreamHandler()
-console_handler.setFormatter(colorlog.ColoredFormatter(
-    '%(asctime)s %(log_color)s%(levelname)-8s%(reset)s %(message)s',
-    datefmt='%Y-%m-%d %H:%I:%S',
-    reset=True,
-    log_colors={
-        'DEBUG':    'cyan',
-        'INFO':     'white',
-        'WARNING':  'red',
-        'ERROR':    'red',
-        'CRITICAL': 'red,bg_white',
-    }))
+if sys.stdout.isatty():
+    colorama.init(autoreset=True)
+    console_handler.setFormatter(colorlog.ColoredFormatter(
+        '%(asctime)s %(log_color)s%(levelname)-8s%(reset)s %(message)s',
+        datefmt='%Y-%m-%d %H:%I:%S',
+        reset=True,
+        log_colors={
+            'DEBUG':    'cyan',
+            'INFO':     'white',
+            'WARNING':  'red',
+            'ERROR':    'red',
+            'CRITICAL': 'red,bg_white',
+        }))
+else:
+    # We're being piped, so skip colors
+    colorama.init(strip=True)
+    console_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)-8s %(message)s',
+        datefmt='%Y-%m-%d %H:%I:%S'
+    ))
 log.addHandler(console_handler)
 
 

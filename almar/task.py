@@ -97,16 +97,16 @@ class InteractiveReplaceTask(Task):
     def _run(self, marc_record):
         print()
         time.sleep(1)
-        print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
+        print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL).encode('utf-8'))
         for field in marc_record.fields:
             if field.tag.startswith('6'):
                 if field.sf('2') == self.source.sf['2']:
                     if field.match(self.source):
-                        print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL).encode('utf-8'))
                     else:
-                        print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL).encode('utf-8'))
                 else:
-                    print('    {}'.format(field))
+                    print('    {}'.format(field).encode('utf-8'))
 
         while True:
             targets = pick('Make a selection (or press Ctrl-C to abort)', self.targets, OrderedDict((
@@ -163,17 +163,17 @@ class ListTask(Task):
 
     def _run(self, marc_record):
         if self.show_titles:
-            print('%s\t%s' % (marc_record.id, marc_record.title()))
+            print('{}\t{}'.format(marc_record.id, marc_record.title()).encode('utf-8'))
         else:
-            print(marc_record.id)
+            print(marc_record.id.encode('utf-8'))
 
         if self.show_subjects:
             for field in marc_record.fields:
                 if field.tag.startswith('6'):
                     if field.sf('2') == self.source.sf['2']:
-                        print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL).encode('utf-8'))
                     else:
-                        print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
+                        print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL).encode('utf-8'))
 
         return 0  # No, we didn't modify anything
 

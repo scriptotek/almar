@@ -124,9 +124,9 @@ class Job(object):
         if self.ils.name is not None:
             log.info('Alma environment: %s', self.ils.name)
 
-        print('Planned steps:')
+        log.debug('Planned steps:')
         for i, step in enumerate(self.steps):
-            print(' %d. %s' % ((i + 1), step))
+            log.debug(' %d. %s' % ((i + 1), step))
 
         if self.dry_run:
             log.info('Dry run: No catalog records will be touched!')
