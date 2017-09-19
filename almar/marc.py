@@ -251,7 +251,7 @@ class Record(object):
         matches = list(self.search(concept, ignore_extra_subfields))
         if len(matches) > 1:
             # Sort fields with $0 first, since we prefer to keep those
-            matches = sorted(matches, key=lambda x: x.sf('0'), reverse=True)
+            matches = sorted(matches, key=lambda x: x.sf('0') or '', reverse=True)
             for match in matches[1:]:
                 log.info('Target subject already existed on the record, ignoring duplicate: %s', match)
                 self.remove_field(match)
