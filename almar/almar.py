@@ -81,6 +81,11 @@ def parse_args(args, default_env=None):
     parser.add_argument('--diffs', dest='show_diffs', action='store_true',
                         help='Show diffs before saving.')
 
+    parser.add_argument('--cql', dest='cql_query', nargs='?',
+                        help='Custom CQL query to specify which records to be checked. ' +
+                        'Example: --cql \'alma.all_for_ui = "some identifier"\''
+                        )
+
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Create parser for the "replace" command
@@ -324,6 +329,7 @@ def job_args(config=None, args=None):
         'source_concept': source_concept,
         'target_concepts': target_concepts,
         'list_options': list_options,
+        'cql_query': args.cql_query,
         'authorities': Authorities(vocabularies)
     }
 

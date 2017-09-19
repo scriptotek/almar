@@ -17,7 +17,7 @@ formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt
 
 class Job(object):
     def __init__(self, action, source_concept, target_concepts=None, sru=None, ils=None,
-                 list_options=None, authorities=None):
+                 list_options=None, authorities=None, cql_query=None):
 
         self.dry_run = False
         self.interactive = True
@@ -43,6 +43,9 @@ class Job(object):
         log.debug('Source concept: %s', source_concept)
         for target_concept in target_concepts:
             log.debug('Target concept: %s', target_concept)
+
+        cql_query = cql_query or 'alma.subjects = "{term}" AND alma.authority_vocabulary = "{vocabulary}"'
+        self.cql_query = cql_query.format(term=self.source_concept.term, vocabulary=self.source_concept.sf['2'])
 
         self.steps = []
         self.generate_steps()
@@ -142,11 +145,9 @@ class Job(object):
 
         valid_records = set()
         pbar = None
-        cql_query = 'alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (self.source_concept.term,
-                                                                                   self.source_concept.sf['2'])
 
         try:
-            for marc_record in self.sru.search(cql_query):
+            for marc_record in self.sru.search(self.cql_query):
                 if pbar is None and self.show_progress and self.sru.num_records > 50:
                     pbar = tqdm(total=self.sru.num_records, desc='Filtering SRU results')
 

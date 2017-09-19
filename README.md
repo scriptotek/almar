@@ -170,6 +170,17 @@ which of the two headings to include on the record. Use the arrow keys and space
 to check one or the other, both or none of the headings, then press Enter to
 confirm the selection and save the record.
 
+### Working with a custom document set
+
+By default, `almar` will check all the documents returned from the following
+CQL query: `alma.subjects = "{term}" AND alma.authority_vocabulary = "{vocabulary}"`,
+but you can use the `--cql` argument to specify a different query if you only
+want to work with a subset of the documents. For instance,
+
+    lokar --cql 'alma.all_for_ui = "999707921404702201"' --diffs replace 'Some subject' 'Some other subject'
+
+The variables `{term}` and `{vocabulary}` can be used in the query string.
+
 ## Notes
 
 * For terms consisting of more than one word, you must add quotation marks (single or double)
