@@ -20,7 +20,7 @@ from functools import wraps
 from textwrap import dedent
 
 from almar.bib import Bib
-from almar.almar import main, job_args, parse_args, log
+from almar.almar import main, job_args, parse_args, log, get_concept
 from almar.authorities import Vocabulary
 from almar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from almar.alma import Alma
@@ -124,7 +124,7 @@ class TestRecord(unittest.TestCase):
         4th and 6th value should match because we didn't restrict to $x: None
         The rest should not match because of $a or tag != 650
         """
-        concept = Concept('650', {'2': 'noubomn', 'a': 'Mønstre'})
+        concept = Concept('650', OrderedDict((('2', 'noubomn'), ('a', 'Mønstre'))))
         fields1 = list(self.getRecord().search(concept, ignore_extra_subfields=False))
         fields2 = list(self.getRecord().search(concept, ignore_extra_subfields=True))
 
@@ -136,7 +136,7 @@ class TestRecord(unittest.TestCase):
         4th field should match because of $x
         The rest should not match because of $a or tag != 650
         """
-        concept = Concept('650', {'2': 'noubomn', 'x': 'Atferd'})
+        concept = Concept('650', OrderedDict((('2', 'noubomn'), ('x', 'Atferd'))))
         fields1 = list(self.getRecord().search(concept, ignore_extra_subfields=False))
         fields2 = list(self.getRecord().search(concept, ignore_extra_subfields=True))
 
@@ -153,8 +153,8 @@ class TestRecord(unittest.TestCase):
         record = self.getRecord()
         assert record_search(record, '655', {'2': 'noubomn'}) == 1
 
-        src = Concept('650', {'a': 'Atferd', '2': 'noubomn'})
-        dst = Concept('655', {'a': 'Atferd', '2': 'noubomn'})
+        src = Concept('650', OrderedDict((('a', 'Atferd'), ('2', 'noubomn'))))
+        dst = Concept('655', OrderedDict((('a', 'Atferd'), ('2', 'noubomn'))))
         task = ReplaceTask(src, dst)
         self.assertTrue(task.match_record(record))
 
@@ -166,8 +166,8 @@ class TestRecord(unittest.TestCase):
         """Replace $a : $x with $a : $x"""
         record = self.getRecord()
 
-        tasks = Job.generate_replace_tasks(Concept('650', {'a': 'Mønstre', 'x': 'Dagbøker', '2': 'noubomn'}),
-                                           Concept('650', {'a': 'Test to', 'x': 'Atlas', '2': 'noubomn'}))
+        tasks = Job.generate_replace_tasks(Concept('650', OrderedDict((('a', 'Mønstre'), ('x', 'Dagbøker'), ('2', 'noubomn')))),
+                                           Concept('650', OrderedDict((('a', 'Test to'), ('x', 'Atlas'), ('2', 'noubomn')))))
 
         assert len(tasks) == 1
         for task in tasks:
@@ -182,8 +182,8 @@ class TestRecord(unittest.TestCase):
     def testReplace1to2(self):
         """Replace $a with $a : $x"""
         record = self.getRecord()
-        tasks = Job.generate_replace_tasks(Concept('650', {'a': 'Mønstre', 'x': None, '2': 'noubomn'}),
-                                           Concept('650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'}))
+        tasks = Job.generate_replace_tasks(Concept('650', OrderedDict((('a', 'Mønstre'), ('x', None), ('2', 'noubomn')))),
+                                           Concept('650', OrderedDict((('a', 'Mønstre'), ('x', 'Test'), ('2', 'noubomn')))))
 
         assert len(tasks) == 1
         for task in tasks:
@@ -192,13 +192,15 @@ class TestRecord(unittest.TestCase):
             self.assertFalse(task.match_record(record))
             assert strip_colors(task) == 'Replace `650 $a Mønstre $2 noubomn` → `650 $a Mønstre $x Test $2 noubomn`'
 
-        assert record_search(record, '650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'}) == 1
+        fields = list(record.search(Concept('650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'}), ignore_extra_subfields=True))
+        assert len(fields) == 1
+        assert text_type(fields[0]) == '650 #7 $a Mønstre $x Test $2 noubomn'  # this really is a tests for the order of arguments
 
     def testReplace2to1(self):
         """Replace $a : $x with $a"""
         record = self.getRecord()
-        tasks = Job.generate_replace_tasks(Concept('650', {'a': 'Mønstre', 'x': 'Atferd', '2': 'noubomn'}),
-                                           Concept('650', {'a': 'Ost', 'x': None, '2': 'noubomn'}))
+        tasks = Job.generate_replace_tasks(Concept('650', OrderedDict((('a', 'Mønstre'), ('x', 'Atferd'), ('2', 'noubomn')))),
+                                           Concept('650', OrderedDict((('a', 'Ost'), ('x', None), ('2', 'noubomn')))))
 
         assert len(tasks) == 1
         for task in tasks:
@@ -212,8 +214,8 @@ class TestRecord(unittest.TestCase):
     def testReplace1to1(self):
         """Replace $a with $a"""
         record = self.getRecord()
-        tasks = Job.generate_replace_tasks(Concept('650', {'a_or_x': 'Atferd', '2': 'noubomn'}),
-                                           Concept('650', {'a_or_x': 'Testerstatning', '2': 'noubomn'}))
+        tasks = Job.generate_replace_tasks(Concept('650', OrderedDict((('a_or_x', 'Atferd'), ('2', 'noubomn')))),
+                                           Concept('650', OrderedDict((('a_or_x', 'Testerstatning'), ('2', 'noubomn')))))
 
         assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         modified = 0
@@ -229,8 +231,8 @@ class TestRecord(unittest.TestCase):
     def testReplace648(self):
         """Replace 648 field"""
         record = self.getRecord()
-        tasks = Job.generate_replace_tasks(Concept('648', {'a_or_x': 'Mønstre', '2': 'noubomn'}),
-                                           Concept('648', {'a_or_x': 'Testerstatning', '2': 'noubomn'}))
+        tasks = Job.generate_replace_tasks(Concept('648', OrderedDict((('a_or_x', 'Mønstre'), ('2', 'noubomn')))),
+                                           Concept('648', OrderedDict((('a_or_x', 'Testerstatning'), ('2', 'noubomn')))))
 
         assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         modified = 0
@@ -243,7 +245,7 @@ class TestRecord(unittest.TestCase):
     def testAddTask(self):
         """Add field"""
         record = self.getRecord()
-        task = AddTask(Concept('600', {'a': 'ABCDEF', 'd': '1983', '2': 'test'}))
+        task = AddTask(Concept('600', OrderedDict((('a', 'ABCDEF'), ('d', '1983'), ('2', 'test')))))
         modified = task.run(record)
 
         assert modified == 1
@@ -252,7 +254,7 @@ class TestRecord(unittest.TestCase):
     def testRemove(self):
         """Remove subject"""
         record = self.getRecord()
-        task = DeleteTask(Concept('650', {'a': 'atferd', '2': 'noubomn'}))
+        task = DeleteTask(Concept('650', OrderedDict((('a', 'atferd'), ('2', 'noubomn')))))
 
         fc0 = len(record.el.findall('.//datafield[@tag="650"]'))
         modified = task.run(record)
@@ -264,8 +266,8 @@ class TestRecord(unittest.TestCase):
     def testCaseSensitive(self):
         """Se2arch should in general be case sensitive ..."""
         record = self.getRecord()
-        tasks = Job.generate_replace_tasks(Concept('650', {'a_or_x': 'ATFerd', '2': 'noubomn'}),
-                                           Concept('650', {'a_or_x': 'Testerstatning', '2': 'noubomn'})
+        tasks = Job.generate_replace_tasks(Concept('650', OrderedDict((('a_or_x', 'ATFerd'), ('2', 'noubomn')))),
+                                           Concept('650', OrderedDict((('a_or_x', 'Testerstatning'), ('2', 'noubomn'))))
                                            )
 
         assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
@@ -278,8 +280,8 @@ class TestRecord(unittest.TestCase):
         The replacement term should not be normalized.
         """
         record = self.getRecord()
-        tasks = Job.generate_replace_tasks(Concept('650', OrderedDict([('a_or_x', 'atferd'), ('2', 'noubomn')])),
-                                           Concept('650', OrderedDict([('a_or_x', 'testerstatning'), ('2', 'noubomn')]))
+        tasks = Job.generate_replace_tasks(get_concept('650 atferd', 'noubomn'),
+                                           get_concept('650 testerstatning', 'noubomn')
                                            )
 
         for task in tasks:
@@ -321,8 +323,8 @@ class TestRecord(unittest.TestCase):
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
 
         modified = ReplaceTask(
-            Concept('650', {'a': 'Mønstre', '2': 'noubomn'}),
-            Concept('650', {'a': 'Monstre', '2': 'noubomn'})
+            Concept('650', OrderedDict((('a', 'Mønstre'), ('2', 'noubomn')))),
+            Concept('650', OrderedDict((('a', 'Monstre'), ('2', 'noubomn'))))
         ).run(bib.marc_record)
 
         assert modified == 1
@@ -348,8 +350,8 @@ class TestRecord(unittest.TestCase):
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
 
         modified = ReplaceTask(
-            Concept('650', {'a': 'Mønstre', '2': 'noubomn', '0': ANY_VALUE}),
-            Concept('650', {'a': 'Monstre', '2': 'noubomn', '0': '123'})
+            Concept('650', OrderedDict({'a': 'Mønstre', '2': 'noubomn', '0': ANY_VALUE})),
+            Concept('650', OrderedDict((('a', 'Monstre'), ('2', 'noubomn'), ('0', '123'))))
         ).run(bib.marc_record)
 
         assert modified == 2  # change $a, add $0
@@ -380,8 +382,8 @@ class TestRecord(unittest.TestCase):
         assert len(bib.doc.findall('record/datafield[@tag="650"]')) == 2
 
         ReplaceTask(
-            Concept('648', {'a': 'Monstre', '2': 'noubomn'}),
-            Concept('650', {'a': 'Monstre', '2': 'noubomn'})
+            Concept('648', OrderedDict((('a', 'Monstre'), ('2', 'noubomn')))),
+            Concept('650', OrderedDict((('a', 'Monstre'), ('2', 'noubomn'))))
         ).run(bib.marc_record)
 
         assert len(bib.doc.findall('record/datafield[@tag="648"]')) == 0
@@ -1011,11 +1013,22 @@ class TestArgumentParsing(unittest.TestCase):
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
         assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].sf == {'a': 'Sekvenseringsmetoder', 'x': None, '2': 'noubomn', '0': ANY_VALUE}
+        # Does not have to be ordered
+        assert jargs['source_concept'].sf == dict((
+            ('a', 'Sekvenseringsmetoder'),
+            ('x', None),
+            ('2', 'noubomn'),
+            ('0', ANY_VALUE),
+        ))
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '650'
-        assert jargs['target_concepts'][0].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn'}
+        # Must be ordered
+        assert jargs['target_concepts'][0].sf == OrderedDict((
+            ('a', 'Sekvensering'),
+            ('x', 'Metoder'),
+            ('2', 'noubomn'),
+        ))
 
     def test_string_to_simple(self):
         args = parse_args(['replace', 'Sekvensering : Metoder', 'Sekvenseringsmetoder'], default_env='test_env')
