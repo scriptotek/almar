@@ -91,7 +91,7 @@ the `vocabulary.marc_code` code set in your configuration file.
 
 Getting help:
 
-* `almar -h` to show help
+* `almar -h` to show a list of command and general command line options
 * `almar replace -h` to show help for the "replace" subcommand
 
 ### Replace a subject heading
