@@ -166,9 +166,10 @@ class Field(object):
         modified = 0
         idx = 0
 
-        for code, source_value in source.sf.items():
-            target_value = target.sf.get(code)
+        for code, target_value in target.sf.items():
+            source_value = source.sf.get(code)
             found_subfield = False
+
             for subfield in self.get_subfields(code):
                 if term_match(source_value, subfield.text):
                     found_subfield = True
