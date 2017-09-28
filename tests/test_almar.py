@@ -11,6 +11,7 @@ from collections import OrderedDict
 import pytest
 import responses
 import logging
+import yaml
 from mock import Mock, MagicMock, patch, ANY, call
 from io import BytesIO
 from io import open
@@ -20,7 +21,7 @@ from functools import wraps
 from textwrap import dedent
 
 from almar.bib import Bib
-from almar.almar import main, job_args, parse_args, log, get_concept
+from almar.almar import run, get_config, job_args, parse_args, log, get_concept
 from almar.authorities import Vocabulary
 from almar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from almar.alma import Alma
@@ -823,6 +824,10 @@ class TestAlmar(unittest.TestCase):
             sru_url: https://sandbox-eu.alma.exlibrisgroup.com/view/sru/DUMMY_SITE
         ''').encode('utf-8'))
 
+    @classmethod
+    def conf_obj(cls):
+        return yaml.load(cls.conf())
+
     @staticmethod
     def sru_search_mock(*args, **kwargs):
         recs = get_sample('sru_sample_response_1.xml', True).findall('srw:records/srw:record/srw:recordData/record', NSMAP)
@@ -837,7 +842,7 @@ class TestAlmar(unittest.TestCase):
         new_term = 'Test æøå'
         alma = MockAlma.return_value
         mock_authorize_term.return_value = {'id': 'REAL030697'}
-        main(self.conf(), ['-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
 
         sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
 
@@ -851,7 +856,7 @@ class TestAlmar(unittest.TestCase):
         new_term = 'Test æøå'
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
-        main(self.conf(), ['-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
         sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.get_record.call_count == 0
 
@@ -862,7 +867,7 @@ class TestAlmar(unittest.TestCase):
         term = 'Statistiske modeller'
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
-        main(self.conf(), ['-e test_env', '-n', 'remove', term])
+        run(self.conf_obj(), ['-e test_env', '-n', 'remove', term])
         sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.get_record.call_count == 14
 
@@ -879,7 +884,7 @@ class TestAlmar(unittest.TestCase):
         bib = Bib(doc)
         alma.get_record.return_value = bib
 
-        main(self.conf(), ['--diffs', '-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), ['--diffs', '-e test_env', '-n', 'replace', term, new_term])
         sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.get_record.call_count == 1
         assert alma.put_record.call_count == 1
@@ -896,7 +901,7 @@ class TestAlmar(unittest.TestCase):
         bib = Bib(doc)
         alma.get_record.return_value = bib
 
-        main(self.conf(), ['-e test_env', '-n', 'list', term])
+        run(self.conf_obj(), ['-e test_env', '-n', 'list', term])
         sru.search.assert_called_once_with(
             'alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert alma.get_record.call_count == 1
@@ -914,7 +919,7 @@ class TestAlmar(unittest.TestCase):
         doc = get_sample('bib_990705558424702201.xml')
         get_record.return_value = Bib(doc)
 
-        main(self.conf(), ['--dry_run', '-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), ['--dry_run', '-e test_env', '-n', 'replace', term, new_term])
         sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
         assert get_record.call_count == 1
         assert len(responses.calls) == 0
@@ -932,7 +937,7 @@ class TestAlmar(unittest.TestCase):
         bib = Bib(doc)
         get_record.return_value = bib
 
-        main(self.conf(), ['-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
         sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
 
         assert bib.cz_link is not None
@@ -946,7 +951,7 @@ class TestAlmar(unittest.TestCase):
         mock_open.side_effect = IOError('File not found')
 
         with pytest.raises(SystemExit):
-            main(args=['replace', 'old', 'new'])
+            get_config()
 
         mock_open.assert_called_once_with('./almar.yml')
 
@@ -1111,4 +1116,4 @@ class TestArgumentParsing(unittest.TestCase):
         assert jargs['target_concepts'][0].sf == {'a': 'Habsburg', 'c': 'slekten', '0': '90200245', '2': 'bare'}
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.run()

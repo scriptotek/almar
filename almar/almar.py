@@ -342,26 +342,23 @@ def get_config_filename():
             return filename
 
 
-def get_config(config=None):
-    if config is not None:
-        return config
+def get_config():
     filename = get_config_filename()
     if filename is None:
         log.error('Could not find "almar.yml" configuration file. See https://github.com/scriptotek/almar for help.')
         sys.exit(1)
-
     try:
-        return open(filename)
+        with open(filename) as fp:
+            config = yaml.load(fp)
     except IOError:
         log.error('Could not read configuration file "%s"', filename)
         sys.exit(1)
 
+    return config
 
-def main(config=None, args=None):
+
+def run(config, argv):
     global raven_client
-
-    with get_config(config) as fp:
-        config = yaml.load(fp)
 
     username = getpass.getuser()
     log.info('Running as %s', username)
@@ -372,7 +369,7 @@ def main(config=None, args=None):
                 'username': username
             }})
 
-        args = parse_args(args or sys.argv[1:], config.get('default_env'))
+        args = parse_args(argv, config.get('default_env'))
 
         if args.verbose:
             # Do this as early as possible
@@ -404,6 +401,8 @@ def main(config=None, args=None):
         sru = SruClient(env['sru_url'], args.env)
         alma = Alma(env['api_region'], env['api_key'], args.env, dry_run=args.dry_run)
 
+        log.info('Starting job: %s', ' '.join(argv))
+
         job = Job(sru=sru, ils=alma, **jargs)
         job.dry_run = args.dry_run
         job.interactive = not args.non_interactive
@@ -417,6 +416,10 @@ def main(config=None, args=None):
         if raven_client is not None:
             raven_client.captureException()
         log.exception('Uncaught exception:')
+
+
+def main():
+    run(get_config(), sys.argv[1:])
 
 
 if __name__ == '__main__':
