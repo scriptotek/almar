@@ -7,7 +7,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.md')).read()
 
 setup(name='almar',
-      version='0.6.1',
+      version='0.6.2',
       description='Search and replace for subject fields in Alma records.',
       long_description=README,
       classifiers=[
