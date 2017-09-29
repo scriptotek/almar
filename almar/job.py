@@ -26,6 +26,9 @@ class Job(object):
         self.show_diffs = False
         self.list_options = list_options or {}
 
+        self.records_changed = 0
+        self.changes_made = 0
+
         self.sru = sru
         self.ils = ils
         self.authorities = authorities
@@ -103,14 +106,20 @@ class Job(object):
                 self.steps.append(AddTask(target_concept))
 
     def update_record(self, record):
-        modified = 0
+        """
+        Update the record and save it back to Alma if any changes were made.
+        Returns the number of changes made.
+        """
+        changes = 0
         for step in self.steps:
-            modified += step.run(record.marc_record)
+            changes += step.run(record.marc_record)
 
-        if modified == 0:
-            return
+        if changes == 0:
+            return 0
 
         self.ils.put_record(record, interactive=self.interactive, diff=self.show_diffs)
+
+        return changes
 
     def authorize(self):
         if self.action in ['remove']:
@@ -191,17 +200,22 @@ class Job(object):
             log.info('%d catalog records will be updated', len(valid_records))
 
             if self.interactive and not yesno('Continue?', default='yes'):
-                log.info('Bye')
+                log.info('Job aborted')
                 return []
 
         # ------------------------------------------------------------------------------------
         # Del 2: Nå har vi en liste over MMS-IDer for bibliografiske poster vi vil endre.
         # Vi går gjennom dem én for én, henter ut posten med Bib-apiet, endrer og poster tilbake.
 
+        self.records_changed = 0
+        self.changes_made = 0
         for idx, mms_id in enumerate(valid_records):
             if self.action not in ['list', 'interactive']:
                 log.info('Updating record %d/%d: %s', idx + 1, len(valid_records), mms_id)
             record = self.ils.get_record(mms_id)
-            self.update_record(record)
+            c = self.update_record(record)
+            if c > 0:
+                self.records_changed += 1
+                self.changes_made += c
 
         return valid_records

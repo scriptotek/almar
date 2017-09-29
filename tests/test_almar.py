@@ -21,7 +21,7 @@ from functools import wraps
 from textwrap import dedent
 
 from almar.bib import Bib
-from almar.almar import run, get_config, job_args, parse_args, log, get_concept
+from almar.almar import run, get_config, job_args, parse_args, get_concept
 from almar.authorities import Vocabulary
 from almar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from almar.alma import Alma
@@ -31,6 +31,7 @@ from almar.util import normalize_term, parse_xml, ANY_VALUE
 from almar.marc import Record
 from almar.task import DeleteTask, ReplaceTask, AddTask
 
+log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
 
@@ -822,6 +823,9 @@ class TestAlmar(unittest.TestCase):
             api_key: secret1
             api_region: eu
             sru_url: https://sandbox-eu.alma.exlibrisgroup.com/view/sru/DUMMY_SITE
+
+        logging:
+          version: 1
         ''').encode('utf-8'))
 
     @classmethod

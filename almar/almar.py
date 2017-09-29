@@ -5,15 +5,17 @@ import argparse
 import getpass
 from collections import OrderedDict
 
-import colorlog
 import colorama
-import logging.handlers
+import coloredlogs
+import logging
+import logging.config
 import re
 import os
 import sys
 from io import open  # pylint: disable=redefined-builtin
 
 import yaml
+from six import text_type
 from raven import Client
 from six import binary_type
 
@@ -27,31 +29,25 @@ from .util import ANY_VALUE
 
 raven_client = None
 
-log = logging.getLogger()
-log.setLevel(logging.INFO)
-logging.getLogger('requests').setLevel(logging.WARNING)
-console_handler = logging.StreamHandler()
-if sys.stdout.isatty():
-    colorama.init(autoreset=True)
-    console_handler.setFormatter(colorlog.ColoredFormatter(
-        '%(asctime)s %(log_color)s%(levelname)-8s%(reset)s %(message)s',
-        datefmt='%Y-%m-%d %H:%I:%S',
-        reset=True,
-        log_colors={
-            'DEBUG':    'cyan',
-            'INFO':     'white',
-            'WARNING':  'red',
-            'ERROR':    'red',
-            'CRITICAL': 'red,bg_white',
-        }))
-else:
-    # We're being piped, so skip colors
-    colorama.init(strip=True)
-    console_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)-8s %(message)s',
-        datefmt='%Y-%m-%d %H:%I:%S'
-    ))
-log.addHandler(console_handler)
+
+def configure_logging(config):
+    logging.config.dictConfig(config)
+
+    # By default the install() function installs a handler on the root logger,
+    # this means that log messages from your code and log messages from the
+    # libraries that you use will all show up on the terminal.
+    coloredlogs.install(level=logging.DEBUG,
+                        fmt='%(asctime)s %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d %H:%I:%S')
+
+    logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
+
+    if sys.stdout.isatty():
+        colorama.init(autoreset=True)
+    else:
+        # We're being piped, so skip colors
+        colorama.init(strip=True)
 
 
 def ensure_unicode(arg):
@@ -149,6 +145,7 @@ def normalize_ind(value):
 
 
 def parse_advanced_input(value):
+    log = logging.getLogger()
     m = re.match(r'^(?P<tag>[0-9]{3}) (?P<ind1>[0-9#])(?P<ind2>[0-9#]) (?P<sf>\$\$.*)$', value)
     if not m:
         log.error('Invalid input format')
@@ -244,6 +241,8 @@ def job_args(config=None, args=None):
     We will do fuzzy matching (matching either $a or $x) only if both the source
     and target supports it
     """
+    log = logging.getLogger()
+
     if len(target_concepts) > 0:
         if 'a_or_x' in source_concept.sf and 'a_or_x' not in target_concepts[0].sf:
             source_concept.set_a_or_x_to('a')
@@ -343,6 +342,8 @@ def get_config_filename():
 
 
 def get_config():
+    log = logging.getLogger()
+
     filename = get_config_filename()
     if filename is None:
         log.error('Could not find "almar.yml" configuration file. See https://github.com/scriptotek/almar for help.')
@@ -360,8 +361,9 @@ def get_config():
 def run(config, argv):
     global raven_client
 
-    username = getpass.getuser()
-    log.info('Running as %s', username)
+    configure_logging(config.get('logging', {'version': 1, 'disable_existing_loggers': False}))
+    log = logging.getLogger()
+
     try:
         if config.get('sentry') is not None:
             raven_client = Client(config['sentry']['dsn'])
@@ -374,15 +376,10 @@ def run(config, argv):
         if args.verbose:
             # Do this as early as possible
             log.setLevel(logging.DEBUG)
+        else:
+            log.setLevel(logging.INFO)
 
         jargs = job_args(config, args)
-
-        if not args.dry_run:
-            file_handler = logging.FileHandler('almar.log')
-            file_handler.setFormatter(logging.Formatter(
-                '[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S'))
-            file_handler.setLevel(logging.INFO)
-            log.addHandler(file_handler)
 
         def get_env(config, args):
             if args.env is None:
@@ -401,16 +398,26 @@ def run(config, argv):
         sru = SruClient(env['sru_url'], args.env)
         alma = Alma(env['api_region'], env['api_key'], args.env, dry_run=args.dry_run)
 
-        log.info('Starting job: %s', ' '.join([ensure_unicode(x) for x in argv]))
-
         job = Job(sru=sru, ils=alma, **jargs)
         job.dry_run = args.dry_run
         job.interactive = not args.non_interactive
         job.verbose = args.verbose
         job.show_diffs = args.show_diffs
 
+        username = getpass.getuser()
+
+        concepts = [jargs['source_concept']] + jargs['target_concepts']
+        jobname = '%s %s' % (jargs['action'], ' '.join(["'%s'" % text_type(x) for x in concepts]))
+
+        log.info('Starting job as %s: %s', username, jobname)
+
         job.start()
-        log.info('Job complete')
+        log.info('Made %d changes to %d records', job.changes_made, job.records_changed)
+
+        if job.changes_made > 0:
+            summary = logging.getLogger('summary')
+            summary.info('%s - %s - Made %d changes to %d records',
+                         username, jobname, job.changes_made, job.records_changed)
 
     except Exception:  # # pylint: disable=broad-except
         if raven_client is not None:
