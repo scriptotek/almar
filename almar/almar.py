@@ -401,7 +401,7 @@ def run(config, argv):
         sru = SruClient(env['sru_url'], args.env)
         alma = Alma(env['api_region'], env['api_key'], args.env, dry_run=args.dry_run)
 
-        log.info('Starting job: %s', ' '.join(argv))
+        log.info('Starting job: %s', ' '.join([ensure_unicode(x) for x in argv]))
 
         job = Job(sru=sru, ils=alma, **jargs)
         job.dry_run = args.dry_run
