@@ -4,6 +4,7 @@ from __future__ import unicode_literals, print_function
 import logging
 from copy import deepcopy
 from datetime import datetime
+import re
 
 from prompter import yesno
 from tqdm import tqdm
@@ -44,8 +45,12 @@ class Job(object):
         for target_concept in target_concepts:
             log.debug('Target concept: %s', target_concept)
 
-        cql_query = cql_query or 'alma.subjects = "{term}" AND alma.authority_vocabulary = "{vocabulary}"'
-        self.cql_query = cql_query.format(term=self.source_concept.term, vocabulary=self.source_concept.sf['2'])
+        def prepare_cql_query(query, term, vocabulary):
+            template = cql_query or 'alma.subjects = "{term}" AND alma.authority_vocabulary = "{vocabulary}"'
+            term = re.sub('[-–]', ' ', term)  # replace hyphens and dashes with spaces
+            return template.format(term=term, vocabulary=vocabulary)
+
+        self.cql_query = prepare_cql_query(cql_query, self.source_concept.term, self.source_concept.sf['2'])
 
         self.steps = []
         self.generate_steps()
