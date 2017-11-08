@@ -163,7 +163,7 @@ If you need to split a concept into two or more concepts, you can use
 `almar interactive` mode. Example: to replace "Kretser" with "Integrerte kretser"
 on some documents, but with "Elektriske kretser" on other, run:
 
-    lokar --diffs interactive 'Kretser' 'Integrerte kretser' 'Elektriske kretser'
+    almar --diffs interactive 'Kretser' 'Integrerte kretser' 'Elektriske kretser'
 
 For each record, Almar will print the title and subject headings and ask you
 which of the two headings to include on the record. Use the arrow keys and space
