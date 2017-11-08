@@ -97,4 +97,4 @@ def show_diff(src, dst):
     # dst = vkbeautify.xml(dst).splitlines(True)
 
     for line in color_diff(difflib.unified_diff(src, dst, fromfile='Original', tofile='Modified')):
-        sys.stdout.write(line)
+        sys.stdout.write(line.encode('utf-8'))
