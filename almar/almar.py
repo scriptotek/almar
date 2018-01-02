@@ -388,7 +388,9 @@ def run(config, argv):
         }
     }
 
-    sha_input = u' '.join([config.get('default_env'), str(time.time())] + argv)
+    argv = [x.decode('utf-8') if isinstance(x, binary_type) else x for x in argv]  # Python 2/3: normalize to unicode strings
+
+    sha_input = u' '.join([config.get('default_env'), text_type(time.time())] + argv)
     jobname = sha1(sha_input.encode('utf-8')).hexdigest()
 
     # Note: configure_logging will add a StreamHandler for stdout
