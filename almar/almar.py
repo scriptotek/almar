@@ -388,7 +388,8 @@ def run(config, argv):
         }
     }
 
-    argv = [x.decode('utf-8') if isinstance(x, binary_type) else x for x in argv]  # Python 2/3: normalize to unicode strings
+    # Python 2/3: normalize to unicode strings
+    argv = [x.decode('utf-8') if isinstance(x, binary_type) else x for x in argv]
 
     sha_input = u' '.join([config.get('default_env'), text_type(time.time())] + argv)
     jobname = sha1(sha_input.encode('utf-8')).hexdigest()
