@@ -117,7 +117,7 @@ class Job(object):
         if changes == 0:
             return 0
 
-        self.ils.put_record(record, interactive=self.interactive, diff=self.show_diffs)
+        self.ils.put_record(record, interactive=self.interactive, show_diff=self.show_diffs)
 
         return changes
 
@@ -139,14 +139,11 @@ class Job(object):
     def start(self):
 
         if self.ils.name is not None:
-            log.info('Alma environment: %s', self.ils.name)
+            log.debug('Alma environment: %s', self.ils.name)
 
         log.debug('Planned steps:')
         for i, step in enumerate(self.steps):
             log.debug(' %d. %s' % ((i + 1), step))
-
-        if self.dry_run:
-            log.info('Dry run: No catalog records will be touched!')
 
         # ------------------------------------------------------------------------------------
         # Del 1: Søk mot SRU for å finne over alle bibliografiske poster med emneordet.
@@ -197,7 +194,10 @@ class Job(object):
         elif self.action in ['interactive', 'list']:
             log.info('%d catalog records found', len(valid_records))
         else:
-            log.info('%d catalog records will be updated', len(valid_records))
+            log.info('%d catalog records to be changed', len(valid_records))
+
+            if self.dry_run:
+                log.warning('DRY RUN: No catalog records will actually be changed!')
 
             if self.interactive and not yesno('Continue?', default='yes'):
                 log.info('Job aborted')

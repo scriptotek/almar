@@ -8,6 +8,10 @@ from colorama import Fore
 from lxml import etree
 from six import text_type
 import inquirer
+import logging
+import re
+import pkg_resources  # part of setuptools
+__version__ = pkg_resources.require('almar')[0].version
 
 ANY_VALUE = '{ANY_VALUE}'
 
@@ -89,12 +93,30 @@ def line_marc(root):
     return st
 
 
-def show_diff(src, dst):
+def get_diff(src, dst):
     src = line_marc(etree.fromstring(src.encode('utf-8')))
     dst = line_marc(etree.fromstring(dst.encode('utf-8')))
 
     # src = vkbeautify.xml(src).splitlines(True)
     # dst = vkbeautify.xml(dst).splitlines(True)
 
-    for line in color_diff(difflib.unified_diff(src, dst, fromfile='Original', tofile='Modified')):
-        sys.stdout.write(line.encode('utf-8'))
+    # returns list of unicode strings
+    return list(color_diff(difflib.unified_diff(src, dst, fromfile='Original', tofile='Modified')))
+
+
+class ColorStripFormatter(logging.Formatter):
+
+    def format(self, record):
+        s = super(ColorStripFormatter, self).format(record)
+        s = re.sub('\x1b\[[0-9;]*m', '', s)
+
+        return s
+
+
+class JobNameFilter(logging.Filter):
+
+    jobname = ''
+
+    def filter(self, record):
+        record.jobname = self.jobname
+        return True

@@ -6,13 +6,15 @@ import getpass
 from collections import OrderedDict
 
 import colorama
-import coloredlogs
+import time
+from coloredlogs import ColoredFormatter
 import logging
 import logging.config
 import re
 import os
 import sys
 from io import open  # pylint: disable=redefined-builtin
+from hashlib import sha1
 
 import yaml
 from six import text_type
@@ -25,29 +27,44 @@ from .alma import Alma
 from .concept import Concept
 from .job import Job
 from .sru import SruClient
-from .util import ANY_VALUE
+from .util import ANY_VALUE, ColorStripFormatter, JobNameFilter
 
 raven_client = None
 
 
-def configure_logging(config):
-    logging.config.dictConfig(config)
+def configure_logging(config, jobname, verbose=False):
+    use_colors = sys.stdout.isatty()
+    level = logging.DEBUG if verbose else logging.INFO
+    formatter_options = {
+        'fmt': '%(asctime)s %(levelname)-8s %(message)s',
+        'datefmt': '%Y-%m-%d %H:%I:%S',
+    }
 
-    # By default the install() function installs a handler on the root logger,
-    # this means that log messages from your code and log messages from the
-    # libraries that you use will all show up on the terminal.
-    coloredlogs.install(level=logging.DEBUG,
-                        fmt='%(asctime)s %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d %H:%I:%S')
-
-    logging.getLogger('requests').setLevel(logging.WARNING)
-    logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
-
-    if sys.stdout.isatty():
+    if use_colors:
         colorama.init(autoreset=True)
     else:
         # We're being piped, so skip colors
         colorama.init(strip=True)
+
+    logging.config.dictConfig(config)
+
+    # Get root logger
+    logger = logging.getLogger()
+
+    # Add stream handler and formatter
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    formatter_type = ColoredFormatter if use_colors else ColorStripFormatter
+    handler.setFormatter(formatter_type(**formatter_options))
+
+    # Configure JobNameFilter
+    JobNameFilter.jobname = jobname[:10]
+
+    logger.addHandler(handler)
+
+    # Increase logging level for dependencies
+    logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
 
 
 def ensure_unicode(arg):
@@ -361,26 +378,34 @@ def get_config():
 def run(config, argv):
     global raven_client
 
-    configure_logging(config.get('logging', {'version': 1, 'disable_existing_loggers': False}))
+    username = getpass.getuser()
+
+    logging_defaults = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'root': {
+            'level': '!!python/name:logging.INFO',
+        }
+    }
+
+    sha_input = u' '.join([config.get('default_env'), str(time.time())] + argv)
+    jobname = sha1(sha_input.encode('utf-8')).hexdigest()
+
+    # Note: configure_logging will add a StreamHandler for stdout
+    args = parse_args(argv, config.get('default_env'))
+
+    configure_logging(config.get('logging', logging_defaults), jobname, args.verbose)
     log = logging.getLogger()
+    log.debug('Starting job %s as %s', jobname, username)
 
+    jargs = job_args(config, args)
+
+    if config.get('sentry') is not None:
+        raven_client = Client(config['sentry']['dsn'])
+        raven_client.context.merge({'user': {
+            'username': username
+        }})
     try:
-        if config.get('sentry') is not None:
-            raven_client = Client(config['sentry']['dsn'])
-            raven_client.context.merge({'user': {
-                'username': username
-            }})
-
-        args = parse_args(argv, config.get('default_env'))
-
-        if args.verbose:
-            # Do this as early as possible
-            log.setLevel(logging.DEBUG)
-        else:
-            log.setLevel(logging.INFO)
-
-        jargs = job_args(config, args)
-
         def get_env(config, args):
             if args.env is None:
                 log.error('No environment specified and no default environment found in configuration file')
@@ -404,20 +429,19 @@ def run(config, argv):
         job.verbose = args.verbose
         job.show_diffs = args.show_diffs
 
-        username = getpass.getuser()
-
         concepts = [jargs['source_concept']] + jargs['target_concepts']
-        jobname = '%s %s' % (jargs['action'], ' '.join(["'%s'" % text_type(x) for x in concepts]))
+        jobdesc = '%s %s' % (jargs['action'], ' '.join(["'%s'" % text_type(x) for x in concepts]))
 
-        log.info('Starting job as %s: %s', username, jobname)
+        log.debug('Job arguments: %s', jobdesc)
 
         job.start()
-        log.info('Made %d changes to %d records', job.changes_made, job.records_changed)
 
         if job.changes_made > 0:
+            log.info('Job %s completed. Made %d changes to %d records', jobname, job.changes_made, job.records_changed)
+
             summary = logging.getLogger('summary')
-            summary.info('%s - %s - Made %d changes to %d records',
-                         username, jobname, job.changes_made, job.records_changed)
+            summary.info('%s - %s - %s - Made %d changes to %d records',
+                         jobname, username, jobdesc, job.changes_made, job.records_changed)
 
     except Exception:  # # pylint: disable=broad-except
         if raven_client is not None:

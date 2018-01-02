@@ -1,11 +1,12 @@
 # coding=utf-8
+from __future__ import unicode_literals
 import logging
 from io import BytesIO
 from prompter import yesno
 from requests import Session, HTTPError
 from textwrap import dedent
 
-from .util import show_diff
+from .util import get_diff
 from .bib import Bib
 
 log = logging.getLogger(__name__)
@@ -50,11 +51,11 @@ class Alma(LibrarySystem):
                                % (record.id, record_id))
         return record
 
-    def put_record(self, record, interactive=True, diff=False):
+    def put_record(self, record, interactive=True, show_diff=False):
         """
         Store a Bib record to Alma
 
-        :param diff: bool
+        :param show_diff: bool
         :param interactive: bool
         :type record: Bib
         """
@@ -73,8 +74,7 @@ class Alma(LibrarySystem):
             log.warning(' -> Updating the record. The CZ connection will be lost!')
 
         post_data = record.xml()
-        if diff:
-            show_diff(record.orig_xml, post_data)
+        log.debug('Diff:\n%s', ''.join(get_diff(record.orig_xml, post_data)))
 
         if not self.dry_run:
             try:

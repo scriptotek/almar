@@ -25,7 +25,7 @@ class Task(object):
         return marc_record.match(self.source, self.ignore_extra_subfields)
 
     def run(self, marc_record):
-        log.debug('Run task: %s', self)
+        # log.debug('Run task: %s', self)
         modified = self._run(marc_record)
         if modified > 0:
             log.debug('Modifications made: %d', modified)

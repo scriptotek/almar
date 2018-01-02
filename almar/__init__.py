@@ -1,4 +1,3 @@
-import pkg_resources  # part of setuptools
+from .util import __version__, ColorStripFormatter, JobNameFilter
 from .sru import SruClient
 from .alma import Alma
-__version__ = pkg_resources.require('almar')[0].version

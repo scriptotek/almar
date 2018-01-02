@@ -35,7 +35,7 @@ class SruClient(object):
         self.num_records = 0  # from last response
 
     def search(self, query):
-        log.info('SRU search: %s', query)
+        log.debug('SRU search: %s', query)
         # A searchRetrieve generator that yields MarcRecord objects
         start_record = 1
         while True:

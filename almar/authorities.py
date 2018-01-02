@@ -57,7 +57,7 @@ class Vocabulary(object):
 
         url = self.id_service_url.format(vocabulary=self.marc_code, term=term, tag=tag)
         response = requests.get(url)
-        log.debug(response.text)
+        log.debug('Authority service response: %s', response.text)
         if response.status_code != 200 or response.text == '':
             return {}
 
