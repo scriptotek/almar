@@ -74,7 +74,11 @@ class Alma(LibrarySystem):
             log.warning(' -> Updating the record. The CZ connection will be lost!')
 
         post_data = record.xml()
-        log.debug('Diff:\n%s', ''.join(get_diff(record.orig_xml, post_data)))
+        the_diff = ''.join(get_diff(record.orig_xml, post_data))
+        if show_diff:
+            log.info('Diff:\n%s', the_diff)
+        else:
+            log.debug('Diff:\n%s', the_diff)
 
         if not self.dry_run:
             try:
