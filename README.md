@@ -15,7 +15,7 @@ field A with the given term and a subject field B with the given vocabulary
 code, but where A is not necessarily equal to B, so almar filters the result
 list to find the records where A is actually the same as B.
 
-[![asciicast](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f.png)](https://asciinema.org/a/4hpi7n6s6ll3b5djykuqs2y8f)
+[![asciicast](https://asciinema.org/a/Bf4E5NEoMmcMmsw2Z9Mxc1DNi.png)](https://asciinema.org/a/Bf4E5NEoMmcMmsw2Z9Mxc1DNi)
 
 ## Installation and configuration
 
