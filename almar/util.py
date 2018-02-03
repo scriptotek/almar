@@ -16,6 +16,16 @@ __version__ = pkg_resources.require('almar')[0].version
 ANY_VALUE = '{ANY_VALUE}'
 
 
+def print(txt=None):
+    if txt is None:
+        sys.stdout.write('\n')
+    else:
+        if sys.version_info < (3,0):
+            sys.stdout.write('%s\n' % txt.encode('utf-8'))
+        else:
+            sys.stdout.write('%s\n' % txt)
+
+
 def pick(msg, options, alpha_options=None):
     choices = OrderedDict()
     for i, option in enumerate(options):

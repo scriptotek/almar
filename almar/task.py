@@ -1,5 +1,5 @@
 # coding=utf-8
-from __future__ import unicode_literals, print_function
+from __future__ import unicode_literals
 import logging
 from collections import OrderedDict
 import six
@@ -8,7 +8,7 @@ from six import python_2_unicode_compatible
 from copy import deepcopy
 import time
 from .concept import Concept
-from .util import ANY_VALUE, normalize_term, pick
+from .util import ANY_VALUE, normalize_term, pick, print
 
 log = logging.getLogger(__name__)
 
@@ -97,16 +97,16 @@ class InteractiveReplaceTask(Task):
     def _run(self, marc_record):
         print()
         time.sleep(1)
-        print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL).encode('utf-8'))
+        print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
         for field in marc_record.fields:
             if field.tag.startswith('6'):
                 if field.sf('2') == self.source.sf['2']:
                     if field.match(self.source):
-                        print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL).encode('utf-8'))
+                        print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
                     else:
-                        print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL).encode('utf-8'))
+                        print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
                 else:
-                    print('    {}'.format(field).encode('utf-8'))
+                    print('    {}'.format(field))
 
         while True:
             targets = pick('Make a selection (or press Ctrl-C to abort)', self.targets, OrderedDict((
@@ -163,17 +163,17 @@ class ListTask(Task):
 
     def _run(self, marc_record):
         if self.show_titles:
-            print('{}\t{}'.format(marc_record.id, marc_record.title()).encode('utf-8'))
+            print('{}\t{}'.format(marc_record.id, marc_record.title()))
         else:
-            print(marc_record.id.encode('utf-8'))
+            print(marc_record.id)
 
         if self.show_subjects:
             for field in marc_record.fields:
                 if field.tag.startswith('6'):
                     if field.sf('2') == self.source.sf['2']:
-                        print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL).encode('utf-8'))
+                        print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
                     else:
-                        print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL).encode('utf-8'))
+                        print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
 
         return 0  # No, we didn't modify anything
 
