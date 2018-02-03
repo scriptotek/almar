@@ -2,6 +2,7 @@ lokar.cfg
 lokar.yml
 almar.yml
 jobs
+.pytest_cache
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

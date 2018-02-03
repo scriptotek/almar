@@ -384,7 +384,7 @@ def run(config, argv):
         'version': 1,
         'disable_existing_loggers': False,
         'root': {
-            'level': '!!python/name:logging.INFO',
+            'level': 'INFO',
         }
     }
 

@@ -1,4 +1,4 @@
-# Almar &middot; [![Travis](https://img.shields.io/travis/scriptotek/almar.svg)](https://travis-ci.org/scriptotek/almar) [![Codecov](https://img.shields.io/codecov/c/github/scriptotek/almar.svg)](https://codecov.io/gh/scriptotek/almar) [![Code Health](https://landscape.io/github/scriptotek/almar/master/landscape.svg?style=flat)](https://landscape.io/github/scriptotek/almar/master)
+# Almar &middot; [![Travis](https://img.shields.io/travis/scriptotek/almar.svg)](https://travis-ci.org/scriptotek/almar) [![Codecov](https://img.shields.io/codecov/c/github/scriptotek/almar.svg)](https://codecov.io/gh/scriptotek/almar)
 
 Almar (formerly Lokar) is a script for batch editing and removing controlled
 classification and subject heading fields (084/648/650/651/655) in bibliographic
@@ -31,7 +31,7 @@ Here's a minimal configuration file to start with:
 default_vocabulary: INSERT MARC VOCABULARY CODE HERE
 
 vocabularies:
-  marc_code: INSERT MARC VOCABULARY CODE HERE
+  - marc_code: INSERT MARC VOCABULARY CODE HERE
 
 default_env: prod
 
