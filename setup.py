@@ -42,6 +42,8 @@ setup(name='almar',
               'executable': '/usr/bin/env python',
           },
       },
-      packages=['almar']
+      packages=['almar'],
+      dependency_links=['https://github.com/danmichaelo/python-inquirer/tarball/fix-py36#egg=inquirer-2.3.0']
+
       # data_files=[(AppDirs('Lokar').user_config_dir, ['almar.cfg'])]
       )
