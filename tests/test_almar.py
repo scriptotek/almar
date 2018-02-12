@@ -1119,5 +1119,6 @@ class TestArgumentParsing(unittest.TestCase):
         assert jargs['target_concepts'][0].tag == '600'
         assert jargs['target_concepts'][0].sf == {'a': 'Habsburg', 'c': 'slekten', '0': '90200245', '2': 'bare'}
 
+
 if __name__ == '__main__':
     unittest.run()

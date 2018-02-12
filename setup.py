@@ -35,7 +35,7 @@ setup(name='almar',
                         'inquirer',
                         ],
       setup_requires=['pytest-runner'],
-      tests_require=['pytest', 'pytest-pep8', 'pytest-cov', 'responses', 'mock'],
+      tests_require=['pytest', 'pytest-pycodestyle', 'pytest-cov', 'responses', 'mock'],
       entry_points={'console_scripts': ['almar=almar.almar:main']},
       options={
           'build_scripts': {

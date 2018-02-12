@@ -20,7 +20,7 @@ def print(txt=None):
     if txt is None:
         sys.stdout.write('\n')
     else:
-        if sys.version_info < (3,0):
+        if sys.version_info < (3, 0):
             sys.stdout.write('%s\n' % txt.encode('utf-8'))
         else:
             sys.stdout.write('%s\n' % txt)
