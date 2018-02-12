@@ -8,7 +8,7 @@ from six import python_2_unicode_compatible
 from copy import deepcopy
 import time
 from .concept import Concept
-from .util import ANY_VALUE, normalize_term, pick, print
+from .util import ANY_VALUE, normalize_term, pick, utf8print
 
 log = logging.getLogger(__name__)
 
@@ -95,18 +95,18 @@ class InteractiveReplaceTask(Task):
         self.ignore_extra_subfields = ignore_extra_subfields
 
     def _run(self, marc_record):
-        print()
+        utf8print()
         time.sleep(1)
-        print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
+        utf8print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
         for field in marc_record.fields:
             if field.tag.startswith('6'):
                 if field.sf('2') == self.source.sf['2']:
                     if field.match(self.source):
-                        print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        utf8print('  > {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
                     else:
-                        print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        utf8print('    {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
                 else:
-                    print('    {}'.format(field))
+                    utf8print('    {}'.format(field))
 
         while True:
             targets = pick('Make a selection (or press Ctrl-C to abort)', self.targets, OrderedDict((
@@ -163,17 +163,17 @@ class ListTask(Task):
 
     def _run(self, marc_record):
         if self.show_titles:
-            print('{}\t{}'.format(marc_record.id, marc_record.title()))
+            utf8print('{}\t{}'.format(marc_record.id, marc_record.title()))
         else:
-            print(marc_record.id)
+            utf8print(marc_record.id)
 
         if self.show_subjects:
             for field in marc_record.fields:
                 if field.tag.startswith('6'):
                     if field.sf('2') == self.source.sf['2']:
-                        print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        utf8print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
                     else:
-                        print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
+                        utf8print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
 
         return 0  # No, we didn't modify anything
 

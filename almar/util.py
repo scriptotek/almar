@@ -16,7 +16,7 @@ __version__ = pkg_resources.require('almar')[0].version
 ANY_VALUE = '{ANY_VALUE}'
 
 
-def print(txt=None):
+def utf8print(txt=None):
     if txt is None:
         sys.stdout.write('\n')
     else:
