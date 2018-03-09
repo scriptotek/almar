@@ -106,8 +106,7 @@ def parse_args(args, default_env=None):
     # TODO: , aliases=['rename', 'move'] added in Python 3.5
 
     parser_move.add_argument('term', nargs=1, help='Term to search for')
-    parser_move.add_argument('new_term', nargs=1, default='', help='Replacement term')
-    parser_move.add_argument('new_term2', nargs='?', default='', help='Second replacement term')
+    parser_move.add_argument('new_terms', nargs='+', default='', help='Replacement terms')
     parser_move.set_defaults(action='replace')
 
     # Create parser for the "remove" command
@@ -143,10 +142,6 @@ def parse_args(args, default_env=None):
 
     if args.action in ['remove', 'list']:
         args.new_terms = []
-    elif args.action == 'replace':
-        args.new_terms = [args.new_term[0]]
-        if args.new_term2 != '':
-            args.new_terms.append(args.new_term2)
 
     args.term = ensure_unicode(args.term)
     args.env = ensure_unicode(args.env)
@@ -243,8 +238,8 @@ def job_args(config=None, args=None):
                                            default_term=source_concept.term,
                                            default_tag=source_concept.tag))
 
-        if len(args.new_terms) > 1:
-            target_concepts.append(get_concept(args.new_terms[1], default_vocabulary,
+        for new_term in args.new_terms[1:]:
+            target_concepts.append(get_concept(new_term, default_vocabulary,
                                                default_tag=source_concept.tag))
 
     elif args.action == 'interactive':
