@@ -82,13 +82,13 @@ def parse_args(args, default_env=None):
                         help='Environment from config file. Default: {}'.format(default_env or '(none)'),
                         default=default_env)
 
-    parser.add_argument('-d', '--dry_run', dest='dry_run', action='store_true',
+    parser.add_argument('-d', '--dry-run', '--dry_run', dest='dry_run', action='store_true',
                         help='Dry run without doing any edits.')
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                         help='Show more output')
 
-    parser.add_argument('-n', '--non-interactive', dest='non_interactive', action='store_true',
+    parser.add_argument('-n', '--non-interactive', '--non_interactive', dest='non_interactive', action='store_true',
                         help='Non-interactive mode. Always use defaults rather than asking.')
 
     parser.add_argument('--diffs', dest='show_diffs', action='store_true',
