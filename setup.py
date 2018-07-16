@@ -32,7 +32,7 @@ setup(name='almar',
                         'raven',
                         'vkbeautify',
                         'lxml',
-                        'inquirer',
+                        'inquirer==2.3.0',  # pip install --process-dependency-links
                         ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest', 'pytest-pycodestyle', 'pytest-cov', 'responses', 'mock'],
@@ -43,7 +43,9 @@ setup(name='almar',
           },
       },
       packages=['almar'],
-      dependency_links=['https://github.com/danmichaelo/python-inquirer/tarball/fix-py36#egg=inquirer-2.3.0']
+      dependency_links=[
+          'git+https://github.com/danmichaelo/python-inquirer.git@fix-py36#egg=inquirer-2.3.0'
+      ]
 
       # data_files=[(AppDirs('Lokar').user_config_dir, ['almar.cfg'])]
       )
