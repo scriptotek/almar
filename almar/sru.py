@@ -34,19 +34,29 @@ class SruClient(object):
         self.record_no = 0  # from last response
         self.num_records = 0  # from last response
 
+    def request(self, query, start_record):
+        response = requests.get(self.endpoint_url, params={
+            'version': '1.2',
+            'operation': 'searchRetrieve',
+            'startRecord': start_record,
+            'maximumRecords': '50',
+            'query': query,
+        })
+        return response.text
+
     def search(self, query):
         log.debug('SRU search: %s', query)
         # A searchRetrieve generator that yields MarcRecord objects
         start_record = 1
         while True:
-            response = requests.get(self.endpoint_url, params={
-                'version': '1.2',
-                'operation': 'searchRetrieve',
-                'startRecord': start_record,
-                'maximumRecords': '50',
-                'query': query,
-            })
-            root = parse_xml(response.text)  # Takes ~ 4 seconds for 50 records!
+            response = self.request(query, start_record)
+
+            # Fix for the sudden addition of namespaces to the SRU response.
+            # The problem is that the Bibs API still don't use namespaces,
+            # so by removing the namespace the XML is compatible with the Bibs API.
+            txt = response.replace('xmlns="http://www.loc.gov/MARC21/slim"', 'xmlns=""')
+
+            root = parse_xml(txt)  # Takes ~ 4 seconds for 50 records!
 
             for diagnostic in root.findall('srw:diagnostics/diag:diagnostic', namespaces=NSMAP):
                 raise SruErrorResponse(diagnostic.findtext('diag:message', namespaces=NSMAP))

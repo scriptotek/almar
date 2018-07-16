@@ -623,33 +623,19 @@ class SruMock(Mock):
         super(SruMock, self).__init__(**kwargs)
 
 
-def setup_sru_mock(xml_response_file, mock=None):
-    mock = mock or Mock(spec=SruClient)
-    recs = get_sample(xml_response_file, True).findall('srw:records/srw:record/srw:recordData/record', NSMAP)
-    recs = [Record(rec) for rec in recs]
-
-    def search(arg):
-        for rec in recs:
-            yield rec
-
-    mock = mock.return_value
-    mock.num_records = len(recs)
-    mock.search.side_effect = search
-    return mock
-
-
 def patch_sru_search(xml_response_file):
     # Decorator
 
-    def setup_mock(mock_class):
-        return setup_sru_mock(xml_response_file, mock_class)
-
     @contextmanager
     def patch_fn():
-        patcher = patch('almar.almar.SruClient', autospec=True)
-        mock_sru_class = patcher.start()
-        mock_sru = setup_mock(mock_sru_class)
-        yield mock_sru
+
+        patcher = patch('almar.almar.SruClient.request')
+        patcher.start()
+
+        sru_mock = SruClient('http://example.com')
+        sru_mock.request.return_value = get_sample(xml_response_file)
+        yield sru_mock
+
         patcher.stop()
 
     def decorator_fn(func):
@@ -669,7 +655,11 @@ class TestJob(unittest.TestCase):
         self.alma = MockAlma('eu', 'dummy')
 
     def runJob(self, sru_response, vocabulary, args):
-        self.sru = setup_sru_mock(sru_response)
+
+        patched_sru = SruClient('http://example.com')
+        patched_sru.request = MagicMock(name='request')
+        patched_sru.request.return_value = get_sample(sru_response)
+
         conf = {
             'vocabularies': [{
                 'marc_code': vocabulary,
@@ -677,7 +667,7 @@ class TestJob(unittest.TestCase):
             }],
             'default_vocabulary': vocabulary,
         }
-        self.job = Job(sru=self.sru, ils=self.alma, **job_args(conf, parse_args(args)))
+        self.job = Job(sru=patched_sru, ils=self.alma, **job_args(conf, parse_args(args)))
         # self.job.dry_run = True
         self.job.interactive = False
 
@@ -686,7 +676,6 @@ class TestJob(unittest.TestCase):
 
     def tearDown(self):
         self.alma = None
-        self.sru = None
         self.job = None
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
@@ -848,7 +837,7 @@ class TestAlmar(unittest.TestCase):
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
 
-        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
 
         assert alma.get_record.call_count == 14
 
@@ -861,7 +850,7 @@ class TestAlmar(unittest.TestCase):
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
         run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
         assert alma.get_record.call_count == 0
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
@@ -872,7 +861,7 @@ class TestAlmar(unittest.TestCase):
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
         run(self.conf_obj(), ['-e test_env', '-n', 'remove', term])
-        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
         assert alma.get_record.call_count == 14
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
@@ -889,7 +878,7 @@ class TestAlmar(unittest.TestCase):
         alma.get_record.return_value = bib
 
         run(self.conf_obj(), ['--diffs', '-e test_env', '-n', 'replace', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
         assert alma.get_record.call_count == 1
         assert alma.put_record.call_count == 1
 
@@ -906,8 +895,8 @@ class TestAlmar(unittest.TestCase):
         alma.get_record.return_value = bib
 
         run(self.conf_obj(), ['-e test_env', '-n', 'list', term])
-        sru.search.assert_called_once_with(
-            'alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        sru.request.assert_called_once_with(
+            'alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
         assert alma.get_record.call_count == 1
         assert alma.put_record.call_count == 0
 
@@ -924,7 +913,7 @@ class TestAlmar(unittest.TestCase):
         get_record.return_value = Bib(doc)
 
         run(self.conf_obj(), ['--dry_run', '-e test_env', '-n', 'replace', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
         assert get_record.call_count == 1
         assert len(responses.calls) == 0
 
@@ -942,7 +931,8 @@ class TestAlmar(unittest.TestCase):
         get_record.return_value = bib
 
         run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
-        sru.search.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'))
+
+        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
 
         assert bib.cz_link is not None
         assert get_record.call_count == 2  # It did match, but...

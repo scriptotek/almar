@@ -6,7 +6,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00918cam a2200265 c 4500</leader>
           <controlfield tag="001">991202990974702201</controlfield>
           <controlfield tag="005">20120823140732.0</controlfield>
@@ -89,7 +89,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00917cam a2200277 c 4500</leader>
           <controlfield tag="001">990411889854702201</controlfield>
           <controlfield tag="005">20050131114312.0</controlfield>
@@ -176,7 +176,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00830cam a2200277 c 4500</leader>
           <controlfield tag="001">999609721964702201</controlfield>
           <controlfield tag="005">19960912000000.0</controlfield>
@@ -261,7 +261,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01023cam a2200289 c 4500</leader>
           <controlfield tag="001">990218447714702201</controlfield>
           <controlfield tag="005">20041001132727.0</controlfield>
@@ -359,7 +359,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01456cgm a2200349 c 4500</leader>
           <controlfield tag="001">990205525054702201</controlfield>
           <controlfield tag="005">20160407164323.0</controlfield>
@@ -522,7 +522,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01992cam a2200529 c 4500</leader>
           <controlfield tag="001">991148415514702201</controlfield>
           <controlfield tag="005">20170124091919.0</controlfield>
@@ -695,7 +695,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01042cam a22003017c 4500</leader>
           <controlfield tag="001">991325656094702201</controlfield>
           <controlfield tag="005">20170126162218.0</controlfield>
@@ -790,7 +790,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00865cam a2200301 c 4500</leader>
           <controlfield tag="001">991400753134702201</controlfield>
           <controlfield tag="005">20140325142921.0</controlfield>
@@ -893,7 +893,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01315cam a2200385 c 4500</leader>
           <controlfield tag="001">999900497604702201</controlfield>
           <controlfield tag="005">20170120143838.0</controlfield>
@@ -1042,7 +1042,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00710cam a2200253 c 4500</leader>
           <controlfield tag="001">990106318954702201</controlfield>
           <controlfield tag="005">20010511085445.0</controlfield>

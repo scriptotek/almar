@@ -7,7 +7,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01134cam a2200301 c 4500</leader>
           <controlfield tag="001">990314778524702201</controlfield>
           <controlfield tag="005">20140123114615.0</controlfield>

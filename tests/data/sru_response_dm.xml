@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
   <version>1.2</version>
-  <numberOfRecords>72</numberOfRecords>
+  <numberOfRecords>10</numberOfRecords>
   <records>
     <record>
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>02060nam a22003013u 4500</leader>
           <controlfield tag="001">999920005718802201</controlfield>
           <controlfield tag="005">20140106011013.0</controlfield>
@@ -158,7 +158,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00761cam a22002177c 4500</leader>
           <controlfield tag="001">991407806964702201</controlfield>
           <controlfield tag="005">20160114225046.0</controlfield>
@@ -216,7 +216,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01286cam a22003017c 4500</leader>
           <controlfield tag="001">991407834404702201</controlfield>
           <controlfield tag="005">20160114225046.0</controlfield>
@@ -304,7 +304,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01023cam a22002417c 4500</leader>
           <controlfield tag="001">991408084344702201</controlfield>
           <controlfield tag="005">20160114225048.0</controlfield>
@@ -374,7 +374,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>04847nam a22004333u 4500</leader>
           <controlfield tag="001">999920034562102201</controlfield>
           <controlfield tag="005">20151005070355.0</controlfield>
@@ -549,7 +549,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01760nam a22003373u 4500</leader>
           <controlfield tag="001">999920013492302201</controlfield>
           <controlfield tag="005">20130418052833.0</controlfield>
@@ -714,7 +714,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>01336cam a2200337 c 4500</leader>
           <controlfield tag="001">990102243434702201</controlfield>
           <controlfield tag="005">20110614111051.0</controlfield>
@@ -822,7 +822,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00786nam a22002658a 4500</leader>
           <controlfield tag="001">999919952345002201</controlfield>
           <controlfield tag="005">20020606104010.5</controlfield>
@@ -987,7 +987,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>00837cam a22002771c 4500</leader>
           <controlfield tag="001">990000458534702201</controlfield>
           <controlfield tag="005">20130326100648.0</controlfield>
@@ -1091,7 +1091,7 @@
       <recordSchema>marcxml</recordSchema>
       <recordPacking>xml</recordPacking>
       <recordData>
-        <record xmlns="">
+        <record xmlns="http://www.loc.gov/MARC21/slim">
           <leader>03157nam a22003733u 4500</leader>
           <controlfield tag="001">999919903405902201</controlfield>
           <controlfield tag="005">20130418052749.0</controlfield>
@@ -1406,7 +1406,6 @@
       <recordPosition>10</recordPosition>
     </record>
   </records>
-  <nextRecordPosition>11</nextRecordPosition>
   <diagnostics/>
   <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
     <xb:exact>true</xb:exact>
