@@ -2,7 +2,7 @@
 
 Almar (formerly Lokar) is a script for batch editing and removing controlled
 classification and subject heading fields (084/648/650/651/655) in bibliographic
-records in Alma using the Alma APIs. Tested with Python 2.7 and Python 3.4+.
+records in Alma using the Alma APIs. Tested with Python 2.7 and Python 3.5+.
 
 It will use an SRU service to search for records, fetch and modify the MARCXML
 records and use the Alma Bibs API to write the modified records back to Alma.
