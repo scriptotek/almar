@@ -95,8 +95,8 @@ def parse_args(args, default_env=None):
                         help='Show diffs before saving.')
 
     parser.add_argument('--cql', dest='cql_query', nargs='?',
-                        help='Custom CQL query to specify which records to be checked. ' +
-                        'Example: --cql \'alma.all_for_ui = "some identifier"\''
+                        help=('Custom CQL query to specify which records to be checked. '
+                              'Example: --cql \'alma.all_for_ui = "some identifier"\'')
                         )
 
     subparsers = parser.add_subparsers(title='subcommands')

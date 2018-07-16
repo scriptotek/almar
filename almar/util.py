@@ -118,7 +118,7 @@ class ColorStripFormatter(logging.Formatter):
 
     def format(self, record):
         s = super(ColorStripFormatter, self).format(record)
-        s = re.sub('\x1b\[[0-9;]*m', '', s)
+        s = re.sub(r'\x1b\[[0-9;]*m', '', s)
 
         return s
 

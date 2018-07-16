@@ -20,8 +20,10 @@ class Bib(object):
         self.cz_link = self.doc.findtext('linked_record_id[@type="CZ"]') or None
 
     def xml(self):
-        return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-                etree.tounicode(self.doc))
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n%s' %
+            etree.tounicode(self.doc)
+        )
 
     def dump(self, filename):
         # Dump record to file

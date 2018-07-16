@@ -31,9 +31,10 @@ class Authorities(object):
                 if concept.sf.get('0') == ANY_VALUE:
                     pass  # ignore ANY_VALUE
                 elif identifier != concept.sf['0']:
-                    identifier = pick_one('The $$0 value does not match the authority record id. ' +
-                                          'Please select which to use',
-                                          [concept.sf['0'], identifier])
+                    identifier = pick_one(
+                        'The $$0 value does not match the authority record id. Please select which to use',
+                        [concept.sf['0'], identifier]
+                    )
             concept.sf['0'] = identifier
             log.info(Fore.GREEN + '✔' + Style.RESET_ALL + ' Authorized: %s', concept)
         else:

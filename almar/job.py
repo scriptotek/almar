@@ -182,10 +182,12 @@ class Job(object):
                 pbar.close()
 
         except TooManyResults:
-            log.error('More than 10,000 results would have to be checked, but the Alma SRU service does ' +
-                      'not allow us to retrieve more than 10,000 results. Annoying? Go vote for this:\n' +
-                      'http://ideas.exlibrisgroup.com/forums/308173-alma/suggestions/' +
-                      '18737083-sru-srw-increase-the-10-000-record-retrieval-limi')
+            log.error((
+                'More than 10,000 results would have to be checked, but the Alma SRU service does '
+                'not allow us to retrieve more than 10,000 results. Annoying? Go vote for this:\n'
+                'http://ideas.exlibrisgroup.com/forums/308173-alma/suggestions/'
+                '18737083-sru-srw-increase-the-10-000-record-retrieval-limi'
+            ))
             return []
 
         if len(valid_records) == 0:
