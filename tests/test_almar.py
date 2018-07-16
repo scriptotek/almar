@@ -294,9 +294,15 @@ class TestRecord(unittest.TestCase):
         for task in tasks:
             modified += task.run(record)
 
-        assert strip_colors(tasks[0]) == 'Replace `650 $a atferd $2 noubomn` → `650 $a testerstatning $2 noubomn`'
-        assert strip_colors(tasks[1]) == 'Replace `650 $a atferd $2 noubomn` → `650 $a testerstatning $2 noubomn` (ignoring any extra subfields)'
-        assert strip_colors(tasks[2]) == 'Replace `650 $x atferd $2 noubomn` → `650 $x testerstatning $2 noubomn` (ignoring any extra subfields)'
+        assert strip_colors(tasks[0]) == (
+            'Replace `650 $a atferd $2 noubomn` → `650 $a testerstatning $2 noubomn`'
+        )
+        assert strip_colors(tasks[1]) == (
+            'Replace `650 $a atferd $2 noubomn` → `650 $a testerstatning $2 noubomn` (ignoring any extra subfields)'
+        )
+        assert strip_colors(tasks[2]) == (
+            'Replace `650 $x atferd $2 noubomn` → `650 $x testerstatning $2 noubomn` (ignoring any extra subfields)'
+        )
 
         assert modified == 3
         f = record.el.xpath('.//datafield[@tag="650"]/subfield[@code="a"][text()="testerstatning"]')
