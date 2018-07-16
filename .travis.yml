@@ -9,5 +9,6 @@ install:
   - pip install --process-dependency-links .
 script:
   - py.test
+  - pycodestyle
 after_success:
   - bash <(curl -s https://codecov.io/bash)
