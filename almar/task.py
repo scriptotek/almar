@@ -25,8 +25,9 @@ class Task(object):
     def match_record(self, marc_record):
         return marc_record.match(self.source, self.ignore_extra_subfields)
 
-    def run(self, marc_record):
+    def run(self, marc_record, progress=None):
         # log.debug('Run task: %s', self)
+        self.progress = progress
         modified = self._run(marc_record)
         if modified > 0:
             log.debug('Modifications made: %d', modified)
@@ -99,7 +100,13 @@ class InteractiveReplaceTask(Task):
         utf8print()
         time.sleep(1)
         os.system('clear')
-        utf8print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
+        if self.progress is not None:
+            utf8print('{}[Record {:d} of {:d}]{}'.format(
+                Fore.WHITE, self.progress['current'], self.progress['total'], Style.RESET_ALL
+            ))
+        utf8print('{}{} {}{}'.format(
+            Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL
+        ))
         for field in marc_record.fields:
             if field.tag.startswith('6'):
                 if field.sf('2') == self.source.sf['2']:

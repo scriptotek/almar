@@ -105,14 +105,14 @@ class Job(object):
             for target_concept in self.target_concepts[1:]:
                 self.steps.append(AddTask(target_concept))
 
-    def update_record(self, record):
+    def update_record(self, record, progress):
         """
         Update the record and save it back to Alma if any changes were made.
         Returns the number of changes made.
         """
         changes = 0
         for step in self.steps:
-            changes += step.run(record.marc_record)
+            changes += step.run(record.marc_record, progress)
 
         if changes == 0:
             return 0
@@ -215,7 +215,7 @@ class Job(object):
             if self.action not in ['list', 'interactive']:
                 log.info('Updating record %d/%d: %s', idx + 1, len(valid_records), mms_id)
             record = self.ils.get_record(mms_id)
-            c = self.update_record(record)
+            c = self.update_record(record, progress={'current': idx + 1, 'total': len(valid_records)})
             if c > 0:
                 self.records_changed += 1
                 self.changes_made += c
