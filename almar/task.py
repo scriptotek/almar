@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import logging
 from collections import OrderedDict
 import six
+import os
 from colorama import Fore, Back, Style
 from six import python_2_unicode_compatible
 from copy import deepcopy
@@ -97,6 +98,7 @@ class InteractiveReplaceTask(Task):
     def _run(self, marc_record):
         utf8print()
         time.sleep(1)
+        os.system('clear')
         utf8print('{}{}: {}{}'.format(Fore.WHITE, marc_record.id, marc_record.title(), Style.RESET_ALL))
         for field in marc_record.fields:
             if field.tag.startswith('6'):
