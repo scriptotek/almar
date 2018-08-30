@@ -22,9 +22,6 @@ class Task(object):
     def match_field(self, field):
         return field.match(self.source, self.ignore_extra_subfields)
 
-    def match_record(self, marc_record):
-        return marc_record.match(self.source, self.ignore_extra_subfields)
-
     def run(self, marc_record, progress=None):
         # log.debug('Run task: %s', self)
         self.progress = progress
@@ -217,19 +214,20 @@ class AddTask(Task):
     Add a new subject access or classification number field to any given MARC record.
     """
 
-    def __init__(self, target):
+    def __init__(self, target, match=False):
         self.source = None
         self.target = deepcopy(target)
         self.target.set_a_or_x_to('a')
+
+        # This task will either always match (if run alone)
+        # or never match (if appending to another task)
+        self.match = match
 
     def __str__(self):
         return 'Add `{}`'.format(Fore.WHITE + six.text_type(self.target) + Style.RESET_ALL)
 
     def match_field(self, field):
-        return False  # This task will only be run if some other task matches the record.
-
-    def match_record(self, marc_record):
-        return False  # This task will only be run if some other task matches the record.
+        return self.match  # This task will only be run if some other task matches the record.
 
     def _run(self, marc_record):
         new_field = self.target.as_xml()

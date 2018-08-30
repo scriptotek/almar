@@ -84,7 +84,10 @@ class Job(object):
 
     def generate_steps(self):
 
-        if self.action == 'remove':
+        if self.action == 'add':
+            self.steps.append(AddTask(self.source_concept, match=True))
+
+        elif self.action == 'remove':
             # Delete
             self.steps.append(DeleteTask(self.source_concept))
 

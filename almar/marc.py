@@ -218,10 +218,6 @@ class Record(object):
         for node in self.el.findall('datafield'):
             yield Field(node)
 
-    def match(self, concept, ignore_extra_subfields=False):
-        matches = list(self.search(concept, ignore_extra_subfields))
-        return len(matches) != 0
-
     def search(self, concept, ignore_extra_subfields=False):
         """
         Return fields matching the Concept

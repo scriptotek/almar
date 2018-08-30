@@ -158,10 +158,10 @@ class TestRecord(unittest.TestCase):
         src = Concept('650', OrderedDict((('a', 'Atferd'), ('2', 'noubomn'))))
         dst = Concept('655', OrderedDict((('a', 'Atferd'), ('2', 'noubomn'))))
         task = ReplaceTask(src, dst)
-        self.assertTrue(task.match_record(record))
+        self.assertTrue(self.match_record(task, record))
 
         task.run(record)
-        self.assertFalse(task.match_record(record))
+        self.assertFalse(self.match_record(task, record))
         assert record_search(record, '655', {'2': 'noubomn'}) == 2
 
     def testReplace2to2(self):
@@ -173,9 +173,9 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(task.match_record(record))
+            self.assertTrue(self.match_record(task, record))
             task.run(record)
-            self.assertFalse(task.match_record(record))
+            self.assertFalse(self.match_record(task, record))
             assert strip_colors(task) == 'Replace `650 $a Mønstre $x Dagbøker $2 noubomn` → `650 $a Test to $x Atlas $2 noubomn`'
 
         assert record_search(record, '650', {'a': 'Mønstre', 'x': 'Dagbøker', '2': 'noubomn'}) == 0
@@ -189,9 +189,9 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(task.match_record(record))
+            self.assertTrue(self.match_record(task, record))
             task.run(record)
-            self.assertFalse(task.match_record(record))
+            self.assertFalse(self.match_record(task, record))
             assert strip_colors(task) == 'Replace `650 $a Mønstre $2 noubomn` → `650 $a Mønstre $x Test $2 noubomn`'
 
         fields = list(record.search(Concept('650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'}), ignore_extra_subfields=True))
@@ -206,9 +206,9 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(task.match_record(record))
+            self.assertTrue(self.match_record(task, record))
             task.run(record)
-            self.assertFalse(task.match_record(record))
+            self.assertFalse(self.match_record(task, record))
             assert strip_colors(task) == 'Replace `650 $a Mønstre $x Atferd $2 noubomn` → `650 $a Ost $2 noubomn`'
 
         assert record_search(record, '650', {'a': 'Ost', 'x': None, '2': 'noubomn'}) == 1
@@ -265,6 +265,34 @@ class TestRecord(unittest.TestCase):
         assert modified == 1
         assert fc1 == fc0 - 1
 
+    def testAddDoesNotAddDuplicates(self):
+        """Add subject"""
+        record = self.getRecord()
+        task = AddTask(Concept('650', OrderedDict((('a', 'atferd'), ('2', 'noubomn')))))
+
+        fc0 = len(record.el.findall('.//datafield[@tag="650"]'))
+        modified = task.run(record)
+        fc1 = len(record.el.findall('.//datafield[@tag="650"]'))
+
+        # The subject will added, before being removed as a duplicated,
+        # so the record is still marked as modified. We could perhaps
+        # improve this in the future.
+        assert modified == 1
+
+        assert fc1 == fc0
+
+    def testAdd(self):
+        """Add subject"""
+        record = self.getRecord()
+        task = AddTask(Concept('650', OrderedDict((('a', 'something new'), ('2', 'noubomn')))))
+
+        fc0 = len(record.el.findall('.//datafield[@tag="650"]'))
+        modified = task.run(record)
+        fc1 = len(record.el.findall('.//datafield[@tag="650"]'))
+
+        assert modified == 1
+        assert fc1 == fc0 + 1
+
     def testCaseSensitive(self):
         """Se2arch should in general be case sensitive ..."""
         record = self.getRecord()
@@ -274,7 +302,14 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         for task in tasks:
-            self.assertFalse(task.match_record(record))
+            self.assertFalse(self.match_record(task, record))
+
+    def match_record(self, task, record):
+        for field in record.fields:
+            if field.tag.startswith('6'):
+                if task.match_field(field):
+                    return True
+        return False
 
     def testCaseInsensitiveFirstCharacter(self):
         """

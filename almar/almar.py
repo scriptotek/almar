@@ -50,6 +50,7 @@ def configure_logging(config, jobname, verbose=False):
 
     # Get root logger
     logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
     # Add stream handler and formatter
     handler = logging.StreamHandler()
@@ -116,6 +117,11 @@ def parse_args(args, default_env=None):
     parser_del.add_argument('term', nargs=1, help='Term to remove')
     parser_del.set_defaults(action='remove')
 
+    # Create parser for the "add" command
+    parser_add = subparsers.add_parser('add', help='Add subject field')
+    parser_add.add_argument('term', nargs=1, help='Term to add')
+    parser_add.set_defaults(action='add')
+
     # Create parser for the "interactive" command
     parser_int = subparsers.add_parser('interactive', help='Interactive reclassification')
     parser_int.add_argument('term', nargs=1, help='Term to search for')
@@ -140,7 +146,7 @@ def parse_args(args, default_env=None):
 
     args.term = args.term[0]
 
-    if args.action in ['remove', 'list']:
+    if args.action in ['add', 'remove', 'list']:
         args.new_terms = []
 
     args.term = ensure_unicode(args.term)
