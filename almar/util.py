@@ -7,7 +7,7 @@ import vkbeautify
 from colorama import Fore
 from lxml import etree
 from six import text_type
-import inquirer
+from PyInquirer import prompt
 import logging
 import re
 import pkg_resources  # part of setuptools
@@ -35,8 +35,13 @@ def pick(msg, options, alpha_options=None):
         for k, v in alpha_options.items():
             choices[v] = k
 
-    answers = inquirer.prompt([
-        inquirer.Checkbox('whattodo', message=msg, choices=choices.keys())
+    answers = prompt([
+        {
+            'type': 'checkbox',
+            'name': 'whattodo',
+            'message': msg,
+            'choices': choices.keys(),
+        }
     ])
 
     return [choices[x] for x in answers['whattodo']]
@@ -51,8 +56,13 @@ def pick_one(msg, options, alpha_options=None):
         for k, v in alpha_options.items():
             choices[v] = k
 
-    answers = inquirer.prompt([
-        inquirer.List('whattodo', message=msg, choices=choices.keys())
+    answers = prompt([
+        {
+            'type': 'list',
+            'name': 'whattodo',
+            'message': msg,
+            'choices': choices.keys(),
+        }
     ])
 
     return choices[answers['whattodo']]
