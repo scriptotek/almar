@@ -40,7 +40,7 @@ def pick(msg, options, alpha_options=None):
             'type': 'checkbox',
             'name': 'whattodo',
             'message': msg,
-            'choices': choices.keys(),
+            'choices': [{'name': x} for x in choices.keys()],
         }
     ])
 
