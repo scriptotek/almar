@@ -7,7 +7,7 @@ import vkbeautify
 from colorama import Fore
 from lxml import etree
 from six import text_type
-from PyInquirer import prompt
+import questionary
 import logging
 import re
 import pkg_resources  # part of setuptools
@@ -35,16 +35,11 @@ def pick(msg, options, alpha_options=None):
         for k, v in alpha_options.items():
             choices[v] = k
 
-    answers = prompt([
-        {
-            'type': 'checkbox',
-            'name': 'whattodo',
-            'message': msg,
-            'choices': [{'name': x} for x in choices.keys()],
-        }
-    ])
+    answer = questionary.checkbox(msg, choices=[
+        {'name': x} for x in choices.keys()
+    ]).ask()
 
-    return [choices[x] for x in answers['whattodo']]
+    return [choices[x] for x in answer]
 
 
 def pick_one(msg, options, alpha_options=None):
@@ -56,16 +51,9 @@ def pick_one(msg, options, alpha_options=None):
         for k, v in alpha_options.items():
             choices[v] = k
 
-    answers = prompt([
-        {
-            'type': 'list',
-            'name': 'whattodo',
-            'message': msg,
-            'choices': choices.keys(),
-        }
-    ])
+    answer = questionary.select(msg, choices.keys()).ask()
 
-    return choices[answers['whattodo']]
+    return choices[answer]
 
 
 def parse_xml(txt):
