@@ -100,6 +100,11 @@ def parse_args(args, default_env=None):
                               'Example: --cql \'alma.all_for_ui = "some identifier"\'')
                         )
 
+    parser.add_argument('--grep', dest='grep', nargs='?',
+                        help=('Filter the result list by some string.'
+                              'Example: --grep \'some text\'')
+                        )
+
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Create parser for the "replace" command
@@ -347,6 +352,7 @@ def job_args(config=None, args=None):
         'target_concepts': target_concepts,
         'list_options': list_options,
         'cql_query': args.cql_query,
+        'grep': args.grep,
         'authorities': Authorities(vocabularies)
     }
 

@@ -18,7 +18,7 @@ formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt
 
 class Job(object):
     def __init__(self, action, source_concept, target_concepts=None, sru=None, ils=None,
-                 list_options=None, authorities=None, cql_query=None):
+                 list_options=None, authorities=None, cql_query=None, grep=None):
 
         self.dry_run = False
         self.interactive = True
@@ -54,6 +54,9 @@ class Job(object):
             return template.format(term=term, vocabulary=vocabulary)
 
         self.cql_query = prepare_cql_query(cql_query, self.source_concept.term, self.source_concept.sf['2'])
+        self.grep = grep
+        if self.grep is not None:
+            self.grep = self.grep.lower()
 
         self.steps = []
         self.generate_steps()
@@ -166,18 +169,26 @@ class Job(object):
                     pbar = tqdm(total=self.sru.num_records, desc='Filtering SRU results')
 
                 log.debug('Checking record %s', marc_record.id)
+                record_matching = False
+                grep_matching = False
                 for field in marc_record.fields:
                     if field.tag.startswith('6'):
-                        matched = False
+                        field_matching = False
                         for step in self.steps:
                             if step.match_field(field):
-                                matched = True
+                                field_matching = True
                                 break  # no need to check rest of the steps
-                        if matched:
+
+                        if self.grep is None or self.grep in str(field).lower():
+                            grep_matching = True
+                        if field_matching:
                             log.debug('> %s', field)
-                            valid_records.add(marc_record.id)
+                            record_matching = True
                         else:
                             log.debug('  %s', field)
+
+                if record_matching and grep_matching:
+                    valid_records.add(marc_record.id)
 
                 if pbar is not None:
                     pbar.update()
