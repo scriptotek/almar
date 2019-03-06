@@ -406,6 +406,8 @@ def run(config, argv):
 
     configure_logging(config.get('logging', logging_defaults), jobname, args.verbose)
     log = logging.getLogger()
+    if sys.version_info < (3, 0):
+        log.warning('Running on Python < 3.0')
     log.debug('Starting job %s as %s', jobname, username)
 
     jargs = job_args(config, args)

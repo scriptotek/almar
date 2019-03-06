@@ -21,7 +21,7 @@ def utf8print(txt=None):
         sys.stdout.write('\n')
     else:
         if sys.version_info < (3, 0):
-            sys.stdout.write('%s\n' % txt.encode('utf-8'))
+            sys.stdout.write(('%s\n' % txt).encode('utf-8'))
         else:
             sys.stdout.write('%s\n' % txt)
 
