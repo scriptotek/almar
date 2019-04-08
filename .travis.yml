@@ -1,15 +1,25 @@
 language: python
 python:
-  - "3.5"
-  - "3.6"
-  - "3.7"
+- '3.5'
+- '3.6'
+- '3.7'
 dist: xenial
 sudo: true
 install:
-  - pip install -r test-requirements.txt
-  - pip install --process-dependency-links .
+- pip install -r test-requirements.txt
+- pip install .
 script:
-  - py.test
-  - pycodestyle
+- py.test
+- pycodestyle
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+- bash <(curl -s https://codecov.io/bash)
+deploy:
+  provider: pypi
+  user: danmichaelo
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: scriptotek/almar
+    python: '3.7'
+  password:
+    secure: VRNGNq+AXDEUKh78YXDkm7UXWJxd9IpRu4NPxmY+JyWw0ZooUxC4SAqg4BM4IuHjRLEueCgvGrDfd9go7xve1b9jT1XmTovhio0L5188s+p+f7T3XOcYu1t9mVvu1rmuqO9Npkbal6DxMjiv1SPZHhbfV7lFSw2JKf47kRzRiISq8ak0YDG1dB9KfS08mrO3HWsOHyD/M2nkFxNUpnw19fgV79sAZEsFFs+nOylVVT3klBn0H2b3U3mYJIz4/2qemjHwmY2SWrqWqXf71h6O5sn82ARwTk4+RLq4Lz7gr8hB6nm83jiKcAO4VYmPJzXbR6geWSFYdtuOHN7xqO3Ks2ifSjnB1nk/c1oqiPNIKoYk62D0w0Ss/UWvgu+RodH3OA4WRnrhWQb6v0ai25KBTwP8jsmZLgtpd3YaRw66/dTh0hxOEVuE+wHViz7QP5mf02yEttmWPyUtwOe5mIG8T59OHduzSMsCTvBJoDAAltADjFFkerbWGqwqLdlOV4gNkOkKXAZFrVKrtatinj/GOn30kirZXZijfGq0q+KNqnij/TCYyp7jaawFIp7cGgUtKPMFWXtBiqEgn6PMGyNNsYK+xxvc5wy1QzzDeJS46yinMr0jDwnMl0Gwa4XChWy6Eq1nSg3AX3IKvC74KFsVo1+gVtoq7skFQIT0JGsllXw=
