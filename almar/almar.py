@@ -417,7 +417,7 @@ def get_config():
         sys.exit(1)
     try:
         with open(filename) as fp:
-            config = yaml.load(fp)
+            config = yaml.load(fp, Loader=yaml.SafeLoader)
     except IOError:
         log.error('Could not read configuration file "%s"', filename)
         sys.exit(1)
