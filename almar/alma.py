@@ -6,7 +6,7 @@ from prompter import yesno
 from requests import Session, HTTPError
 from textwrap import dedent
 
-from .util import get_diff
+from .util import get_diff, format_diff
 from .bib import Bib
 
 log = logging.getLogger(__name__)
@@ -74,11 +74,13 @@ class Alma(LibrarySystem):
             log.warning(' -> Updating the record. The CZ connection will be lost!')
 
         post_data = record.xml()
-        the_diff = ''.join(get_diff(record.orig_xml, post_data))
+        diff = get_diff(record.orig_xml, post_data)
+        additions = len([x for x in diff[2:] if x[0] == '+'])
+        deletions = len([x for x in diff[2:] if x[0] == '-'])
         if show_diff:
-            log.info('Diff:\n%s', the_diff)
+            log.info('%d line(s) removed, %d line(s) added:\n%s', deletions, additions, format_diff(diff))
         else:
-            log.debug('Diff:\n%s', the_diff)
+            log.debug('%d line(s) removed, %d line(s) added:\n%s', deletions, additions, format_diff(diff))
 
         if not self.dry_run:
             try:

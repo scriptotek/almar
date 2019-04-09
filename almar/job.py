@@ -6,11 +6,13 @@ from copy import deepcopy
 from datetime import datetime
 import re
 
+from colorama import Fore, Back, Style
 from prompter import yesno
 from tqdm import tqdm
 
 from .sru import TooManyResults
-from .task import AddTask, ReplaceTask, InteractiveReplaceTask, ListTask, DeleteTask
+from .task import AddTask, ReplaceTask, InteractiveReplaceTask, ListTask, DeleteTask, utf8print
+from .util import INTERACTIVITY_NONE, INTERACTIVITY_STANDARD, INTERACTIVITY_INCREASED
 
 log = logging.getLogger(__name__)
 formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%I:%S')
@@ -21,7 +23,7 @@ class Job(object):
                  list_options=None, authorities=None, cql_query=None, grep=None):
 
         self.dry_run = False
-        self.interactive = True
+        self.interactivity = INTERACTIVITY_STANDARD
         self.show_progress = True
         self.show_diffs = False
         self.list_options = list_options or {}
@@ -123,7 +125,10 @@ class Job(object):
         if changes == 0:
             return 0
 
-        self.ils.put_record(record, interactive=self.interactive, show_diff=self.show_diffs)
+        if self.interactivity == INTERACTIVITY_INCREASED and not yesno('Update this record?', default='yes'):
+            return 0
+
+        self.ils.put_record(record, interactive=self.interactivity != INTERACTIVITY_NONE, show_diff=self.show_diffs)
 
         return changes
 
@@ -215,7 +220,7 @@ class Job(object):
             if self.dry_run:
                 log.warning('DRY RUN: No catalog records will actually be changed!')
 
-            if self.interactive and not yesno('Continue?', default='yes'):
+            if not self.dry_run and self.interactivity == INTERACTIVITY_STANDARD and not yesno('Continue?', default='yes'):
                 log.info('Job aborted')
                 return []
 
@@ -227,9 +232,23 @@ class Job(object):
         self.changes_made = 0
         for idx, mms_id in enumerate(valid_records):
             if self.action not in ['list', 'interactive']:
-                log.info('Updating record %d/%d: %s', idx + 1, len(valid_records), mms_id)
+                log.info('Record %d/%d: %s', idx + 1, len(valid_records), mms_id)
+
             record = self.ils.get_record(mms_id)
+
+            if self.list_options.get('show_titles'):
+                utf8print('{}\t{}'.format(record.marc_record.id, record.marc_record.title()))
+
+            if self.list_options.get('show_subjects'):
+                for field in record.marc_record.fields:
+                    if field.tag.startswith('6'):
+                        if len(self.source_concepts) > 0 and field.sf('2') == self.source_concepts[0].sf['2']:
+                            utf8print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        else:
+                            utf8print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
+
             c = self.update_record(record, progress={'current': idx + 1, 'total': len(valid_records)})
+
             if c > 0:
                 self.records_changed += 1
                 self.changes_made += c

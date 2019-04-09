@@ -15,6 +15,10 @@ __version__ = pkg_resources.require('almar')[0].version
 
 ANY_VALUE = '{ANY_VALUE}'
 
+INTERACTIVITY_NONE = 0
+INTERACTIVITY_STANDARD = 1
+INTERACTIVITY_INCREASED = 2
+
 
 def utf8print(txt=None):
     if txt is None:
@@ -102,14 +106,18 @@ def line_marc(root):
 
 
 def get_diff(src, dst):
-    src = line_marc(etree.fromstring(src.encode('utf-8')))
-    dst = line_marc(etree.fromstring(dst.encode('utf-8')))
+    src = sorted(line_marc(etree.fromstring(src.encode('utf-8'))))
+    dst = sorted(line_marc(etree.fromstring(dst.encode('utf-8'))))
 
     # src = vkbeautify.xml(src).splitlines(True)
     # dst = vkbeautify.xml(dst).splitlines(True)
 
     # returns list of unicode strings
-    return list(color_diff(difflib.unified_diff(src, dst, fromfile='Original', tofile='Modified')))
+    return list(difflib.unified_diff(src, dst, fromfile='Original', tofile='Modified'))
+
+
+def format_diff(lines):
+    return ''.join(color_diff(lines))
 
 
 class ColorStripFormatter(logging.Formatter):

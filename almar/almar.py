@@ -27,7 +27,8 @@ from .alma import Alma
 from .concept import Concept
 from .job import Job
 from .sru import SruClient
-from .util import ANY_VALUE, ColorStripFormatter, JobNameFilter
+from .util import ANY_VALUE, INTERACTIVITY_NONE, INTERACTIVITY_STANDARD, INTERACTIVITY_INCREASED
+from .util import ColorStripFormatter, JobNameFilter
 
 raven_client = None
 
@@ -76,7 +77,9 @@ def ensure_unicode(arg):
 
 def parse_args(args, default_env=None):
     parser = argparse.ArgumentParser(prog='almar',
-                                     description='Edit or remove subject fields in Alma catalog records.')
+                                     description='Edit or remove subject fields in Alma catalog records. '
+                                     'By default, almar will ask you once to confirm before making any edits. '
+                                     'This can be changed by using the -n or -i flags, see below.')
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     parser.add_argument('-e', '--env', dest='env', nargs='?',
@@ -90,15 +93,22 @@ def parse_args(args, default_env=None):
                         help='Show more output')
 
     parser.add_argument('-n', '--non-interactive', '--non_interactive', dest='non_interactive', action='store_true',
-                        help='Non-interactive mode. Always use defaults rather than asking.')
+                        help='Non-interactive mode: Never ask for confirmation, always use defaults.')
+
+    parser.add_argument('-i', '--interactive', dest='interactive', action='store_true',
+                        help='Interactive mode: ask to confirm each change.')
 
     parser.add_argument('--diffs', dest='show_diffs', action='store_true',
-                        help='Show diffs before saving.')
+                        help='Show diffs (deprecated option, now enabled by default).')
 
     parser.add_argument('--cql', dest='cql_query', nargs='?',
                         help=('Custom CQL query to specify which records to be checked. '
                               'Example: --cql \'alma.all_for_ui = "some identifier"\'')
                         )
+
+    parser.add_argument('--titles', dest='show_titles', action='store_true',
+                        help='Show titles (deprecated option, now enabled by default)')
+    parser.add_argument('--subjects', dest='show_subjects', action='store_true', help='Show subject fields')
 
     parser.add_argument('--grep', dest='grep', nargs='?',
                         help=('Filter the result list by some string.'
@@ -136,15 +146,20 @@ def parse_args(args, default_env=None):
     # Create parser for the "list" command
     parser_list = subparsers.add_parser('list', help='List documents')
     parser_list.add_argument('term', nargs=1, help='Term to search for')
-    parser_list.add_argument('--titles', dest='show_titles', action='store_true', help='Show titles')
-    parser_list.add_argument('--subjects', dest='show_subjects', action='store_true', help='Show subject fields')
     parser_list.set_defaults(action='list')
 
     # Parse
     args = parser.parse_args(args)
 
+    # Deprecated options
+    args.show_diffs = True
+    args.show_titles = True
+
     if 'action' not in args:
         parser.error('No action specified')
+
+    if args.interactive and args.non_interactive:
+        parser.error('-n and -i are mutually exclusive')
 
     if args.env is not None:
         args.env = args.env.strip()
@@ -342,9 +357,8 @@ def job_args(config=None, args=None):
     if '0' not in source_concept.sf:
         source_concept.sf['0'] = ANY_VALUE
 
-    if args.action == 'list':
-        list_options['show_titles'] = args.show_titles
-        list_options['show_subjects'] = args.show_subjects
+    list_options['show_titles'] = args.show_titles
+    list_options['show_subjects'] = args.show_subjects
 
     return {
         'action': args.action,
@@ -438,7 +452,13 @@ def run(config, argv):
 
         job = Job(sru=sru, ils=alma, **jargs)
         job.dry_run = args.dry_run
-        job.interactive = not args.non_interactive
+        if args.non_interactive:
+            job.interactivity = INTERACTIVITY_NONE
+        elif args.interactive:
+            job.interactivity = INTERACTIVITY_INCREASED
+        else:
+            job.interactivity = INTERACTIVITY_STANDARD
+
         job.verbose = args.verbose
         job.show_diffs = args.show_diffs
 

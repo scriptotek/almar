@@ -27,7 +27,7 @@ from almar.sru import SruClient, SruErrorResponse, TooManyResults, NSMAP
 from almar.alma import Alma
 from almar.job import Job
 from almar.concept import Concept
-from almar.util import normalize_term, parse_xml, ANY_VALUE
+from almar.util import normalize_term, parse_xml, ANY_VALUE, INTERACTIVITY_NONE
 from almar.marc import Record
 from almar.task import DeleteTask, ReplaceTask, AddTask
 
@@ -710,7 +710,7 @@ class TestJob(unittest.TestCase):
         }
         self.job = Job(sru=patched_sru, ils=self.alma, **job_args(conf, parse_args(args)))
         # self.job.dry_run = True
-        self.job.interactive = False
+        self.job.interactivity = INTERACTIVITY_NONE
 
         # Job(self.sru, self.alma, voc, tag, term, new_term, new_tag)
         return self.job.start()
