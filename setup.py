@@ -7,7 +7,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.md')).read()
 
 setup(name='almar',
-      version='0.7.6',  # Use bumpversio to update
+      version='0.8.0',  # Use bumpversio to update
       description='Search and replace for subject fields in Alma records.',
       long_description=README,
       long_description_content_type='text/markdown',
