@@ -115,6 +115,9 @@ def parse_args(args, default_env=None):
                               'Example: --grep \'some text\'')
                         )
 
+    parser.add_argument('--rem', dest='remove', action='append', default=[], help='Term to remove (can be repeated).')
+    parser.add_argument('--add', dest='add', action='append', default=[], help='Term to add (can be repeated).')
+
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Create parser for the "replace" command
@@ -133,8 +136,8 @@ def parse_args(args, default_env=None):
     parser_del.set_defaults(action='remove')
 
     # Create parser for the "add" command
-    parser_add = subparsers.add_parser('add', help='Add subject field')
-    parser_add.add_argument('term', nargs=1, help='Term to add')
+    parser_add = subparsers.add_parser('add', help='Add subject fields')
+    parser_add.add_argument('new_terms', nargs='+', help='Terms to add')
     parser_add.set_defaults(action='add')
 
     # Create parser for the "interactive" command
@@ -155,8 +158,16 @@ def parse_args(args, default_env=None):
     args.show_diffs = True
     args.show_titles = True
 
+    if 'new_terms' not in args:
+        args.new_terms = []
+
     if 'action' not in args:
-        parser.error('No action specified')
+        if len(args.remove) == 0 and len(args.add) == 0:
+            parser.error('Please specify an action or one or more --rem or --add clauses.')
+        args.action = 'custom'
+    else:
+        if len(args.remove) != 0 or len(args.add) != 0:
+            parser.error('--rem or --add cannot be used when an action is specified.')
 
     if args.interactive and args.non_interactive:
         parser.error('-n and -i are mutually exclusive')
@@ -164,14 +175,13 @@ def parse_args(args, default_env=None):
     if args.env is not None:
         args.env = args.env.strip()
 
-    args.term = args.term[0]
-
-    if args.action in ['add', 'remove', 'list']:
-        args.new_terms = []
-
-    args.term = ensure_unicode(args.term)
     args.env = ensure_unicode(args.env)
-    args.new_terms = [ensure_unicode(x) for x in args.new_terms]
+
+    args.terms = [ensure_unicode(x) for x in args.remove]
+    if 'term' in args:
+        args.terms.append(ensure_unicode(args.term[0]))
+
+    args.new_terms = [ensure_unicode(x) for x in args.add] + [ensure_unicode(x) for x in args.new_terms]
 
     return args
 
@@ -217,7 +227,9 @@ def parse_components(streng):
     return sf
 
 
-def get_concept(term, default_vocabulary, default_tag='650', default_term=None):
+def get_concept(term, default_vocabulary, default_tag=None, default_term=None):
+
+    default_tag = default_tag or '650'
 
     # 1) Advanced syntax
     if '$$' in term:
@@ -255,24 +267,28 @@ def job_args(config=None, args=None):
         )
     default_vocabulary = ensure_unicode(config['default_vocabulary'])
 
-    source_concept = get_concept(args.term, default_vocabulary)
-    target_concepts = []
-    list_options = {}
+    source_concepts = [
+        get_concept(term, default_vocabulary)
+        for term in args.terms
+    ]
 
+    target_concepts = []
     if args.action == 'replace':
         target_concepts.append(get_concept(args.new_terms[0], default_vocabulary,
-                                           default_term=source_concept.term,
-                                           default_tag=source_concept.tag))
+                                           default_term=source_concepts[0].term,
+                                           default_tag=source_concepts[0].tag))
 
         for new_term in args.new_terms[1:]:
             target_concepts.append(get_concept(new_term, default_vocabulary,
-                                               default_tag=source_concept.tag))
+                                               default_tag=source_concepts[0].tag))
 
-    elif args.action == 'interactive':
+    elif args.action in ['interactive', 'custom']:
         target_concepts = [
-            get_concept(term, default_vocabulary, default_tag=source_concept.tag)
+            get_concept(term, default_vocabulary)
             for term in args.new_terms
         ]
+
+    list_options = {}
 
     """ Caveat 1:
 
@@ -281,25 +297,35 @@ def job_args(config=None, args=None):
     """
     log = logging.getLogger()
 
-    if len(target_concepts) > 0:
-        if 'a_or_x' in source_concept.sf and 'a_or_x' not in target_concepts[0].sf:
-            source_concept.set_a_or_x_to('a')
+    if len(source_concepts) == 1 and len(target_concepts) > 0:
+        if 'a_or_x' in source_concepts[0].sf and 'a_or_x' not in target_concepts[0].sf:
+            source_concepts[0].set_a_or_x_to('a')
 
-        if 'a_or_x' in target_concepts[0].sf and 'a_or_x' not in source_concept.sf:
+        if 'a_or_x' in target_concepts[0].sf and 'a_or_x' not in source_concepts[0].sf:
             target_concepts[0].set_a_or_x_to('a')
 
     """ Caveat 2:
 
-    If a tag move is involved, avoid fuzzy matching
+    If more than one source or target concept is involved, don't do fuzzy matching.
     """
-    if len(target_concepts) > 0:
-        if source_concept.tag != target_concepts[0].tag:
-            if 'a_or_x' in source_concept.sf:
-                source_concept.set_a_or_x_to('a')
+    if len(source_concepts) > 1 or len(target_concepts) > 1:
+        for source_concept in source_concepts:
+            source_concept.set_a_or_x_to('a')
+        for target_concept in target_concepts:
+            target_concept.set_a_or_x_to('a')
+
+    """ Caveat 3:
+
+    If a tag move is involved, don't do fuzzy matching
+    """
+    if len(source_concepts) == 1 and len(target_concepts) > 0:
+        if source_concepts[0].tag != target_concepts[0].tag:
+            if 'a_or_x' in source_concepts[0].sf:
+                source_concepts[0].set_a_or_x_to('a')
             if 'a_or_x' in target_concepts[0].sf:
                 target_concepts[0].set_a_or_x_to('a')
 
-    """ Caveat 3a:
+    """ Caveat 4a:
 
     If a subfield exists in the source query, but not in the target query,
     we interpret that as a request for removing the subfield.
@@ -312,14 +338,15 @@ def job_args(config=None, args=None):
     Developer note: This should be run before caveat 4 below, since we don't
     want to remove identifiers! (This is covered by tests)
     """
-    for target_concept in target_concepts:
-        # loop over all target concepts because of InteractiveReplaceTask
-        for code in source_concept.sf:
-            if not target_concept.has_subfield(code) and code != '0':
-                log.debug('Adding explicit "%s: None" to target concept %s', code, target_concept)
-                target_concept.sf[code] = None  # meaning NO_VALUE
+    if len(source_concepts) == 1:
+        for target_concept in target_concepts:
+            # loop over all target concepts because of InteractiveReplaceTask
+            for code in source_concepts[0].sf:
+                if not target_concept.has_subfield(code) and code != '0':
+                    log.debug('Adding explicit "%s: None" to target concept %s', code, target_concept)
+                    target_concept.sf[code] = None  # meaning NO_VALUE
 
-    """ Caveat 3b:
+    """ Caveat 4b:
 
     If a subfield (except for $0) exists in the target query, but not in the
     source query, we should not match fields already having some value for
@@ -338,14 +365,15 @@ def job_args(config=None, args=None):
 
     Developer note: This should be run before caveat 4 below
     """
-    for target_concept in target_concepts:
-        # loop over all target concepts because of InteractiveReplaceTask
-        for code in target_concept.sf:
-            if not source_concept.has_subfield(code) and code != '0':
-                log.debug('Adding explicit "%s: None" to source concept %s', code, source_concept)
-                source_concept.sf[code] = None  # meaning NO_VALUE
+    if len(source_concepts) == 1:
+        for target_concept in target_concepts:
+            # loop over all target concepts because of InteractiveReplaceTask
+            for code in target_concept.sf:
+                if not source_concepts[0].has_subfield(code) and code != '0':
+                    log.debug('Adding explicit "%s: None" to source concept %s', code, source_concepts[0])
+                    source_concepts[0].sf[code] = None  # meaning NO_VALUE
 
-    """ Caveat 4:
+    """ Caveat 5:
 
     Some fields will have $0 values, but many won't, so we cannot require
     a $0 value at this point. If you want to match only fields with a given
@@ -354,15 +382,16 @@ def job_args(config=None, args=None):
         almar replace '650 $$a Test $$b Test $$0 identifer' ...
 
     """
-    if '0' not in source_concept.sf:
-        source_concept.sf['0'] = ANY_VALUE
+    for source_concept in source_concepts:
+        if '0' not in source_concept.sf:
+            source_concept.sf['0'] = ANY_VALUE
 
     list_options['show_titles'] = args.show_titles
     list_options['show_subjects'] = args.show_subjects
 
     return {
         'action': args.action,
-        'source_concept': source_concept,
+        'source_concepts': source_concepts,
         'target_concepts': target_concepts,
         'list_options': list_options,
         'cql_query': args.cql_query,
@@ -462,7 +491,7 @@ def run(config, argv):
         job.verbose = args.verbose
         job.show_diffs = args.show_diffs
 
-        concepts = [jargs['source_concept']] + jargs['target_concepts']
+        concepts = jargs['source_concepts'] + jargs['target_concepts']
         jobdesc = '%s %s' % (jargs['action'], ' '.join(["'%s'" % text_type(x) for x in concepts]))
 
         log.debug('Job arguments: %s', jobdesc)

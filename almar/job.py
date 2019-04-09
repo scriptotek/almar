@@ -19,7 +19,7 @@ formatter = logging.Formatter('[%(asctime)s %(levelname)s] %(message)s', datefmt
 
 
 class Job(object):
-    def __init__(self, action, source_concept, target_concepts=None, sru=None, ils=None,
+    def __init__(self, action, source_concepts=[], target_concepts=[], sru=None, ils=None,
                  list_options=None, authorities=None, cql_query=None, grep=None):
 
         self.dry_run = False
@@ -36,26 +36,39 @@ class Job(object):
         self.authorities = authorities
 
         self.action = action
-        self.source_concept = source_concept
-        self.target_concepts = target_concepts or []
+        self.source_concepts = source_concepts
+        self.target_concepts = target_concepts
 
         self.job_name = datetime.now().isoformat()
 
-        if self.source_concept.tag == '648' and self.source_concept.sf.get('2') == 'noubomn':
+        if (
+            len(self.source_concepts) > 0 and
+            self.source_concepts[0].tag == '648' and
+            self.source_concepts[0].sf.get('2') == 'noubomn'
+        ):
             raise RuntimeError('Editing 648 for noubomn is disabled until we get rid of the 650 duplicates')
             # log.info('Note: For the 648 field, we will also fix the 650 duplicate')
 
         self.authorize()
-        log.debug('Source concept: %s', source_concept)
+        for source_concept in source_concepts:
+            log.debug('Source concept: %s', source_concept)
         for target_concept in target_concepts:
             log.debug('Target concept: %s', target_concept)
 
-        def prepare_cql_query(query, term, vocabulary):
-            template = cql_query or 'alma.subjects = "{term}" AND alma.authority_vocabulary = "{vocabulary}"'
-            term = re.sub('[-–]', ' ', term)  # replace hyphens and dashes with spaces
-            return template.format(term=term, vocabulary=vocabulary)
+        def prepare_cql_query(source_concepts):
+            query_parts = set()
+            for concept in source_concepts:
+                term = re.sub('[-–]', ' ', concept.term)  # replace hyphens and dashes with spaces
+                query_parts.add('alma.subjects="%s"' % term)
+                query_parts.add('alma.authority_vocabulary="%s"' % concept.sf['2'])
 
-        self.cql_query = prepare_cql_query(cql_query, self.source_concept.term, self.source_concept.sf['2'])
+            query_parts = sorted(list(query_parts))
+            return ' AND '.join(query_parts)
+
+        self.cql_query = cql_query or prepare_cql_query(self.source_concepts)
+        if self.cql_query == '':
+            raise RuntimeError('No query given.')
+
         self.grep = grep
         if self.grep is not None:
             self.grep = self.grep.lower()
@@ -89,23 +102,32 @@ class Job(object):
 
     def generate_steps(self):
 
-        if self.action == 'add':
-            self.steps.append(AddTask(self.source_concept, match=True))
+        if self.action == 'custom':
+            self.steps.append(DeleteTask(self.source_concepts))
+            for target_concept in self.target_concepts:
+                if len(self.source_concepts) == 0:
+                    self.steps.append(AddTask(target_concept, match=True))
+                else:
+                    self.steps.append(AddTask(target_concept))
+
+        elif self.action == 'add':
+            for target_concept in self.target_concepts:
+                self.steps.append(AddTask(target_concept, match=True))
 
         elif self.action == 'remove':
             # Delete
-            self.steps.append(DeleteTask(self.source_concept))
+            self.steps.append(DeleteTask(self.source_concepts))
 
         elif self.action == 'interactive':
-            self.steps.append(InteractiveReplaceTask(self.source_concept, self.target_concepts))
+            self.steps.append(InteractiveReplaceTask(self.source_concepts[0], self.target_concepts))
 
         elif self.action == 'list':
-            self.steps.append(ListTask(self.source_concept, **self.list_options))
+            self.steps.append(ListTask(self.source_concepts, **self.list_options))
 
         elif self.action == 'replace':
 
             # Rename source concept to first target concept
-            for step in self.generate_replace_tasks(self.source_concept,
+            for step in self.generate_replace_tasks(self.source_concepts[0],
                                                     self.target_concepts[0]):
                 self.steps.append(step)
 
@@ -176,21 +198,18 @@ class Job(object):
                 log.debug('Checking record %s', marc_record.id)
                 record_matching = False
                 grep_matching = False
-                for field in marc_record.fields:
-                    if field.tag.startswith('6'):
-                        field_matching = False
-                        for step in self.steps:
-                            if step.match_field(field):
-                                field_matching = True
-                                break  # no need to check rest of the steps
+                for n, step in enumerate(self.steps):
+                    step_matching = step.match(marc_record)
 
+                    for field in marc_record.fields:
                         if self.grep is None or self.grep in str(field).lower():
                             grep_matching = True
-                        if field_matching:
-                            log.debug('> %s', field)
-                            record_matching = True
-                        else:
-                            log.debug('  %s', field)
+
+                    if step_matching:
+                        log.debug('Step %d did match', n)
+                        record_matching = True
+                    else:
+                        log.debug('Step %d did not match', n)
 
                 if record_matching and grep_matching:
                     valid_records.add(marc_record.id)

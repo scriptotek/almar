@@ -69,3 +69,4 @@ target/
 
 #PyENV
 .python-version
+.mypy_cache

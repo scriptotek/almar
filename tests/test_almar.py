@@ -158,10 +158,10 @@ class TestRecord(unittest.TestCase):
         src = Concept('650', OrderedDict((('a', 'Atferd'), ('2', 'noubomn'))))
         dst = Concept('655', OrderedDict((('a', 'Atferd'), ('2', 'noubomn'))))
         task = ReplaceTask(src, dst)
-        self.assertTrue(self.match_record(task, record))
+        self.assertTrue(task.match(record))
 
         task.run(record)
-        self.assertFalse(self.match_record(task, record))
+        self.assertFalse(task.match(record))
         assert record_search(record, '655', {'2': 'noubomn'}) == 2
 
     def testReplace2to2(self):
@@ -173,9 +173,9 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(self.match_record(task, record))
+            self.assertTrue(task.match(record))
             task.run(record)
-            self.assertFalse(self.match_record(task, record))
+            self.assertFalse(task.match(record))
             assert strip_colors(task) == 'Replace `650 $a Mønstre $x Dagbøker $2 noubomn` → `650 $a Test to $x Atlas $2 noubomn`'
 
         assert record_search(record, '650', {'a': 'Mønstre', 'x': 'Dagbøker', '2': 'noubomn'}) == 0
@@ -189,9 +189,9 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(self.match_record(task, record))
+            self.assertTrue(task.match(record))
             task.run(record)
-            self.assertFalse(self.match_record(task, record))
+            self.assertFalse(task.match(record))
             assert strip_colors(task) == 'Replace `650 $a Mønstre $2 noubomn` → `650 $a Mønstre $x Test $2 noubomn`'
 
         fields = list(record.search(Concept('650', {'a': 'Mønstre', 'x': 'Test', '2': 'noubomn'}), ignore_extra_subfields=True))
@@ -206,9 +206,9 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 1
         for task in tasks:
-            self.assertTrue(self.match_record(task, record))
+            self.assertTrue(task.match(record))
             task.run(record)
-            self.assertFalse(self.match_record(task, record))
+            self.assertFalse(task.match(record))
             assert strip_colors(task) == 'Replace `650 $a Mønstre $x Atferd $2 noubomn` → `650 $a Ost $2 noubomn`'
 
         assert record_search(record, '650', {'a': 'Ost', 'x': None, '2': 'noubomn'}) == 1
@@ -256,7 +256,7 @@ class TestRecord(unittest.TestCase):
     def testRemove(self):
         """Remove subject"""
         record = self.getRecord()
-        task = DeleteTask(Concept('650', OrderedDict((('a', 'atferd'), ('2', 'noubomn')))))
+        task = DeleteTask([Concept('650', OrderedDict((('a', 'atferd'), ('2', 'noubomn'))))])
 
         fc0 = len(record.el.findall('.//datafield[@tag="650"]'))
         modified = task.run(record)
@@ -264,6 +264,21 @@ class TestRecord(unittest.TestCase):
 
         assert modified == 1
         assert fc1 == fc0 - 1
+
+    def testRemoveMultiple(self):
+        """Remove multiple subjects"""
+        record = self.getRecord()
+        task = DeleteTask([
+            Concept('650', OrderedDict((('a', 'atferd'), ('2', 'noubomn')))),
+            Concept('650', OrderedDict((('a', 'mønstre'), ('x', 'dagbøker'), ('2', 'noubomn')))),
+        ])
+
+        fc0 = len(record.el.findall('.//datafield[@tag="650"]'))
+        modified = task.run(record)
+        fc1 = len(record.el.findall('.//datafield[@tag="650"]'))
+
+        assert modified == 2
+        assert fc1 == fc0 - 2
 
     def testAddDoesNotAddDuplicates(self):
         """Add subject"""
@@ -293,6 +308,25 @@ class TestRecord(unittest.TestCase):
         assert modified == 1
         assert fc1 == fc0 + 1
 
+    def testRemoveAndAdd(self):
+        """Remove and add subject"""
+
+        old_concept = Concept('650', OrderedDict((('a', 'atferd'), ('2', 'noubomn'))))
+        new_concept = Concept('651', OrderedDict((('a', 'something new'), ('2', 'noubomn'))))
+
+        record = self.getRecord()
+        f650b = len(record.el.findall('.//datafield[@tag="650"]'))
+        f651b = len(record.el.findall('.//datafield[@tag="651"]'))
+        modified1 = DeleteTask([old_concept]).run(record)
+        modified2 = AddTask(new_concept).run(record)
+        f650a = len(record.el.findall('.//datafield[@tag="650"]'))
+        f651a = len(record.el.findall('.//datafield[@tag="651"]'))
+
+        assert modified1 == 1
+        assert modified2 == 1
+        assert f650a == f650b - 1
+        assert f651a == f651b + 1
+
     def testCaseSensitive(self):
         """Se2arch should in general be case sensitive ..."""
         record = self.getRecord()
@@ -302,14 +336,7 @@ class TestRecord(unittest.TestCase):
 
         assert len(tasks) == 3  # exact $a, fuzzy $a, fuzzy $x
         for task in tasks:
-            self.assertFalse(self.match_record(task, record))
-
-    def match_record(self, task, record):
-        for field in record.fields:
-            if field.tag.startswith('6'):
-                if task.match_field(field):
-                    return True
-        return False
+            self.assertFalse(task.match(record))
 
     def testCaseInsensitiveFirstCharacter(self):
         """
@@ -585,7 +612,7 @@ class TestSruSearch(unittest.TestCase):
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
         with pytest.raises(TooManyResults):
-            records = list(SruClient(url).search('alma.subjects=="Tyskland" AND alma.authority_vocabulary = "humord"'))
+            records = list(SruClient(url).search('alma.subjects=="Tyskland" AND alma.authority_vocabulary="humord"'))
 
         assert len(responses.calls) == 1
 
@@ -777,7 +804,6 @@ class TestJob(unittest.TestCase):
     def testIdentifierShouldNotBeAddedForComponentMatches(self, authorize_term):
 
         def side_effect(*args):
-            print(args)
             if args[1] == 'Geologi':
                 return {}
             else:
@@ -878,7 +904,7 @@ class TestAlmar(unittest.TestCase):
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
 
-        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
+        sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
 
         assert alma.get_record.call_count == 14
 
@@ -891,7 +917,7 @@ class TestAlmar(unittest.TestCase):
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
         run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
-        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
+        sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 0
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
@@ -902,7 +928,7 @@ class TestAlmar(unittest.TestCase):
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
         run(self.conf_obj(), ['-e test_env', '-n', 'remove', term])
-        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
+        sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 14
 
     @patch.object(Vocabulary, 'authorize_term', autospec=True)
@@ -919,7 +945,7 @@ class TestAlmar(unittest.TestCase):
         alma.get_record.return_value = bib
 
         run(self.conf_obj(), ['--diffs', '-e test_env', '-n', 'replace', term, new_term])
-        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
+        sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 1
         assert alma.put_record.call_count == 1
 
@@ -937,7 +963,7 @@ class TestAlmar(unittest.TestCase):
 
         run(self.conf_obj(), ['-e test_env', '-n', 'list', term])
         sru.request.assert_called_once_with(
-            'alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
+            'alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 1
         assert alma.put_record.call_count == 0
 
@@ -954,7 +980,7 @@ class TestAlmar(unittest.TestCase):
         get_record.return_value = Bib(doc)
 
         run(self.conf_obj(), ['--dry_run', '-e test_env', '-n', 'replace', term, new_term])
-        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
+        sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert get_record.call_count == 1
         assert len(responses.calls) == 0
 
@@ -973,7 +999,7 @@ class TestAlmar(unittest.TestCase):
 
         run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
 
-        sru.request.assert_called_once_with('alma.subjects = "%s" AND alma.authority_vocabulary = "%s"' % (term, 'noubomn'), 1)
+        sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
 
         assert bib.cz_link is not None
         assert get_record.call_count == 2  # It did match, but...
@@ -1011,27 +1037,28 @@ class TestArgumentParsing(unittest.TestCase):
         assert args.env == 'test_env'
         assert args.dry_run is False
         assert args.action == 'replace'
-        assert args.term == 'Sekvensering'
+        assert args.terms == ['Sekvensering']
         assert args.new_terms == ['Sekvenseringsmetoder']
 
-        assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].term == 'Sekvensering'
+        assert jargs['source_concepts'][0].tag == '650'
+        assert jargs['source_concepts'][0].term == 'Sekvensering'
 
     def test_unicode_input(self):
         args = parse_args(['replace', 'Byer : Økologi', 'Byøkologi'], default_env='test_env')
 
         assert args.action == 'replace'
-        assert args.term == 'Byer : Økologi'
+        assert args.terms == ['Byer : Økologi']
         assert args.new_terms == ['Byøkologi']
-        assert type(args.term) == text_type
+        assert type(args.terms[0]) == text_type
         assert type(args.new_terms[0]) == text_type
 
     def test_tag_move(self):
         args = parse_args(['replace', '651 Sekvensering', '655 Sekvenseringsmetoder'], default_env='test_env')
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '651'
-        assert jargs['source_concept'].sf == {'a': 'Sekvensering', '2': 'noubomn', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '651'
+        assert jargs['source_concepts'][0].sf == {'a': 'Sekvensering', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '655'
@@ -1041,8 +1068,9 @@ class TestArgumentParsing(unittest.TestCase):
         args = parse_args(['replace', '650 100 tallet f.Kr.', '648'], default_env='test_env')
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].sf == {'a': '100 tallet f.Kr.', '2': 'noubomn', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '650'
+        assert jargs['source_concepts'][0].sf == {'a': '100 tallet f.Kr.', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '648'
@@ -1052,9 +1080,10 @@ class TestArgumentParsing(unittest.TestCase):
         args = parse_args(['replace', 'Sekvenseringsmetoder', 'Sekvensering : Metoder'], default_env='test_env')
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '650'
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '650'
         # Does not have to be ordered
-        assert jargs['source_concept'].sf == dict((
+        assert jargs['source_concepts'][0].sf == dict((
             ('a', 'Sekvenseringsmetoder'),
             ('x', None),
             ('2', 'noubomn'),
@@ -1074,8 +1103,9 @@ class TestArgumentParsing(unittest.TestCase):
         args = parse_args(['replace', 'Sekvensering : Metoder', 'Sekvenseringsmetoder'], default_env='test_env')
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '650'
+        assert jargs['source_concepts'][0].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '650'
@@ -1085,8 +1115,9 @@ class TestArgumentParsing(unittest.TestCase):
         args = parse_args(['replace', 'Sekvensering : Metoder', 'Metoder : Sekvensiering'], default_env='test_env')
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '650'
+        assert jargs['source_concepts'][0].sf == {'a': 'Sekvensering', 'x': 'Metoder', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '650'
@@ -1096,8 +1127,9 @@ class TestArgumentParsing(unittest.TestCase):
         args = parse_args(['replace', '651 Sekvensering', 'Sekvenseringsmetoder'], default_env='test_env')
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '651'
-        assert jargs['source_concept'].sf == {'a_or_x': 'Sekvensering', '2': 'noubomn', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '651'
+        assert jargs['source_concepts'][0].sf == {'a_or_x': 'Sekvensering', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
         assert jargs['target_concepts'][0].tag == '651'
@@ -1107,18 +1139,20 @@ class TestArgumentParsing(unittest.TestCase):
         args = parse_args(['replace', '651 Sekvenseringsmetoder', 'Sekvensering', 'Metoder'], default_env='test_env')
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '651'
-        assert jargs['source_concept'].sf == {'a_or_x': 'Sekvenseringsmetoder', '2': 'noubomn', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+
+        assert jargs['source_concepts'][0].tag == '651'
+        assert jargs['source_concepts'][0].sf == {'a': 'Sekvenseringsmetoder', '2': 'noubomn', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 2
 
         assert jargs['target_concepts'][0].tag == '651'
-        assert jargs['target_concepts'][0].sf == {'a_or_x': 'Sekvensering', '2': 'noubomn'}
+        assert jargs['target_concepts'][0].sf == {'a': 'Sekvensering', '2': 'noubomn'}
 
         assert jargs['target_concepts'][1].tag == '651'
-        assert jargs['target_concepts'][1].sf == {'a_or_x': 'Metoder', '2': 'noubomn'}
+        assert jargs['target_concepts'][1].sf == {'a': 'Metoder', '2': 'noubomn'}
 
-    def test_advanced_syntax1(self):
+    def test_advanced_replace_syntax1(self):
         args = parse_args(['replace',
                            '650 #7 $$a Osloavtalen $$2 humord',
                            '630 2# $$a Osloavtalen $$d 1993 $$0 90918232 $$2 bare'
@@ -1126,15 +1160,17 @@ class TestArgumentParsing(unittest.TestCase):
 
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].sf == {'a': 'Osloavtalen', 'd': None, '2': 'humord', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+
+        assert jargs['source_concepts'][0].tag == '650'
+        assert jargs['source_concepts'][0].sf == {'a': 'Osloavtalen', 'd': None, '2': 'humord', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
 
         assert jargs['target_concepts'][0].tag == '630'
         assert jargs['target_concepts'][0].sf == {'a': 'Osloavtalen', 'd': '1993', '0': '90918232', '2': 'bare'}
 
-    def test_advanced_syntax2(self):
+    def test_advanced_replace_syntax2(self):
         args = parse_args(['replace',
                            '650 #7 $$a Habsburg $$2 humord',
                            '600 3# $$a Habsburg $$c slekten $$0 90200245 $$2 bare'
@@ -1142,13 +1178,56 @@ class TestArgumentParsing(unittest.TestCase):
 
         jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
 
-        assert jargs['source_concept'].tag == '650'
-        assert jargs['source_concept'].sf == {'a': 'Habsburg', 'c': None, '2': 'humord', '0': ANY_VALUE}
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '650'
+        assert jargs['source_concepts'][0].sf == {'a': 'Habsburg', 'c': None, '2': 'humord', '0': ANY_VALUE}
 
         assert len(jargs['target_concepts']) == 1
-
         assert jargs['target_concepts'][0].tag == '600'
         assert jargs['target_concepts'][0].sf == {'a': 'Habsburg', 'c': 'slekten', '0': '90200245', '2': 'bare'}
+
+    def test_rem_add_1_to_2(self):
+        """
+        Test replacement of 1 subject with 2 subjects.
+
+        Since any number of subjects can be provided with `--rem`, make sure that the `-add`
+        subjects do not inherit the MARC tag (651 in this case). but uses the default tag (650).
+        """
+        args = parse_args([
+            '--rem', '651 Sekvenseringsmetoder',
+            '--add', 'Sekvensering',
+            '--add', 'Metoder'
+        ], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
+
+        assert len(jargs['source_concepts']) == 1
+        assert jargs['source_concepts'][0].tag == '651'
+        assert jargs['source_concepts'][0].sf == {'a': 'Sekvenseringsmetoder', '2': 'noubomn', '0': ANY_VALUE}
+
+        assert len(jargs['target_concepts']) == 2
+
+        assert jargs['target_concepts'][0].tag == '650'
+        assert jargs['target_concepts'][0].sf == {'a': 'Sekvensering', '2': 'noubomn'}
+
+        assert jargs['target_concepts'][1].tag == '650'
+        assert jargs['target_concepts'][1].sf == {'a': 'Metoder', '2': 'noubomn'}
+
+    def test_rem_add_2_to_1(self):
+        """
+        Test replacement of 2 subjects with 1.
+        """
+        args = parse_args(['--rem', 'Fysikk', '--rem', '655 Historie', '--add', 'Fysikkhistorie'], default_env='test_env')
+        jargs = job_args({'vocabularies': [{'marc_code': 'noubomn'}], 'default_vocabulary': 'noubomn'}, args)
+
+        assert len(jargs['source_concepts']) == 2
+        assert jargs['source_concepts'][0].tag == '650'
+        assert jargs['source_concepts'][0].sf == {'a': 'Fysikk', '2': 'noubomn', '0': ANY_VALUE}
+        assert jargs['source_concepts'][1].tag == '655'
+        assert jargs['source_concepts'][1].sf == {'a': 'Historie', '2': 'noubomn', '0': ANY_VALUE}
+
+        assert len(jargs['target_concepts']) == 1
+        assert jargs['target_concepts'][0].tag == '650'
+        assert jargs['target_concepts'][0].sf == {'a': 'Fysikkhistorie', '2': 'noubomn'}
 
 
 if __name__ == '__main__':

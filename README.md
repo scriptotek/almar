@@ -1,4 +1,6 @@
-# Almar &middot; [![Travis](https://img.shields.io/travis/scriptotek/almar.svg)](https://travis-ci.org/scriptotek/almar) [![Codecov](https://img.shields.io/codecov/c/github/scriptotek/almar.svg)](https://codecov.io/gh/scriptotek/almar)
+# Almar &middot; [![Travis](https://img.shields.io/travis/scriptotek/almar.svg)](https://travis-ci.org/scriptotek/almar)
+[![Codecov](https://img.shields.io/codecov/c/github/scriptotek/almar.svg)](https://codecov.io/gh/scriptotek/almar)
+[![Supported Python Versions](https://img.shields.io/pypi/pyversions/almar.svg)](https://pypi.python.org/pypi/almar)
 
 Almar (formerly Lokar) is a script for batch editing and removing controlled
 classification and subject heading fields (084/648/650/651/655) in bibliographic
@@ -110,7 +112,7 @@ To work with any other field than the 650 field, the field number must be explic
 
 Supported fields are 084, 648, 650, 651 and 655.
 
-### Diffs and dry run
+### Test things first with dry run
 
 To see the changes made to each catalog record, add the `--diffs` flag. Combined
 with the `--dry_run` flag (or `-d`), you will see the changes that would be made
@@ -120,7 +122,7 @@ to the records without actually touching any records:
 
 This way, you can easily get a feel for how the tool works.
 
-### Moving a subject to another MARC tag
+### Move a subject to another MARC tag
 
 To move a subject heading from 650 to 651:
 
@@ -135,7 +137,7 @@ one operation:
 
     almar replace '650 Term' '651 New term'
 
-### Removing a subject heading
+### Remove a subject heading
 
 To remove all 650 fields having either `$a Term` or `$x Term`:
 
@@ -145,8 +147,7 @@ or, since 650 is the default field, the shorthand:
 
     almar remove 'Term'
 
-
-### Listing documents
+### List documents
 
 If you just want a list of documents without making any changes, use `almar list`:
 
@@ -157,13 +158,26 @@ Optionally with titles:
     almar list '650 Term' --titles
 
 
-### Interactive replace (splitting)
+### More complex edits
 
-If you need to split a concept into two or more concepts, you can use
-`almar interactive` mode. Example: to replace "Kretser" with "Integrerte kretser"
+For more complex edits, such as replacing two subject headings with one,
+use the `--rem` and `--add` options to remove and add subject headings.
+For instance, to replace `Physics` AND `History` (655) with a single subject `History of physics`:
+
+    almar --rem 'Physics' --rem '655 History' --add 'History of physics'
+
+Note that only records having *all* of the two subjects to be removed (the `--rem` subjects) will be modified.
+Any number of `--rem` and `--add` options is supported.
+
+
+### Interactive editing
+
+If you need to split a concept into two or more concepts, you can use the
+interactive mode.
+Example: to replace "Kretser" with "Integrerte kretser"
 on some documents, but with "Elektriske kretser" on other, run:
 
-    almar --diffs interactive 'Kretser' 'Integrerte kretser' 'Elektriske kretser'
+    almar interactive 'Kretser' 'Integrerte kretser' 'Elektriske kretser'
 
 For each record, Almar will print the title and subject headings and ask you
 which of the two headings to include on the record. Use the arrow keys and space

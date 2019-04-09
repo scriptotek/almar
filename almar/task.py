@@ -2,48 +2,85 @@
 from __future__ import unicode_literals
 import logging
 from collections import OrderedDict
-import six
 import os
-from colorama import Fore, Back, Style
+import time
+from colorama import Fore, Style
+import six
 from six import python_2_unicode_compatible
 from copy import deepcopy
-import time
-from .concept import Concept
-from .util import ANY_VALUE, normalize_term, pick, utf8print
+from .util import pick, utf8print
 
 log = logging.getLogger(__name__)
 
 
+@python_2_unicode_compatible
 class Task(object):
     """
     Task class from which the other task classes inherit.
     """
+    def __init__(self):
+        self.progress = 0
 
-    def match_field(self, field):
-        return field.match(self.source, self.ignore_extra_subfields)
+    def _run(self, marc_record):
+        return 0
 
     def run(self, marc_record, progress=None):
         # log.debug('Run task: %s', self)
         self.progress = progress
         modified = self._run(marc_record)
-        if modified > 0:
-            log.debug('Modifications made: %d', modified)
         return modified
 
 
 @python_2_unicode_compatible
-class ReplaceTask(Task):
+class SingleSourceConceptTask(Task):
+
+    def __init__(self, source, ignore_extra_subfields):
+        super().__init__()
+        self.source = deepcopy(source)
+        self.ignore_extra_subfields = ignore_extra_subfields
+
+    def match(self, marc_record):
+        for field in marc_record.fields:
+            if field.tag.startswith('6') and field.match(self.source, self.ignore_extra_subfields):
+                return True
+        return False
+
+
+@python_2_unicode_compatible
+class MultipleSourceConceptTask(Task):
+
+    def __init__(self, concepts, ignore_extra_subfields):
+        super().__init__()
+        self.concepts = [deepcopy(concept) for concept in concepts]
+        for concept in self.concepts:
+            concept.set_a_or_x_to('a')
+        self.ignore_extra_subfields = ignore_extra_subfields
+
+    def match_concept(self, marc_record, concept):
+        for field in marc_record.fields:
+            if field.tag.startswith('6') and field.match(concept, self.ignore_extra_subfields):
+                return True
+        return False
+
+    def match(self, marc_record):
+        for concept in self.concepts:
+            if not self.match_concept(marc_record, concept):
+                return False
+        return True
+
+
+@python_2_unicode_compatible
+class ReplaceTask(SingleSourceConceptTask):
     """
     Replace a subject access or classification number field with another one in
     any given MARC record.
     """
 
     def __init__(self, source, target, ignore_extra_subfields=False):
-        self.source = deepcopy(source)
+        super().__init__(source, ignore_extra_subfields)
         self.target = deepcopy(target)
         self.source.set_a_or_x_to('a')
         self.target.set_a_or_x_to('a')
-        self.ignore_extra_subfields = ignore_extra_subfields
 
         """
         Caveat 1:
@@ -75,7 +112,7 @@ class ReplaceTask(Task):
 
 
 @python_2_unicode_compatible
-class InteractiveReplaceTask(Task):
+class InteractiveReplaceTask(SingleSourceConceptTask):
     """
     Replace a subject access or classification number field with another one
     (from a selection) in any given MARC record.
@@ -86,12 +123,11 @@ class InteractiveReplaceTask(Task):
     """
 
     def __init__(self, source, targets, ignore_extra_subfields=False):
-        self.source = deepcopy(source)
+        super().__init__(source, ignore_extra_subfields)
         self.source.set_a_or_x_to('a')
         self.targets = deepcopy(targets)
         for target in self.targets:
             target.set_a_or_x_to('a')
-        self.ignore_extra_subfields = ignore_extra_subfields
 
     def _run(self, marc_record):
         utf8print()
@@ -129,10 +165,10 @@ class InteractiveReplaceTask(Task):
 
         tasks = []
         if 'REMOVE' in targets:
-            tasks.append(DeleteTask(self.source, ignore_extra_subfields=self.ignore_extra_subfields))
+            tasks.append(DeleteTask([self.source], ignore_extra_subfields=self.ignore_extra_subfields))
         else:
-            tasks.append(ReplaceTask(self.source, targets[0], ignore_extra_subfields=self.ignore_extra_subfields))
-            for target in targets[1:]:
+            tasks.append(DeleteTask([self.source], ignore_extra_subfields=self.ignore_extra_subfields))
+            for target in targets:
                 tasks.append(AddTask(target))
 
         modified = 0
@@ -146,7 +182,7 @@ class InteractiveReplaceTask(Task):
 
 
 @python_2_unicode_compatible
-class ListTask(Task):
+class ListTask(MultipleSourceConceptTask):
     """
     Do nothing except test if the MARC record contains the requested
     subject access or classification number field.
@@ -156,53 +192,56 @@ class ListTask(Task):
           field "$a Fish $x Behaviour".
     """
 
-    def __init__(self, source, show_titles=False, show_subjects=False, ignore_extra_subfields=True):
-        self.source = deepcopy(source)
-        self.source.set_a_or_x_to('a')
-        self.ignore_extra_subfields = ignore_extra_subfields
+    def __init__(self, concepts, show_titles=False, show_subjects=False, ignore_extra_subfields=True):
+        super().__init__(concepts, ignore_extra_subfields)
 
         self.show_titles = show_titles
         self.show_subjects = show_subjects
 
     def __str__(self):
-        return 'List titles having `{}`'.format(Fore.WHITE + six.text_type(self.source) + Style.RESET_ALL)
+        return 'List titles having `{}`'.format(
+            Fore.WHITE + '` and `'.join([six.text_type(x) for x in self.concepts]) + Style.RESET_ALL
+        )
 
     def _run(self, marc_record):
-        if self.show_titles:
-            utf8print('{}\t{}'.format(marc_record.id, marc_record.title()))
-        else:
-            utf8print(marc_record.id)
+        # if self.show_titles:
+        #     utf8print('{}\t{}'.format(marc_record.id, marc_record.title()))
+        # else:
+        #     utf8print(marc_record.id)
 
         if self.show_subjects:
             for field in marc_record.fields:
                 if field.tag.startswith('6'):
-                    if field.sf('2') == self.source.sf['2']:
-                        utf8print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
-                    else:
-                        utf8print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
+                    for concept in self.concepts:
+                        if field.sf('2') == concept.sf['2']:
+                            utf8print('  {}{}{}'.format(Fore.YELLOW, field, Style.RESET_ALL))
+                        else:
+                            utf8print('  {}{}{}'.format(Fore.CYAN, field, Style.RESET_ALL))
 
         return 0  # No, we didn't modify anything
 
 
 @python_2_unicode_compatible
-class DeleteTask(Task):
+class DeleteTask(MultipleSourceConceptTask):
     """
-    Delete a subject access or classification number field from any given MARC record.
+    Delete one or more subject heading or classification number fields from any given MARC record.
     """
 
-    def __init__(self, source, ignore_extra_subfields=False):
-        self.source = deepcopy(source)
-        self.source.set_a_or_x_to('a')
-        self.ignore_extra_subfields = ignore_extra_subfields
+    def __init__(self, concepts, ignore_extra_subfields=False):
+        super().__init__(concepts, ignore_extra_subfields)
 
     def __str__(self):
-        return 'Delete `{}`'.format(Fore.WHITE + six.text_type(self.source) + Style.RESET_ALL)
+        return 'Delete ' + ' AND '.join([
+            '`{}`'.format(Fore.WHITE + six.text_type(concept) + Style.RESET_ALL) for concept in self.concepts
+        ])
 
     def _run(self, marc_record):
         removed = 0
-        for field in marc_record.search(self.source, self.ignore_extra_subfields):
-            marc_record.remove_field(field)
-            removed += 1
+        for concept in self.concepts:
+            for field in marc_record.search(concept, self.ignore_extra_subfields):
+                log.debug('Removing field: %s' % field)
+                marc_record.remove_field(field)
+                removed += 1
 
         return removed
         # Open question: should we also remove strings where sf['a'] is a component???
@@ -215,19 +254,18 @@ class AddTask(Task):
     """
 
     def __init__(self, target, match=False):
-        self.source = None
         self.target = deepcopy(target)
         self.target.set_a_or_x_to('a')
 
         # This task will either always match (if run alone)
         # or never match (if appending to another task)
-        self.match = match
+        self._match = match
 
     def __str__(self):
         return 'Add `{}`'.format(Fore.WHITE + six.text_type(self.target) + Style.RESET_ALL)
 
-    def match_field(self, field):
-        return self.match  # This task will only be run if some other task matches the record.
+    def match(self, marc_record):
+        return self._match  # This task will only be run if some other task matches the record.
 
     def _run(self, marc_record):
         new_field = self.target.as_xml()
@@ -244,6 +282,7 @@ class AddTask(Task):
             idx = marc_record.el.index(field.node)
 
         marc_record.el.insert(idx + 1, new_field)
+        log.debug('Inserting field: %s' % self.target)
 
         marc_record.remove_duplicates(self.target)
 
