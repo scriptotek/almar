@@ -282,7 +282,7 @@ def job_args(config=None, args=None):
             target_concepts.append(get_concept(new_term, default_vocabulary,
                                                default_tag=source_concepts[0].tag))
 
-    elif args.action in ['interactive', 'custom']:
+    elif args.action in ['interactive', 'custom', 'add']:
         target_concepts = [
             get_concept(term, default_vocabulary)
             for term in args.new_terms
