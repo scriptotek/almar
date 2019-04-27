@@ -89,7 +89,7 @@ def parse_args(args, default_env=None):
     parser.add_argument('-d', '--dry-run', '--dry_run', dest='dry_run', action='store_true',
                         help='Dry run without doing any edits.')
 
-    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+    parser.add_argument('-v', '--verbose', '--debug', dest='verbose', action='store_true',
                         help='Show more output')
 
     parser.add_argument('-n', '--non-interactive', '--non_interactive', dest='non_interactive', action='store_true',
