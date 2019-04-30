@@ -28,13 +28,15 @@ class TooManyResults(RuntimeError):
 
 class SruClient(object):
 
-    def __init__(self, endpoint_url, name=None):
+    def __init__(self, endpoint_url, cache, name=None, cache_time=300):
         self.endpoint_url = endpoint_url
+        self.cache = cache
+        self.cache_time = cache_time
         self.name = name
         self.record_no = 0  # from last response
         self.num_records = 0  # from last response
 
-    def request(self, query, start_record):
+    def request_and_cache(self, query, start_record, cache_key):
         response = requests.get(self.endpoint_url, params={
             'version': '1.2',
             'operation': 'searchRetrieve',
@@ -42,7 +44,14 @@ class SruClient(object):
             'maximumRecords': '50',
             'query': query,
         })
+        response.raise_for_status()
+        self.cache.set(cache_key, response.text, expire=self.cache_time)
         return response.text
+
+    def request(self, query, start_record):
+        cache_key = 'sru:{}:{}'.format(query, start_record)
+
+        return self.cache.get(cache_key) or self.request_and_cache(query, start_record, cache_key)
 
     def search(self, query):
         log.debug('SRU search: %s', query)

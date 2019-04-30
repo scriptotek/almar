@@ -15,6 +15,8 @@ import os
 import sys
 from io import open  # pylint: disable=redefined-builtin
 from hashlib import sha1
+import tempfile
+from diskcache import Cache
 
 import yaml
 from six import text_type
@@ -425,7 +427,7 @@ def get_config():
     return config
 
 
-def run(config, argv):
+def run(config, cache, argv):
     global raven_client
 
     username = getpass.getuser()
@@ -453,6 +455,7 @@ def run(config, argv):
         log.error('Sorry, Python < 3.5 is not supported.')
         sys.exit(1)
     log.debug('Starting job %s as %s', jobname, username)
+    log.debug('Using cache dir: %s', cache.directory)
 
     jargs = job_args(config, args)
 
@@ -476,8 +479,21 @@ def run(config, argv):
 
         env = get_env(config, args)
 
-        sru = SruClient(env['sru_url'], args.env)
-        alma = Alma(env['api_region'], env['api_key'], args.env, dry_run=args.dry_run)
+        sru = SruClient(
+            env['sru_url'],
+            cache,
+            name=args.env,
+            cache_time=os.environ.get('CACHE_TIME', 300)  # in seconds
+        )
+
+        alma = Alma(
+            env['api_region'],
+            env['api_key'],
+            cache,
+            name=args.env,
+            dry_run=args.dry_run,
+            cache_time=os.environ.get('CACHE_TIME', 300)  # in seconds
+        )
 
         job = Job(sru=sru, ils=alma, **jargs)
         job.dry_run = args.dry_run
@@ -512,7 +528,10 @@ def run(config, argv):
 
 
 def main():
-    run(get_config(), sys.argv[1:])
+    username = getpass.getuser()
+    cache_dir = os.path.join(tempfile.gettempdir(), 'almar-cache-%s' % username)
+    with Cache(cache_dir) as cache:
+        run(get_config(), cache, sys.argv[1:])
 
 
 if __name__ == '__main__':

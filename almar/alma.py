@@ -25,11 +25,13 @@ class Alma(LibrarySystem):
 
     name = None
 
-    def __init__(self, api_region, api_key, name=None, dry_run=False):
+    def __init__(self, api_region, api_key, cache, cache_time=300, name=None, dry_run=False):
         self.api_region = api_region
         self.api_key = api_key
         self.name = name
         self.dry_run = dry_run
+        self.cache = cache
+        self.cache_time = cache_time
         self.session = Session()
         self.session.headers.update({'Authorization': 'apikey %s' % api_key})
         self.base_url = 'https://api-{region}.hosted.exlibrisgroup.com/almaws/v1'.format(region=self.api_region)
@@ -37,15 +39,21 @@ class Alma(LibrarySystem):
     def url(self, path, **kwargs):
         return self.base_url.rstrip('/') + '/' + path.lstrip('/').format(**kwargs)
 
+    def get_and_cache(self, record_id, cache_key):
+        response = self.session.get(self.url('/bibs/{mms_id}', mms_id=record_id))
+        response.raise_for_status()
+        self.cache.set(cache_key, response.text, expire=self.cache_time)
+        return response.text
+
     def get_record(self, record_id):
         """
         Get a Bib record from Alma
 
         :type record_id: string
         """
-        response = self.session.get(self.url('/bibs/{mms_id}', mms_id=record_id))
-        response.raise_for_status()
-        record = Bib(response.text)
+        cache_key = 'bib:{}'.format(record_id)
+        response = self.cache.get(cache_key) or self.get_and_cache(record_id, cache_key)
+        record = Bib(response)
         if record.id != record_id:
             raise RuntimeError('Response does not contain the requested MMS ID. %s != %s'
                                % (record.id, record_id))
@@ -82,12 +90,15 @@ class Alma(LibrarySystem):
         else:
             log.debug('%d line(s) removed, %d line(s) added:\n%s', deletions, additions, format_diff(diff))
 
+        cache_key = 'bib:{}'.format(record.id)
+
         if not self.dry_run:
             try:
                 response = self.session.put(self.url('/bibs/{mms_id}', mms_id=record.id),
                                             data=BytesIO(post_data.encode('utf-8')),
                                             headers={'Content-Type': 'application/xml'})
                 response.raise_for_status()
+                self.cache.delete(cache_key)
                 record.init(response.text)
 
             except HTTPError:

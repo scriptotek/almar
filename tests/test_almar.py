@@ -19,6 +19,7 @@ from six import text_type
 from contextlib import contextmanager
 from functools import wraps
 from textwrap import dedent
+from diskcache import Cache
 
 from almar.bib import Bib
 from almar.almar import run, get_config, job_args, parse_args, get_concept
@@ -33,6 +34,12 @@ from almar.task import DeleteTask, ReplaceTask, AddTask
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
+
+
+def get_cache_mock():
+    cache = Mock()
+    cache.get = Mock(return_value=None)
+    return cache
 
 
 def get_sample(filename, as_xml=False):
@@ -569,7 +576,7 @@ class TestSruSearch(unittest.TestCase):
         body = get_sample('sru_sample_response_1.xml')
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
-        records = list(SruClient(url).search('alma.subjects=="test"'))
+        records = list(SruClient(url, get_cache_mock()).search('alma.subjects=="test"'))
 
         assert len(responses.calls) == 1
         assert len(records) == 18
@@ -587,7 +594,7 @@ class TestSruSearch(unittest.TestCase):
 
         responses.add_callback(responses.GET, url, callback=request_callback, content_type='application/xml')
 
-        records = list(SruClient(url).search('alma.subjects=="test"'))
+        records = list(SruClient(url, get_cache_mock()).search('alma.subjects=="test"'))
 
         assert len(responses.calls) == 2
         assert len(records) == 2
@@ -600,7 +607,7 @@ class TestSruSearch(unittest.TestCase):
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
         with pytest.raises(SruErrorResponse):
-            records = list(SruClient(url).search('alma.subjects=="test"'))
+            records = list(SruClient(url, get_cache_mock()).search('alma.subjects=="test"'))
 
         assert len(responses.calls) == 1
 
@@ -612,7 +619,11 @@ class TestSruSearch(unittest.TestCase):
         responses.add(responses.GET, url, body=body, content_type='application/xml')
 
         with pytest.raises(TooManyResults):
-            records = list(SruClient(url).search('alma.subjects=="Tyskland" AND alma.authority_vocabulary="humord"'))
+            records = list(
+                SruClient(url, get_cache_mock()).search(
+                    'alma.subjects=="Tyskland" AND alma.authority_vocabulary="humord"'
+                )
+            )
 
         assert len(responses.calls) == 1
 
@@ -622,7 +633,7 @@ class TestAlma(unittest.TestCase):
     @responses.activate
     def testGetRecord(self):
         id = '991416299674702204'
-        alma = Alma('test', 'key')
+        alma = Alma('test', 'key', get_cache_mock())
         url = '{}/bibs/{}'.format(alma.base_url, id)
         body = get_sample('bib_991416299674702204.xml')
         responses.add(responses.GET, url, body=body, content_type='application/xml')
@@ -633,7 +644,7 @@ class TestAlma(unittest.TestCase):
     @responses.activate
     def testPutRecord(self):
         id = '991416299674702204'
-        alma = Alma('test', 'key')
+        alma = Alma('test', 'key', get_cache_mock())
         url = '/bibs/{}'.format(id)
         body = get_sample('bib_991416299674702204.xml')
         bib = Bib(body)
@@ -700,7 +711,7 @@ def patch_sru_search(xml_response_file):
         patcher = patch('almar.almar.SruClient.request')
         patcher.start()
 
-        sru_mock = SruClient('http://example.com')
+        sru_mock = SruClient('http://example.com', get_cache_mock())
         sru_mock.request.return_value = get_sample(xml_response_file)
         yield sru_mock
 
@@ -720,11 +731,11 @@ class TestJob(unittest.TestCase):
 
     def setUp(self):
         MockAlma = MagicMock(spec=Alma, spec_set=True)
-        self.alma = MockAlma('eu', 'dummy')
+        self.alma = MockAlma('eu', 'dummy', get_cache_mock())
 
     def runJob(self, sru_response, vocabulary, args):
 
-        patched_sru = SruClient('http://example.com')
+        patched_sru = SruClient('http://example.com', get_cache_mock())
         patched_sru.request = MagicMock(name='request')
         patched_sru.request.return_value = get_sample(sru_response)
 
@@ -902,7 +913,7 @@ class TestAlmar(unittest.TestCase):
         new_term = 'Test æøå'
         alma = MockAlma.return_value
         mock_authorize_term.return_value = {'id': 'REAL030697'}
-        run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), get_cache_mock(), ['-e test_env', '-n', 'replace', term, new_term])
 
         sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
 
@@ -916,7 +927,7 @@ class TestAlmar(unittest.TestCase):
         new_term = 'Test æøå'
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
-        run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), get_cache_mock(), ['-e test_env', '-n', 'replace', term, new_term])
         sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 0
 
@@ -927,7 +938,7 @@ class TestAlmar(unittest.TestCase):
         term = 'Statistiske modeller'
         mock_authorize_term.return_value = {'id': 'REAL030697'}
         alma = MockAlma.return_value
-        run(self.conf_obj(), ['-e test_env', '-n', 'remove', term])
+        run(self.conf_obj(), get_cache_mock(), ['-e test_env', '-n', 'remove', term])
         sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 14
 
@@ -944,7 +955,7 @@ class TestAlmar(unittest.TestCase):
         bib = Bib(doc)
         alma.get_record.return_value = bib
 
-        run(self.conf_obj(), ['--diffs', '-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), get_cache_mock(), ['--diffs', '-e test_env', '-n', 'replace', term, new_term])
         sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 1
         assert alma.put_record.call_count == 1
@@ -961,7 +972,7 @@ class TestAlmar(unittest.TestCase):
         bib = Bib(doc)
         alma.get_record.return_value = bib
 
-        run(self.conf_obj(), ['-e test_env', '-n', 'list', term])
+        run(self.conf_obj(), get_cache_mock(), ['-e test_env', '-n', 'list', term])
         sru.request.assert_called_once_with(
             'alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert alma.get_record.call_count == 1
@@ -979,7 +990,7 @@ class TestAlmar(unittest.TestCase):
         doc = get_sample('bib_990705558424702201.xml')
         get_record.return_value = Bib(doc)
 
-        run(self.conf_obj(), ['--dry_run', '-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), get_cache_mock(), ['--dry_run', '-e test_env', '-n', 'replace', term, new_term])
         sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
         assert get_record.call_count == 1
         assert len(responses.calls) == 0
@@ -997,7 +1008,7 @@ class TestAlmar(unittest.TestCase):
         bib = Bib(doc)
         get_record.return_value = bib
 
-        run(self.conf_obj(), ['-e test_env', '-n', 'replace', term, new_term])
+        run(self.conf_obj(), get_cache_mock(), ['-e test_env', '-n', 'replace', term, new_term])
 
         sru.request.assert_called_once_with('alma.authority_vocabulary="%s" AND alma.subjects="%s"' % ('noubomn', term), 1)
 
