@@ -118,7 +118,7 @@ To see the changes made to each catalog record, add the `--diffs` flag. Combined
 with the `--dry_run` flag (or `-d`), you will see the changes that would be made
 to the records without actually touching any records:
 
-    almar replace --diffs --dry_run 'Term' 'New term'
+    almar --diffs --dry_run replace 'Term' 'New term'
 
 This way, you can easily get a feel for how the tool works.
 
