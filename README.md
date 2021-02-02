@@ -149,13 +149,9 @@ or, since 650 is the default field, the shorthand:
 
 ### List documents
 
-If you just want a list of documents without making any changes, use `almar list`:
+The `list` command can be used to list which documents match a query without making any changes:
 
     almar list '650 Term'
-
-Optionally with titles:
-
-    almar list '650 Term' --titles
 
 
 ### More complex edits
